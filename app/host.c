@@ -417,7 +417,13 @@ static const char *const MN[NMS] = {"lo", "mid", "hi", "-", "color", "camount", 
 /* fm1-base's expect, for LOOM-8's own state with one value */
 int app_expect(const char *what, int *got)
 {
-    if (!strcmp(what, "playing"))
+    if (!strcmp(what, "kids"))
+        *got = kids_mode;
+    else if (!strcmp(what, "kids_draws"))
+        *got = (int)kids_draws;
+    else if (!strcmp(what, "kids_bar"))
+        *got = ui.bar + 1;
+    else if (!strcmp(what, "playing"))
         *got = seq.playing;
     else if (!strcmp(what, "scene"))
         *got = seq.scene + 1;

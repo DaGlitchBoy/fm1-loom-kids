@@ -15,6 +15,9 @@
  *   SAVE   save (held + white key: a slot, or a user preset on the sound pages)
  *   SELECT the button's pages     ALGORITHM the track      PRESETS the page's item     K1-K4 the page's four */
 
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+static void kids_set(int mode);
+#endif
 static void speak(void);
 static void step_rec_start(void);
 static void sp_msg(const char *a, const char *b, uint32_t flags);
@@ -1862,6 +1865,12 @@ static void button_down(int b)
 }
 static void button_up(int b)
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (b == B_HOME && ui.page == P_STATUS && !ui.ask && !lst.open) {
+        kids_set(1);
+        return;
+    }
+#endif
     if (lst.open && b == PAGE_BTN[page_group(ui.page)].btn && b != B_HOME) {
         ui.ask = 0;
         lst.open = 0;
@@ -3822,8 +3831,12 @@ static void save_key(int k)
     }
     act_save_slot(w);
 }
+#include "kids.c"
 static void input(void)
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_input()) return;
+#endif
     uint32_t btn = plat_buttons(), keys = plat_keys(), ch, i;
     int32_t e, ev[NE];
     ch = btn ^ ui.btn;
@@ -4692,6 +4705,11 @@ static void speak_dump(void)
 
 void ui_init(void)
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    kids_mode = 0;
+    kids_draws = 0;
+    memset(kids_sig, 0, sizeof kids_sig);
+#endif
     memset(&ui, 0, sizeof ui);
     memset(&lst, 0, sizeof lst);
     ui.touched = -1;
@@ -4782,6 +4800,15 @@ void ui_frame(void)
         seq.wv_live = ui.wv_held;
     }
     autosave();
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_mode) {
+        kids_draw();
+        leds();
+        ann_tick(plat_ms());
+        ui.frame++;
+        return;
+    }
+#endif
     draw_header();
     draw_page();
     draw_rec_strip();
@@ -4799,6 +4826,9 @@ void ui_frame(void)
 void ui_input_only(void) { input(); }
 void ui_redraw(void)                             /* every band drawn again at the next frame (their signatures forgotten) */
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    memset(kids_sig, 0, sizeof kids_sig);
+#endif
     for (uint32_t i = 0; i < sizeof ui.sig / sizeof ui.sig[0]; i++)
         ui.sig[i] = 0;
 }

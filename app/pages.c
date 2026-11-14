@@ -2244,7 +2244,12 @@ static void page_footer(char *t)
     case P_SETUP:
         s_cat(t, "SEL Bluetooth|KEYS play");
         break;
-    case P_MASTER: case P_MASTER2: case P_STATUS:
+    case P_STATUS:
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        s_cat(t, "HOME Kids Stage|KEYS play");
+        break;
+#endif
+    case P_MASTER: case P_MASTER2:
         s_cat(t, "KEYS play");
         break;
     case P_SENDS:

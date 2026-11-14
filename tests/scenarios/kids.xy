@@ -1,0 +1,109 @@
+# Emulator-only entry uses a labelled physical action on Studio's Debug page.
+wait 300
+tap GLO
+turn SELECT 6
+expect page Debug
+tap HOME
+expect kids 1
+expect kids_draws 8
+wait 1000
+expect kids_draws 8
+shot kids_stage.png
+tap SEQ
+expect kids 2
+# Drum hits coexist; removing the selected kick preserves the snare.
+tapkey w0
+expect note 1 1 1 1
+tapkey b1
+tapkey w0
+spin K3 -1
+tapkey w0
+expect note 1 1 1 2
+# All four bars remain reachable, even beyond the current pattern length.
+spin K2 3
+expect kids_bar 4
+tapkey w15
+expect note 1 1 64 1
+shot kids_bar4.png
+tapkey w15
+expect note 1 1 64 0
+spin K2 -3
+spin K1 1
+expect trk 2
+spin K3 2
+tapkey w0
+expect note 2 1 1 62
+tapkey w0
+expect note 2 1 1 0
+spin ALGO 6
+expect trk 8
+spin ALGO -6
+expect trk 2
+tapkey w4
+tap PLAY
+expect playing 1
+wait 300
+shot kids_playing.png
+tap PLAY
+expect playing 0
+tap HOME
+expect kids 1
+shot kids_home.png
+# Studio recovers normal navigation and musical state.
+tap SEL
+expect kids 0
+expect page Steps
+expect note 2 1 5 62
+tap EDIT
+expect page Engine
+shot kids_studio.png
+
+# Re-entry, bar clamps, and queued patterns use the original model.
+tap GLO
+turn SELECT 6
+tap HOME
+expect kids 1
+tap SEQ
+spin K2 99
+expect kids_bar 4
+spin K2 -99
+expect kids_bar 1
+spin PRESET 1
+tapkey w0
+expect note 2 2 1 62
+tap PLAY
+spin PRESET 1
+shot kids_queued.png
+wait 2200
+tapkey w1
+expect note 2 3 2 62
+tap PLAY
+# Unsupported REC combinations must not silently latch recording.
+press REC
+tap PLAY
+release REC
+expect playing 1
+tap PLAY
+expect playing 0
+# Exit with a key held: its release must not toggle a second time in Studio.
+key w2 down
+expect note 2 3 3 62
+tap SEL
+key w2 up
+expect kids 0
+expect note 2 3 3 62
+reboot
+wait 300
+expect kids 0
+
+# Studio's large-type setting must not overflow the fixed Kids layout.
+large 1
+tap GLO
+turn SELECT 6
+tap HOME
+expect kids 1
+tap SEQ
+spin K1 7
+shot kids_large_setting.png
+tap SEL
+expect kids 0
