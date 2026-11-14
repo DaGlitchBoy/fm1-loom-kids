@@ -12,7 +12,12 @@ Build with `./build.sh --host`. The default remains Studio. In the emulator:
 
 1. Tap GLO, turn SELECT six clicks to Debug. The footer says **HOME Kids Stage**.
 2. Tap HOME to enter Stage. Recording and active modal editing must finish first.
-3. SEQ opens Steps; HOME returns to Stage; SEL returns to Studio Steps.
+3. On first entry, an adult uses K1–K4 to choose four PIN digits, presses SEL, enters the same digits again,
+   and presses SEL to start Kids. Set all four digits; there is no default PIN. HOME cancels setup.
+4. SEQ opens Steps; HOME returns to Stage. SEL opens the adult PIN prompt, not Studio directly.
+   Enter the PIN with K1–K4 and SEL to unlock; HOME cancels. Incorrect entries impose a three-second retry delay.
+5. Kids edits an **unsaved working copy**. Unlocking preserves that copy without saving it. In Studio,
+   SAVE chooses a slot; replacing existing work requires the normal explicit confirmation. HOME cancels.
 
 Both Kids screens use the same four knobs, with persistent labels and current values:
 
@@ -26,7 +31,7 @@ Both Kids screens use the same four knobs, with persistent labels and current va
 | PLAY | Existing transport start/stop; recording stays in Studio |
 | White keys on Steps | Toggle the corresponding step in the selected bar |
 | Black keys on drum Steps | Select the drum hit |
-| SEL | Studio for complex notes, recording, sounds, save, FX, envelopes, LFO, mixer, scenes and song |
+| SEL | Adult PIN unlock for Studio: complex notes, recording, sounds, save, FX, envelopes, LFO, mixer, scenes and song |
 
 The two rows retain all eight colored, numbered track marks; the first four have stronger underlines.
 Selected track, mute marks, transport, current and queued patterns, bar, notes and playhead come directly
@@ -38,15 +43,18 @@ Other buttons and SELECT rotation have no Kids action. There are no hold gesture
 
 ## Implementation
 
-- `app/kids.c`: isolated emulator input and eight signature-cached drawing bands, at most 36 pixels high.
+- `app/kids.c`: isolated emulator input, adult session PIN setup/unlock and unsaved working-copy detachment;
+  eight signature-cached drawing bands, at most 36 pixels high.
   Uses existing canvas, fonts and procedural rectangles; no new framebuffer, assets, heap allocation,
   sequencer state, or idle redraw loop.
 - `app/ui.c`: guarded entry, input/render dispatch, initialization and redraw invalidation.
 - `app/pages.c`: emulator-only entry label on Debug; hardware footer unchanged.
-- `app/host.c`: assertions for Kids mode, selected bar and band-draw count.
+- `app/host.c`: assertions for Kids mode, selected bar, band-draw count, PIN gate, lock and saved-slot association.
 - `app/web/emu/page.html`: visible emulator entry/control instructions.
 - `tests/scenarios/kids.xy`: real button/encoder scenario, automatically discovered by the existing runner.
-- This report.
+- `tests/scenarios/kids_safety.xy`, `tests/host/kids_safety_test.py`, `tests/run_tests.sh`: saved-object
+  byte comparisons, adult PIN/overwrite flows, and lock retention over simulated reboot.
+- `AGENTS.md` and this report: child-safety requirements and session boundaries.
 
 All new behavior is guarded by `PLAT_HOST` / `PLAT_WEB`. No changes to DSP, audio interrupts, sequencer
 timing, serialization, bootloader, flash layout, install package, or submodules. No firmware build,
@@ -63,8 +71,14 @@ Baseline `./build.sh --host` and `tests/run_tests.sh` passed. Node is available.
 
 The new scenario verifies Stage → Steps → Stage → Studio, all eight tracks, drum hit preservation,
 melodic add/remove, step 64 add/remove, bar limits, pattern switching and queued-pattern playback,
-transport, returning with a key held, reboot to Studio, and no additional Kids drawing during one
-second idle (eight bands initially, still eight afterwards).
+transport, unlocking with a key held, reboot after adult unlock, and no additional Kids drawing during one
+second idle (32 band draws after PIN setup, still 32 afterwards).
+
+The safety scenario snapshots the entire simulated store. Byte-for-byte comparisons require it to remain
+identical after Kids editing and ignored buttons/holds, adult unlock followed by an idle wait, and a
+cancelled overwrite. Only an explicit adult-confirmed save may change it. A locked simulated reboot
+must restore saved notes, remain locked, and leave the stored objects identical to the adult's save.
+The gate tests reject an unset default PIN, a wrong PIN and a rapid retry after cancelling/reopening.
 
 Repeat with:
 
@@ -78,25 +92,28 @@ tests/run_tests.sh
 Screenshots are generated in `app/build/scenarios/kids/`: `kids_stage.png`, `kids_bar4.png`,
 `kids_playing.png`, `kids_home.png`, `kids_studio.png`, `kids_queued.png`, and `kids_large_setting.png`.
 Stage and playback captures were visually inspected at 240×240; the host layout audit also checks them.
+The safety scenario adds `app/build/scenarios/kids_safety/protected_stage.png` and `adult_wrong_pin.png`,
+both visually inspected. Full-suite output is retained in `app/build/tests/milestone1-safety.log`.
 
 The first post-change run exposed clipping when Studio had large type enabled. Kids now explicitly uses
 its fixed small font; the expanded Kids scenario and the original large-type layout sweep both pass.
-The final `tests/run_tests.sh` run passed all 91 checks (baseline: 90), with the three skips listed above.
-`git diff --check` passed.
+The initial milestone passed 91 checks (baseline: 90). The final child-safety extension passed all
+93 checks in `tests/run_tests.sh`, including both scenarios, byte-for-byte store comparisons, and the
+normal/large-type layout sweeps. `./build.sh --host` and `git diff --check` passed. The same three
+dependency/artifact skips apply.
 
 GNU `size` on the native host executable (bytes; includes the entire simulator):
 
 | Section | Baseline | Milestone 1 | Difference |
 | --- | ---: | ---: | ---: |
-| text | 1,119,709 | 1,126,701 | +6,992 |
-| data | 26,620 | 26,620 | 0 |
-| bss | 3,431,992 | 3,432,056 | +64 |
-| total | 4,578,321 | 4,585,377 | +7,056 |
+| text | 1,119,709 | 1,129,725 | +10,016 |
+| data | 26,620 | 26,652 | +32 |
+| bss | 3,431,992 | 3,432,088 | +96 |
+| total | 4,578,321 | 4,588,465 | +10,144 |
 
-The complete Kids scenario simulated 8,190 ms with 318 blits across Kids and Studio; the host reported
-render time of 0.3% of real time on its CPU. The idle assertion specifically measures Kids band draws,
-not elapsed wall-clock performance. No new heap allocations or framebuffer were introduced.
-The large-type sweep simulated 160,939 ms with 3,331 blits and no layout findings.
+The targeted safety scenario simulated 23,465 ms with 289 blits and reported render time of 0.3% of real
+time on the host CPU. The idle assertion measures Kids band draws, not elapsed wall-clock performance.
+There are no new heap allocations or framebuffer. PIN state is a few session bytes, not a copied project.
 
 ## Limits and next milestone
 
@@ -109,19 +126,28 @@ are not estimates of device performance. Hiding screens does not remove their co
 Next: instrument categories plus a small set of clearly named sound macros, reusing existing preset and
 parameter APIs. Afterwards address envelopes/LFO/FX/mixer, then recording and scene interactions.
 
-## Child-safety requirement (added during review)
+## Child-safety extension
 
-Kids mode must support experimentation without damaging saved work or exposing destructive/system actions.
-Acceptance for that stronger safety boundary:
+Follow-up to `19d49fe` on the same feature branch, explicitly requested by the user:
 
-- Kids edits must not automatically overwrite a saved project; an adult must explicitly approve saving.
-- Deleting/replacing projects or presets, resetting settings, device management and installation tools must
-  remain outside Kids access.
-- Studio must have an explicit adult-controlled entry, rather than a secret gesture that a child can discover.
-- Ordinary note, pattern and sound experiments should be undoable, with an obvious way to return to a safe state.
-- Existing projects and advanced capabilities must remain available to the adult; safety must not delete them.
+- Kids must not overwrite saved work: `kids_detach()` uses the existing no-slot state (`proj_slot = NPROJ`)
+  without changing the model or save format. Autosave also explicitly refuses all Kids/PIN screens.
+- Detachment remains after adult unlock. Studio's existing SAVE flow asks before replacing any existing
+  slot because the copy has no saved-slot association. Choosing cancel writes nothing.
+- Adult setup requires two matching four-digit entries. SEL in Kids opens a credential gate; wrong PINs,
+  holding buttons, or cancelling do not unlock. Cancel/reopen does not bypass the retry delay.
+- Session PIN/lock state is separate from projects and survives a simulated reboot in the running emulator.
+  A reboot reloads saved music, detaches it again, and returns to locked Stage.
+- The original Studio remains available after adult unlock; no advanced musical feature is removed.
 
-The current vertical slice is **not yet child-safe under these criteria**: SEL directly opens Studio and
-existing autosave still applies to Kids edits. Emulator-only compilation prevents physical hardware access
-by this implementation, but does not by itself protect saved emulator projects. These additional protections are prerequisites for treating the preview as ready for unsupervised use
-by a child; they are not implemented in this commit.
+Boundary: this protects the active emulator UI session, not against a person who can close/reload the
+application, use developer tools or execute host scripts. Ending the host/browser instance ends the PIN
+session and discards unsaved edits; a fresh launch starts in Studio for adult setup. PINs are not written
+to project files or browser storage. An adult should set up each new session before handing it over.
+Web/WASM execution remains unverified without Emscripten; native-host gate and persistence checks run.
+A durable parental-control boundary across browser restarts would require a separate design.
+
+Further child-focused improvements, beyond these two protections: visible undo/redo and an adult-approved
+restore-to-start action, then instrument categories and simple macros. The UI does not claim that a child
+can never disrupt playback or change the temporary music; those experiments cannot overwrite saved work
+without leaving the session boundary or an adult explicitly approving a save.

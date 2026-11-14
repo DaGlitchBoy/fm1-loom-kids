@@ -4706,7 +4706,9 @@ static void speak_dump(void)
 void ui_init(void)
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
-    kids_mode = 0;
+    kids_mode = kids_locked ? 1 : 0;             /* reboot must not bypass a live session's lock */
+    kids_gate = KG_NONE;
+    kids_gate_sig = kids_retry_at = 0;
     kids_draws = 0;
     memset(kids_sig, 0, sizeof kids_sig);
 #endif
@@ -4743,6 +4745,12 @@ void ui_init(void)
         proj.rsv[1] = (uint8_t)(THEME_SET | (uint32_t)atoi(getenv("LOOM_THEME")) % NTHEMES);
     theme = THEME_OF_PROJ();
 #endif
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_locked) {
+        if (sel_trk() >= NTRK) track_select(0);
+        kids_detach();
+    }
+#endif
     lcd_fill(0, 0, 240, 240, K_BG);
 }
 
@@ -4753,6 +4761,9 @@ void ui_init(void)
 #define AUTOSAVE_QUIET 90u                       /* blocks of quiet (256 samples: about 0.5 s) */
 static void autosave(void)
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_mode) return;                       /* includes PIN setup/unlock screens */
+#endif
     if (!ui.dirty || (proj.rsv[2] & AUTOSAVE_OFF) || proj_slot >= NPROJ || playing() || seq.rec || seq.rec_wait || ui.ask || lst.open ||
         ui.btn || ui.keys || plat_ms() - ui.act_t < AUTOSAVE_MS || eng_voices || eng_quiet < AUTOSAVE_QUIET)
         return;
@@ -4828,6 +4839,7 @@ void ui_redraw(void)                             /* every band drawn again at th
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
     memset(kids_sig, 0, sizeof kids_sig);
+    kids_gate_sig = 0;
 #endif
     for (uint32_t i = 0; i < sizeof ui.sig / sizeof ui.sig[0]; i++)
         ui.sig[i] = 0;

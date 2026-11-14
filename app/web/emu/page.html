@@ -32,8 +32,14 @@ Play LOOM-8, a pocket groovebox firmware for the M-VAVE FM-1, in your browser: t
   <div>
     <h2>Try Kids Stage (emulator preview)</h2>
     <p>In Studio, tap GLO and turn SELECT six clicks to Debug. Its footer labels HOME as Kids Stage:
-      tap HOME to enter. Finish recording or modal editing first. SEQ opens the 16-step view;
-      HOME returns to Stage; SEL returns to the original Studio UI.</p>
+      tap HOME to enter. Finish recording or modal editing first. An adult chooses a private four-digit
+      session PIN with K1–K4 and confirms it twice using SEL before handing over the emulator.
+      SEQ opens Steps; HOME returns to Stage; SEL asks for the adult PIN before opening Studio.</p>
+    <p>Kids uses an unsaved working copy. Saved projects stay untouched, including after unlocking Studio:
+      SAVE explicitly chooses a slot and asks before replacing existing work. HOME cancels a PIN prompt or
+      save confirmation. Incorrect PINs have a three-second retry delay. A simulated reboot stays locked
+      and restores saved work. Closing or reloading the emulator ends the PIN session and discards unsaved
+      edits; this is a session UI guard, not a browser or operating-system parental control.</p>
     <p>Both Kids screens: K1 or ALGORITHM selects any of eight tracks, K2 or OCT−/+ selects one of four bars,
       K3 selects a drum hit or MIDI note, K4 sets tempo, and PRESETS selects a pattern.
       On Steps, white keys toggle steps and black keys select drum hits. PLAY starts/stops.

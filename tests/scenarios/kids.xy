@@ -5,9 +5,23 @@ turn SELECT 6
 expect page Debug
 tap HOME
 expect kids 1
-expect kids_draws 8
+expect kids_gate 1
+spin K1 1
+spin K2 2
+spin K3 3
+spin K4 4
+tap SEL
+expect kids_gate 2
+spin K1 1
+spin K2 2
+spin K3 3
+spin K4 4
+tap SEL
+expect kids_gate 0
+expect kids_locked 1
+expect kids_draws 32
 wait 1000
-expect kids_draws 8
+expect kids_draws 32
 shot kids_stage.png
 tap SEQ
 expect kids 2
@@ -51,6 +65,12 @@ expect kids 1
 shot kids_home.png
 # Studio recovers normal navigation and musical state.
 tap SEL
+expect kids_gate 3
+spin K1 1
+spin K2 2
+spin K3 3
+spin K4 4
+tap SEL
 expect kids 0
 expect page Steps
 expect note 2 1 5 62
@@ -89,6 +109,12 @@ expect playing 0
 key w2 down
 expect note 2 3 3 62
 tap SEL
+expect kids_gate 3
+spin K1 1
+spin K2 2
+spin K3 3
+spin K4 4
+tap SEL
 key w2 up
 expect kids 0
 expect note 2 3 3 62
@@ -105,5 +131,11 @@ expect kids 1
 tap SEQ
 spin K1 7
 shot kids_large_setting.png
+tap SEL
+expect kids_gate 3
+spin K1 1
+spin K2 2
+spin K3 3
+spin K4 4
 tap SEL
 expect kids 0

@@ -81,6 +81,7 @@ for s in tests/scenarios/*.xy; do
     rm -rf "$B/scenarios/$n" && mkdir -p "$B/scenarios/$n"
     run "scenario-$n" $B/host/loom_host "$s" "$B/scenarios/$n"
 done
+run kids-saved-projects "$PY" tests/host/kids_safety_test.py "$B/scenarios/kids_safety"
 # the USB audio input's ten channels as usbtracks.xy recorded them: the tracks in their own, at their level, before their pan
 run usb-channels "$PY" tests/usbtracks_check.py "$B/scenarios/usbtracks"
 # every page, engine and type, through the layout audit (tools/layout_sweep.py)

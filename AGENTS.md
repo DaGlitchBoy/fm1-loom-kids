@@ -10,6 +10,8 @@ Upstream: https://github.com/charlesvestal/fm1-loom
 - Do not modify DSP, audio interrupts, synthesis, sequencer timing, or project/preset serialization in milestone one.
 - Preserve eight tracks, 64-step patterns, recording, effects, envelopes, LFO, mixer, scenes, song arrangement, presets, and Studio access. Hide complexity rather than deleting functionality.
 - Keep original LOOM-8 UI as a reachable fallback; isolate new UI in well-scoped code.
+- Kids mode must protect saved projects: edit an unsaved working copy, never silently autosave it into a saved slot, and retain that protection after unlocking until an adult explicitly saves.
+- Require an explicit adult unlock before leaving an active Kids session for Studio. Avoid secret gestures or a default PIN. Test wrong credentials, cancellation, held inputs, simulated reboot, and unchanged saved bytes. Document session boundaries honestly; do not claim OS-level parental control.
 - Avoid added full-screen framebuffers, bitmap animations, animation frameworks, idle redraw loops, large allocations, and any allocations inside redraw paths. Prefer existing graphics primitives and event-driven partial rendering.
 - Do not assume that hiding screens saves significant RAM. Measure memory, firmware size, host regressions and (if testable) render performance.
 - Work only on an isolated feature branch. Never push to upstream or merge without review.
