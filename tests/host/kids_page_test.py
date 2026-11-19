@@ -16,7 +16,8 @@ with TemporaryDirectory() as directory:
     module.main()
     page = module.PAGE.read_text()
     assert "<title>LOOM Kids in the browser</title>" in page
-    assert page.count('id="kids-entry"') == 1
+    assert page.count('id="go">LOOM Kids starten</button>') == 1
+    assert 'id="kids-entry"' not in page
     assert "{{" not in page
     assert "PRESETS</b> die Klanggruppe" in page
 print("Kids browser page: real template composition, direct entry, matching control help")

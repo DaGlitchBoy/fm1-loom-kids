@@ -10,6 +10,7 @@ import { startEmu, check, done } from "../../base/tests/emu_harness.mjs";
 const dir = process.argv[2] || "app/build/emu";
 const page = readFileSync(`${dir}/index.html`, "utf8");
 check(page.includes("<title>LOOM Kids in the browser</title>") && page.includes('<section class="help">'), "fm1-base's page with LOOM-8's name and help");
+check(page.includes('id="go">LOOM Kids starten</button>') && !page.includes("kids-entry"), "one click starts Kids directly");
 check(page.includes("{{") === false, "no placeholder left in the page");
 const read = (f) => existsSync(`${dir}/${f}`) ? readFileSync(`${dir}/${f}`, "utf8") : "";
 check(read("app_own.js").includes("LOOM-8") && read("app.js").includes("app_own.js"), "LOOM-8's app.js on the page");

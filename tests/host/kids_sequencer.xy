@@ -1,5 +1,6 @@
 # Three independent loop lengths. Track 1 is the default kit.
 wait 300
+kids-legacy-band
 expect kids_length 16
 spin SELECT 1
 spin K2 1

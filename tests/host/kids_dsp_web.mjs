@@ -139,13 +139,7 @@ async function shelf(path) {
   new Uint8Array(restarted.memory.buffer, restarted.web_kids_incoming(), song.length).set(song);
   restarted.web_kids_seed(0, 3, song.length, 0);
   restarted.web_kids_ready(1);
-  assert.equal(restarted.web_lit_buttons() & FX, 0);
-  for (const button of [32, EDIT]) {
-    restarted.web_buttons(button);
-    for (let i = 0; i < 16; ++i) restarted.web_render(FRAMES);
-    restarted.web_buttons(0);
-    for (let i = 0; i < 16; ++i) restarted.web_render(FRAMES);
-  }
+  for (let i = 0; i < 16; ++i) restarted.web_render(FRAMES);
   assert.equal(restarted.web_lit_buttons() & FX, FX);
   console.log("WebAssembly song shelf, failed and acknowledged writes, undo/redo and reload verified");
 }

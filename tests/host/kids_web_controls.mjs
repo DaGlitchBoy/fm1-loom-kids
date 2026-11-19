@@ -1,33 +1,36 @@
 // SPDX-License-Identifier: MPL-2.0
-// Test the real page module's entry binding without requiring a WASM toolchain.
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
-import assert from 'node:assert/strict';
-const page = readFileSync('app/web/emu/page.html', 'utf8');
-assert.match(page, /id="kids-entry" disabled/);
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+import assert from "node:assert/strict";
+
+const page = readFileSync("app/web/emu/page.html", "utf8");
+assert.match(page, /<!-- emu-page: start -->\s*LOOM Kids starten/);
 assert.match(page, /<h1>LOOM Kids<\/h1>/);
-const entry = { disabled: true }, calls = [];
-const selectHit = { getAttribute: () => null, setAttribute() {} };
+assert.doesNotMatch(page, /id="kids-entry"/);
+
+const body = { closest: () => null }, calls = [], keydown = [];
+const hit = { getAttribute: () => null, setAttribute() {} };
 const context = {
-  document: { getElementById: id => id === 'kids-entry' ? entry : null },
-  node: {}, localStorage: { getItem: () => null },
-  buttons: {}, knobs: { SELECT: { hit: selectHit } }, KEYMAP: {}, BTN: {},
-  controls: { addEventListener() {} }, addEventListener() {},
-  holdDown: (...args) => calls.push(args), letGo: id => calls.push(['release', id]),
+  document: { body }, node: {}, localStorage: { getItem: () => null },
+  buttons: { GLO: { bit: 5, hit }, EDIT: { bit: 4, hit }, SAVE: { bit: 7, hit } },
+  knobs: { SELECT: { hit } }, KEYMAP: { KeyQ: { key: 0 } }, BTN: { PLAY: 10, REC: 11, SEQ: 9 },
+  shortcuts: { checked: true },
+  controls: { addEventListener() {}, contains: () => true },
+  addEventListener: (name, fn) => { if (name === "keydown") keydown.push(fn); },
+  holdDown: (...args) => calls.push(args),
 };
 vm.createContext(context);
-vm.runInContext(readFileSync('app/web/emu/app.js', 'utf8').replaceAll(/^export /gm, ''), context);
-vm.runInContext('attach()', context);
-assert.equal(entry.disabled, false);
-assert.match(selectHit.title, /Kids: track/);
-entry.onclick();
-assert.deepEqual(calls, [['kids-entry', 'btn', 30], ['release', 'kids-entry']]);
-calls.length = 0;
-vm.runInContext('attach()', context); // reconnect must replace, not accumulate, click handlers
-entry.onclick();
-assert.equal(calls.length, 2);
-calls.length = 0;
-context.node = null;
-entry.onclick();
-assert.equal(calls.length, 0);
-console.log('Kids entry: enabled after startup, one press/release per click, harmless without emulator');
+vm.runInContext(readFileSync("app/web/emu/app.js", "utf8").replaceAll(/^export /gm, ""), context);
+vm.runInContext("attach(); attach()", context);
+for (const code of ["KeyQ", "KeyO", "KeyN", "KeyV", "Enter"])
+  for (const fn of keydown)
+    fn({ code, target: body, preventDefault() {}, stopPropagation() {} });
+const focused = knob => ({ closest: () => ({ classList: { contains: name => knob && name === "knob" } }) });
+for (const fn of keydown) {
+  fn({ code: "Space", key: " ", target: focused(true), preventDefault() {}, stopPropagation() {} });
+  fn({ code: "Enter", key: "Enter", target: focused(false), preventDefault() {}, stopPropagation() {} });
+}
+assert.deepEqual(calls, [
+  ["kKeyQ", "key", 0], ["kKeyO", "btn", 5], ["kKeyN", "btn", 4], ["kKeyV", "btn", 7], ["kEnter", "btn", 11], ["kSpace", "btn", 10],
+]);
+console.log("Single Kids entry and Mac keyboard shortcuts verified");

@@ -19,23 +19,26 @@ LOOM Kids: eight colorful instruments, steps and sounds. A music-making emulator
 .start button { background: #e6b432; color: #18120e; }
 .hit:focus-visible { outline-color: #e6b432; }
 .help p, .help ul { color: var(--muted); }
-#kids-entry { background: #28ccc0; color: #0c121e; border: 0; border-radius: 12px; padding: 12px 22px; font: inherit; font-weight: 700; cursor: pointer; }
-#kids-entry:focus-visible { outline: 3px solid #f4c83c; outline-offset: 3px; }
 </style>
+<!-- emu-page: start -->
+LOOM Kids starten
 <!-- emu-page: header -->
 <!-- emu-page: top -->
 <!-- (in the main part: the site's own header is the page's banner, tools/make_pages.py dress) -->
 <header>
   <h1>LOOM Kids</h1>
   <p>Acht Instrumente. Deine Sounds. Dein Beat.</p>
-  <button type="button" id="kids-entry" disabled>Kids-Modus öffnen</button>
-  <p>Start → Bühne → spielen.</p>
 </header>
 <!-- emu-page: end -->
 <section class="help">
   <div>
     <h2>Direkt losspielen</h2>
-    <p>Der Emulator startet direkt auf der spielbaren Bühne. Alle Klaviertasten spielen den ausgewählten Track.</p>
+    <p>Der Emulator öffnet den zuletzt verwendeten Songplatz. Die ersten vier Tracks sind Bass, Synth, Drums und E-Piano.
+      Alle Klaviertasten spielen den ausgewählten Track.</p>
+    <p>Am Mac spielen <kbd>Q</kbd> bis <kbd>I</kbd> und <kbd>A</kbd> bis <kbd>K</kbd> die weißen Tasten.
+      <kbd>1</kbd> bis <kbd>0</kbd> und <kbd>-</kbd> spielen die schwarzen Tasten. <kbd>Tab</kbd> wählt
+      die Regler und Tasten. Mit den Pfeiltasten drehst du den gewählten Regler. Leertaste oder Enter drückt die gewählte Taste.
+      <kbd>O</kbd> öffnet GLO, <kbd>N</kbd> drückt EDIT, <kbd>V</kbd> speichert und <kbd>Esc</kbd> drückt HOME.</p>
     <p><b>SELECT</b> wählt den Track, <b>PRESETS</b> die Klanggruppe und <b>ALGORITHM</b> den einzelnen Klang.
       <b>OCT−/+</b> wechselt die Oktave. <b>PLAY</b> startet und stoppt die Wiedergabe.</p>
     <p>Auf <b>HOME</b> regeln K1 die Lautstärke und K2 die Länge (16, 32 oder 64 Steps).

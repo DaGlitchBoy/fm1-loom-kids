@@ -2681,6 +2681,9 @@ static void rec_key_on(seq_t *s, int t, int note, int vel)
     seq_trk_t *tr = &s->t[t];
     uint32_t L = tr->step_q8 ? tr->step_q8 : seq_step_q8(s, t);
     int p = tr->pos, i, q = tp->quant > 100 ? 100 : tp->quant;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (s->kids_mode && t < NTRK) q = 0;  /* keep the live key's sub-step onset in nudge */
+#endif
     int32_t age = (int32_t)(tr->age > L ? L : tr->age) - (int32_t)s->ahead, ticks;
     int early = 0;
     step_t *st;

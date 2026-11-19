@@ -46,6 +46,8 @@ GLO is a settings page with no audio bypass. SEQ opens Steps; K4 is a two-positi
 
 ## Keyboard, chords and recording
 
+Live Kids recording keeps timing offsets at 24 ticks per sixteenth. A step still holds a single onset shared by its notes. See [Delivery 8](DELIVERY_8.md) for the browser build and verification.
+
 - HOME, the overlay panels, ENV, LFO and Performance all use the entire piano keyboard to play. In Steps the 16 white keys toggle cells 1–16; black keys are inert on melodic tracks and select the kit hit on drums. Inserting beyond the current selected length requires lengthening first.
 - Every melodic key yields a note in the selected scale. Proposed first release uses tonic C, the keyboard's ordinary pitches in Chromatic, nearest in-scale pitch otherwise, ties down. Key travel remains monotonic, repeated pitches are allowed. Include Chromatic, Major, Natural Minor, Major Pentatonic, Minor Pentatonic, Dorian and Egyptian pentatonic (0, 2, 5, 7, 10). Keep intervals in a table with boundary tests. OCT transposes 12 semitones. No muted black keys in live play.
 - Preserve this exact chord order: Single, In Scale, Major (0/4/7), Minor (0/3/7), Power (0/7), Minor 7 (0/3/7/10), Octaves (0/12), Major 7 (0/4/7/11). In Scale uses scale degrees 1/3/5 from the played scale degree, wrapping octaves; in Chromatic use a major triad as a defined fallback. Fixed chord qualities keep their intervals even when only the root is quantized. At range limits move voicing by octaves into range. Resolve actual pitches once per key-down; release exactly the pitches/track owned by that press. Overlapping chords and duplicate quantized pitches need reference counts or equivalent ownership.

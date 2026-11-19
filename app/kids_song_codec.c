@@ -18,9 +18,11 @@ typedef struct {
     ks_meta_t kids;
 } ks_song_t;
 
-#define KS_VERSION 2u
+#define KS_VERSION 3u
 #define KS_HEADER_V1 24u
-#define KS_HEADER (KS_HEADER_V1 + 4u + KPIX_BYTES)
+#define KS_LEGACY_PIXELS 72u
+#define KS_HEADER_V2 (KS_HEADER_V1 + 4u + KS_LEGACY_PIXELS)
+#define KS_HEADER (KS_HEADER_V1 + 4u + 1u + KPIX_BYTES)
 #define KS_RAW_MAX (sizeof(ks_song_t) + NTRK * (4u + sizeof pats.pat[0] + NLANE * sizeof(lane_t)))
 #define KS_BLOB_MAX (KS_HEADER + KS_RAW_MAX)
 #define KS_MAGIC 0x53444b4cu /* LKDS */
@@ -60,23 +62,45 @@ static uint32_t ks_header(const ks_blob_t *blob)
     if (!blob || blob->len < KS_HEADER_V1 || get32(blob->data) != KS_MAGIC) return 0;
     unsigned version = get32(blob->data + 4);
     if (version == 1) return KS_HEADER_V1;
-    if (version != KS_VERSION || blob->len < KS_HEADER ||
-        get32(blob->data + KS_HEADER_V1) != crc32_of(blob->data + KS_HEADER_V1 + 4, KPIX_BYTES)) return 0;
-    return KS_HEADER;
+    uint32_t header = version == 2 ? KS_HEADER_V2 : version == KS_VERSION ? KS_HEADER : 0;
+    if (!header || blob->len < header ||
+        get32(blob->data + KS_HEADER_V1) != crc32_of(blob->data + KS_HEADER_V1 + 4, header - KS_HEADER_V1 - 4))
+        return 0;
+    return header;
 }
 
-static const uint8_t *ks_name(const ks_blob_t *blob)
+static uint8_t ks_read_name(const ks_blob_t *blob, int slot, uint8_t *pixels)
 {
-    return ks_header(blob) == KS_HEADER ? blob->data + KS_HEADER_V1 + 4 : NULL;
+    uint32_t header = ks_header(blob);
+    uint8_t name = kpix_default_ids[slot];
+    const uint8_t *stored = blob && header ? blob->data + KS_HEADER_V1 + 4 : NULL;
+    if (header == KS_HEADER) {
+        if (stored[0] < KPIX_COUNT || stored[0] == KPIX_UNSET) {
+            memcpy(pixels, stored + 1, KPIX_BYTES);
+            return stored[0];
+        }
+    } else if (header == KS_HEADER_V2) {
+        memset(pixels, 0, KPIX_BYTES);
+        kpix_from_legacy(pixels, stored);
+        for (int i = 0; i < KPIX_COUNT; i++) {
+            if (memcmp(pixels, kpix_bank[i], KPIX_BYTES)) continue;
+            for (int j = 0; j < KPIX_BYTES; j++) if (pixels[j]) return (uint8_t)i;
+        }
+        for (int i = 0; i < KPIX_BYTES; i++) if (pixels[i]) return KPIX_UNSET;
+    }
+    kpix_default(name, pixels);
+    return name;
 }
 
-static void ks_set_name(ks_blob_t *blob, const uint8_t *pixels)
+static void ks_set_name(ks_blob_t *blob, uint8_t name, const uint8_t *pixels)
 {
-    put32(blob->data + KS_HEADER_V1, crc32_of(pixels, KPIX_BYTES));
-    memcpy(blob->data + KS_HEADER_V1 + 4, pixels, KPIX_BYTES);
+    uint8_t *stored = blob->data + KS_HEADER_V1 + 4;
+    stored[0] = name;
+    memcpy(stored + 1, pixels, KPIX_BYTES);
+    put32(blob->data + KS_HEADER_V1, crc32_of(stored, 1 + KPIX_BYTES));
 }
 
-static ks_blob_t *ks_rename(const ks_blob_t *old, const uint8_t *pixels)
+static ks_blob_t *ks_rename(const ks_blob_t *old, uint8_t name, const uint8_t *pixels)
 {
     uint32_t header = ks_header(old);
     if (!header || get32(old->data + 12) != old->len - header) return NULL;
@@ -84,7 +108,7 @@ static ks_blob_t *ks_rename(const ks_blob_t *old, const uint8_t *pixels)
     if (!blob) return NULL;
     memcpy(blob->data, old->data, KS_HEADER_V1);
     put32(blob->data + 4, KS_VERSION);
-    ks_set_name(blob, pixels);
+    ks_set_name(blob, name, pixels);
     memcpy(blob->data + KS_HEADER, old->data + header, old->len - header);
     return blob;
 }
@@ -140,7 +164,7 @@ static int ks_write_bytes(void *ctx, const uint8_t *p, uint32_t n)
     return 0;
 }
 
-static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, const uint8_t *pixels)
+static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, uint8_t name, const uint8_t *pixels)
 {
     uint8_t *compressed = malloc(len);
     if (!compressed) return NULL;
@@ -156,7 +180,7 @@ static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, const uint8_t *
         put32(blob->data + 12, stored);
         put32(blob->data + 16, crc32_of((const uint8_t *)song, (uint32_t)len));
         put32(blob->data + 20, (uint32_t)packed);
-        ks_set_name(blob, pixels);
+        ks_set_name(blob, name, pixels);
         memcpy(blob->data + KS_HEADER, packed ? compressed : (const uint8_t *)song, stored);
     }
     free(compressed);
@@ -202,17 +226,31 @@ static ks_blob_t *ks_pack(void)
         memcpy(dst, b->lanes, (size_t)b->nlanes * sizeof(lane_t));
         dst += (size_t)b->nlanes * sizeof(lane_t);
     }
-    ks_blob_t *blob = ks_encode(song, (uint32_t)len, kpix_song);
+    ks_blob_t *blob = ks_encode(song, (uint32_t)len, kpix_song_id, kpix_song);
     free(song);
     return blob;
 }
 
-static ks_blob_t *ks_new_song(void)
+static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
 {
     uint32_t len = sizeof(ks_song_t) + NTRK * 4u;
     ks_song_t *song = calloc(1, len);
     if (!song) return NULL;
     project_defaults_into(&song->settings, &song->patterns);
+    trk_t kit = song->settings.trk[0];
+    for (int t = 0; t < 4; t++) {
+        trk_t *track = &song->settings.trk[t];
+        static const uint8_t engine[] = {EG_KNIT, EG_KNIT, EG_DRUMLINE, EG_RAYON};
+        if (t == 2) {
+            *track = kit;
+            set_name(track, "Loom kit");
+        } else {
+            static const char *const names[] = {"reese", "knit", "", "mellow ep"};
+            sound_default(track->par, engine[t]);
+            apply_preset(track, preset_named(engine[t], names[t]));
+        }
+        track->par[TP_CHAN] = 1;
+    }
     song->settings.trk[AUX_FX1].par[TP_SEND2] = 0;
     song->kids.delay = 2;
     for (int t = 0; t < NTRK; t++) {
@@ -222,8 +260,7 @@ static ks_blob_t *ks_new_song(void)
         song->kids.arp_rate[t] = 3;
         memcpy(song->kids.shaping[t], kids_shape_defaults, KD_COUNT);
     }
-    const uint8_t empty[KPIX_BYTES] = {0};
-    ks_blob_t *blob = ks_encode(song, len, empty);
+    ks_blob_t *blob = ks_encode(song, len, name, pixels);
     free(song);
     return blob;
 }

@@ -76,7 +76,7 @@ release EDIT
 expect kids_loaded 3
 expect kids_name_slot 1
 tap EDIT
-expect kids_pixel.0.4.3 3
+expect kids_name_id 8
 spin K1 10
 expect kids_name_slot 11
 spin K2 2
@@ -105,14 +105,10 @@ expect kids_panel 4
 wait 180
 reboot
 wait 300
-expect kids_loaded 0
+expect kids_loaded 3
 expect kids_shelf_mask 7
-tap SAVE
-expect kids_loaded 0
-tap GLO
-spin K3 2
-tap EDIT
 expect par1.level 91
+tap GLO
 expect kids_loaded 3
 expect kids_pixel.0.2.3 4
 expect kids_pixel.1.0.0 4
@@ -129,7 +125,7 @@ spin K3 -2
 tap EDIT
 expect kids_loaded 1
 expect par1.level 85
-expect note 1 1 1 1
+expect note 1 1 1 60
 press HOME
 spin K1 -1
 expect kids_loaded 3

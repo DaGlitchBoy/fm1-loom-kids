@@ -51,6 +51,7 @@ static void kh_regions(const kh_edit_t *e, kh_region_t regions[32], int *count)
 #define KH_REGION(obj) do { regions[n++] = (kh_region_t){(uint8_t *)&(obj), sizeof(obj)}; } while (0)
     if (e->scope == KH_NAME) {
         KH_REGION(kpix_song);
+        KH_REGION(kpix_song_id);
     } else if (e->scope == KH_RECORD) {
         for (int p = 0; p < NPATT; p++) KH_REGION(pats.pat[t][p].st);
     } else {

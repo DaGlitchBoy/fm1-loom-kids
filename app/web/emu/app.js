@@ -41,7 +41,10 @@ function tips() {
 // the computer's keys: fm1-base's map (white keys Q-I, A-K; black keys 1-0, -; Esc HOME; Z / X octave) and LOOM-8's
 const KNOB_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End"]);
 function keyboard() {
-  const map = { ...KEYMAP, Space: { btn: BTN.PLAY }, Enter: { btn: BTN.REC }, Slash: { btn: BTN.SEQ } };
+  const map = {
+    ...KEYMAP, Space: { btn: BTN.PLAY }, Enter: { btn: BTN.REC }, Slash: { btn: BTN.SEQ },
+    KeyO: { btn: buttons.GLO.bit }, KeyN: { btn: buttons.EDIT.bit }, KeyV: { btn: buttons.SAVE.bit },
+  };
   let clicked = null;                    // the control the mouse or a finger last gave the focus to
   controls.addEventListener("pointerdown", (e) => { clicked = e.target.closest(".hit"); }, true);
   addEventListener("keydown", (e) => { if (e.key === "Tab") clicked = null; }, true);
@@ -50,8 +53,9 @@ function keyboard() {
     const t = e.target;
     if (t !== document.body && t !== document.documentElement && !controls.contains(t)) return;   // the page's fields
     const hit = t.closest ? t.closest(".hit") : null;
-    if (hit && hit.classList.contains("knob") && KNOB_KEYS.has(e.key)) return;   // a knob turns with its keys
-    if (hit && hit !== clicked && (e.key === " " || e.key === "Enter")) return;   // reached with Tab: presses it
+    const knob = hit && hit.classList.contains("knob");
+    if (knob && KNOB_KEYS.has(e.key)) return;   // a knob turns with its keys
+    if (hit && !knob && hit !== clicked && (e.key === " " || e.key === "Enter")) return;
     if (e.code === "ArrowUp" || e.code === "ArrowDown") {
       turn(knobs.SELECT, e.code === "ArrowUp" ? 1 : -1);
       e.preventDefault(); e.stopPropagation();
@@ -64,20 +68,16 @@ function keyboard() {
   }, true);
 }
 
+let keyboardAttached = false;
+
 export function attach(context) {
   shelfNode = context?.node;
-  const entry = document.getElementById("kids-entry");
-  if (entry) {
-    entry.disabled = false;
-    entry.onclick = () => {
-      if (!node) return;
-      holdDown("kids-entry", "btn", 30);
-      letGo("kids-entry");
-    };
-  }
   moveStore();
   tips();
-  keyboard();
+  if (!keyboardAttached) {
+    keyboard();
+    keyboardAttached = true;
+  }
 }
 
 // A transaction compares the slot generation and commits one record. Keeping
@@ -131,7 +131,7 @@ export async function message(msg) {
       const records = await readShelf();
       const slots = {};
       for (const record of records) {
-        if (Number.isInteger(record.slot) && record.slot >= 0 && record.slot < 4) slots[record.slot] = record;
+        if (Number.isInteger(record.slot) && record.slot >= 0 && record.slot < 5) slots[record.slot] = record;
       }
       const transfer = Object.values(slots).map((record) => record.bytes).filter((bytes) => bytes instanceof ArrayBuffer);
       shelfNode.port.postMessage({ type: "app", shelf: "seed", ok: true, slots }, transfer);
@@ -141,7 +141,7 @@ export async function message(msg) {
   } else if (msg.shelf === "write") {
     let status = -1;
     try {
-      if (Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < 4) status = await writeShelf(msg);
+      if (Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < 5) status = await writeShelf(msg);
     } catch { /* send a failed acknowledgement so the working song and history stay put */ }
     shelfNode.port.postMessage({ type: "app", shelf: "complete", id: msg.id, status });
   }

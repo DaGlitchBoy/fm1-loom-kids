@@ -1,5 +1,6 @@
 # LOOM_KIDS=1
 wait 300
+kids-legacy-band
 spin SELECT 1
 expect trk 2
 spin K1 -100

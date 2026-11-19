@@ -43,7 +43,7 @@ static uint32_t kids_overflow_seen, kids_full_until;
 static void kids_category_sync(void);
 static void kids_reset_banks(void);
 static void kids_init_panels(void);
-static void ks_init(void);
+static void ks_init(int startup);
 static void kids_detach(void)
 {
     /* Keep the current musical model, but remove its saved-slot association.
@@ -52,28 +52,26 @@ static void kids_detach(void)
     if (proj_slot < NPROJ) ui.pick_save = proj_slot;
     proj_slot = NPROJ;
 }
-static void kids_set(int mode)
+static void kids_enter(int startup)
 {
-    if (mode && (ui.ask || lst.open || ui.held || ui.keys || recording() || ui.rec_armed)) {
+    if (ui.ask || lst.open || ui.held || ui.keys || recording() || ui.rec_armed) {
         say_no("FINISH EDITING", "stop recording first");
         return;
     }
     engine_keys_off(inst_trk());
-    if (mode) ui.nrem = 1;
-    kids_mode = (uint8_t)mode;
+    ui.nrem = 1;
+    kids_mode = KIDS_HOME;
     ui.page = P_STEPS;
     ui.card = ui.chordmode = ui.lockpg = ui.trickpg = 0;
     ui.held = 0;
     ui.btn_used |= ui.btn;
     if (sel_trk() >= NTRK) track_select(0);
-    if (mode) {
-        kids_detach();
-        seq.kids_mode = 1;
-        seq.rec_replace = 0;
-        kids_category_sync();
-        kids_init_panels();
-        ks_init();
-    }
+    kids_detach();
+    seq.kids_mode = 1;
+    seq.rec_replace = 0;
+    kids_category_sync();
+    kids_init_panels();
+    ks_init(startup);
     ui_redraw();
 }
 enum { KC_KEYS, KC_BASS, KC_DRUMS, KC_PADS, KC_LEADS, KC_PLUCKS, KC_TEXTURES, KC_USER, KC_COUNT };
@@ -1087,8 +1085,8 @@ static void kids_draw_pixels(const uint8_t *pixels, int x, int y, int scale)
     for (int row = 0; row < KPIX_SIDE; row++)
         for (int col = 0; col < KPIX_SIDE; col++) {
             int c = kpix_get(pixels, col, row);
-            uint16_t ink = c ? kids_pixel_color(c) : ((row + col) & 1) && scale > 1 ? KIDS_PANEL : KIDS_BG;
-            if (c || scale > 1) cv_rect(x + col * scale, y + row * scale, scale, scale, ink);
+            uint16_t ink = c ? kids_pixel_color(c) : ((row + col) & 1) && scale > 2 ? KIDS_PANEL : KIDS_BG;
+            if (c || scale > 2) cv_rect(x + col * scale, y + row * scale, scale, scale, ink);
         }
 }
 
@@ -1115,9 +1113,9 @@ static void kids_panel_title(void)
     }
     kids_text(30, 5, names[kids_panel]);
     if (kids_panel == KP_GLOBAL) {
-        const uint8_t *name = ks_name(ks_slots[ks_selected].blob);
-        if (ks_selected == ks_loaded) name = kpix_song;
-        kids_draw_pixels(name, 69, 5, 1);
+        uint8_t preview[KPIX_BYTES];
+        ks_preview_name(ks_selected, preview);
+        kids_draw_pixels(ks_selected == ks_loaded ? kpix_song : preview, 68, 3, 2);
         kids_text(88, 5, ks_selected == ks_loaded ? "Loaded" : "Preview");
         kids_text(133, 5, "EDIT Open / Name");
         return;
@@ -1301,6 +1299,7 @@ static int kids_shelf_dialog(void)
     visible = (uint8_t)view;
     uint16_t ink = THEMES[THEME_BW].ink[sel_trk()];
     int notice = ks_note_active();
+    int owner = kpix_open ? ks_name_owner(kpix_slot) : -1;
     int y = 0;
     static const int editor_h[] = {32, 124, 44, 40};
     for (int band = 0; band < 4; band++) {
@@ -1309,6 +1308,8 @@ static int kids_shelf_dialog(void)
         h = hash_u(h, ks_target);
         if (kpix_open) {
             h = hash_u(h, kpix_generation);
+            h = hash_u(h, (unsigned)(owner + 1));
+            for (int i = 0; i < KPIX_BYTES; i++) h = hash_u(h, kpix_song[i]);
             h = hash_u(h, (unsigned)(kpix_slot | kpix_x << 4 | kpix_y << 8 | kpix_color << 12));
         }
         if (notice) { h = hash_s(h, ks_message); h = hash_u(h, ks_saved_slot); }
@@ -1318,15 +1319,22 @@ static int kids_shelf_dialog(void)
         cv_begin(240, height, KIDS_BG);
         if (kpix_open) {
             if (!band) {
-                kids_label(9, 7, &LFONT_B, "Pixel song names", ink, 172);
+                kids_label(9, 7, &LFONT_B, "Pixel song names", ink, 120);
+                kids_draw_pixels(kpix_song, 114, 7, 2);
                 kids_number(204, 9, kpix_slot + 1);
+                if (owner >= 0) {
+                    char used[16];
+                    num_s((unsigned)owner + 1u, s_cat(used, "Used by "));
+                    kids_text(132, 9, used);
+                }
             } else if (band == 1) {
-                kids_draw_pixels(kpix_bank[kpix_slot], 60, 2, 10);
-                int x = 60 + 10 * kpix_x, cy = 2 + 10 * kpix_y;
-                cv_rect(x, cy, 10, 1, KIDS_WHITE);
-                cv_rect(x, cy + 9, 10, 1, KIDS_WHITE);
-                cv_rect(x, cy, 1, 10, KIDS_WHITE);
-                cv_rect(x + 9, cy, 1, 10, KIDS_WHITE);
+                enum { PIXEL_CELL = 15, PIXEL_LEFT = 60, PIXEL_TOP = 2 };
+                kids_draw_pixels(kpix_bank[kpix_slot], PIXEL_LEFT, PIXEL_TOP, PIXEL_CELL);
+                int x = PIXEL_LEFT + PIXEL_CELL * kpix_x, cy = PIXEL_TOP + PIXEL_CELL * kpix_y;
+                cv_rect(x, cy, PIXEL_CELL, 1, KIDS_WHITE);
+                cv_rect(x, cy + PIXEL_CELL - 1, PIXEL_CELL, 1, KIDS_WHITE);
+                cv_rect(x, cy, 1, PIXEL_CELL, KIDS_WHITE);
+                cv_rect(x + PIXEL_CELL - 1, cy, 1, PIXEL_CELL, KIDS_WHITE);
             } else if (band == 2) {
                 kids_text(8, 1, "K1 Slot"); kids_text(66, 1, "K2 X"); kids_text(124, 1, "K3 Y"); kids_text(181, 1, "K4 Color");
                 for (int i = 0; i < KPIX_COLORS; i++) {
@@ -1341,15 +1349,22 @@ static int kids_shelf_dialog(void)
             }
         } else if (!band) {
             char title[24];
-            const char *action = ks_modal == KS_DELETE ? "Delete song " : "Open song ";
-            num_s((uint32_t)ks_target + 1u, s_cat(title, action));
-            kids_label(12, 20, &LFONT_B, title, ink, 170);
-            kids_draw_pixels(ks_name(ks_slots[ks_target].blob), 199, 18, 1);
+            if (ks_modal != KS_DELETE) num_s(ks_target + 1u, s_cat(title, "Open song "));
+            kids_label(12, 20, &LFONT_B, ks_modal == KS_DELETE ? "Empty slot?" : title, ink, 170);
+            uint8_t name[KPIX_BYTES];
+            ks_preview_name(ks_target, name);
+            kids_draw_pixels(name, 199, 18, 2);
             cv_rect(12, 58, 216, 1, KIDS_PANEL);
         } else if (band == 1) {
-            kids_text(12, 10, ks_modal == KS_DELETE ? "Remove the saved song?" : "Working song has unsaved edits");
+            char message[36];
+            if (ks_modal == KS_DELETE) {
+                char *end = s_cat(message, "Slot ");
+                end = num_s(ks_target + 1u, end);
+                s_cat(end, ks_slots[ks_target].blob ? " will be cleared" : " is already empty");
+            }
+            kids_text(12, 10, ks_modal == KS_DELETE ? message : "Working song has unsaved edits");
         } else if (band == 2) {
-            kids_text(12, 5, ks_modal == KS_DELETE ? "EDIT  Delete" : "EDIT  Discard edits and open");
+            kids_text(12, 5, ks_modal == KS_DELETE ? "EDIT  Confirm delete" : "EDIT  Discard edits and open");
             if (ks_modal == KS_OPEN_DIRTY && ks_loaded < KS_SLOTS && ks_loaded != ks_target)
                 kids_text(12, 29, "SAVE  Save current song and open");
         } else {
@@ -1442,7 +1457,7 @@ static void kids_draw(void)
         }
         if (shelf && b >= 4) {
             h = hash_u(h, (uint32_t)(ks_selected | ks_loaded << 2 | ks_ready << 5 | ks_bad << 6));
-            h = hash_u(h, ks_slots[ks_selected].revision);
+            for (int i = 0; i < KS_SLOTS; i++) h = hash_u(h, ks_slots[i].revision);
             if (ks_selected == ks_loaded)
                 for (int i = 0; i < KPIX_BYTES; i++) h = hash_u(h, kpix_song[i]);
         }
@@ -1462,10 +1477,8 @@ static void kids_draw(void)
         cv_begin(240, heights[b], KIDS_BG);
         if (b == 0) {
             kids_label(6, 5, &LFONT_B, performance ? "PERFORMANCE" : kids_mode == KIDS_HOME ? "LOOM KIDS" : kids_mode == KIDS_STEPS ? "STEPS" : kids_mode == KIDS_ENV ? "ENVELOPE" : "LFO", KIDS_WHITE, 104);
-            if (ks_loaded < KS_SLOTS) {
-                if (kids_has_pixels(kpix_song)) kids_draw_pixels(kpix_song, 116, 7, 1);
-                else kids_number(118, 7, ks_loaded + 1);
-            }
+            if (kids_has_pixels(kpix_song)) kids_draw_pixels(kpix_song, 116, 5, 2);
+            else kids_number(118, 7, ks_loaded + 1);
             if (cued_pat(trk) != cur_pat(trk)) { kids_text(140, 7, ">"); kids_number(149, 7, cued_pat(trk) + 1); }
             if (playing()) {
                 for (int i = 0; i < 8; i++) cv_rect(170 + i, 7 + i / 2, 1, 12 - i, ink);

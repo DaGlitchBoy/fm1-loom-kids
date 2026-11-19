@@ -1,0 +1,96 @@
+# Zero-configuration start, live timing, exclusive names, and last song on reboot.
+wait 300
+expect kids 1
+expect kids_loaded 1
+expect kids_slot 1
+expect kids_shelf_mask 0
+expect kids_name_id 4
+expect kids_category 1
+expect par1.vmode 1
+expect note 1 1 1 0
+expect note 3 1 1 0
+expect note 3 1 16 0
+spin SELECT 1
+expect kids_category 0
+spin SELECT 1
+expect kids_category 2
+expect par3.d1.model 0
+expect par3.d3.model 2
+expect par3.d5.model 3
+spin SELECT 1
+expect kids_category 0
+spin SELECT -3
+master 2800
+tap REC
+tap PLAY
+wait 105
+key w0 down
+wait 30
+key w0 up
+wait 95
+key w1 down
+wait 26
+key w1 up
+tap REC
+tap PLAY
+expect note 1 1 2 53
+expect note 1 1 4 55
+expect stepnudge 1 1 2 11
+expect stepnudge 1 1 4 -11
+tap SEQ
+tapkey w5
+expect stepnudge 1 1 6 0
+tap HOME
+tap SAVE
+tap GLO
+spin K3 1
+tap EDIT
+expect kids_loaded 2
+expect kids_name_id 1
+expect note 1 1 1 0
+tap SAVE
+press EDIT
+wait 420
+release EDIT
+spin K1 3
+tap EDIT
+expect kids_name_id 1
+spin K1 7
+spin K4 1
+tap EDIT
+expect kids_name_id 11
+expect kids_pixel.0.0.0 4
+spin K4 1
+expect kids_pixel.11.0.0 5
+expect kids_pixel.0.0.0 4
+tap HOME
+reboot
+wait 300
+expect kids_loaded 2
+expect kids_slot 2
+expect kids_name_id 11
+expect kids_pixel.11.0.0 5
+expect kids_pixel.0.0.0 4
+tap GLO
+spin K3 1
+tap EDIT
+expect kids_loaded 3
+expect kids_name_id 8
+spin K4 -1
+expect kids_dialog 2
+tap EDIT
+expect kids_dialog 0
+expect kids_shelf_mask 3
+reboot
+wait 300
+expect kids_loaded 3
+expect kids_name_id 8
+expect note 3 1 1 0
+tap GLO
+spin K3 -2
+tap EDIT
+expect kids_loaded 1
+expect note 1 1 2 53
+expect note 1 1 4 55
+expect stepnudge 1 1 2 11
+expect stepnudge 1 1 4 -11

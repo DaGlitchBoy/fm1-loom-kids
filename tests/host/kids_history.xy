@@ -1,5 +1,6 @@
 # Five mixed actions across tracks and a sixth root edit.
 wait 300
+kids-legacy-band
 expect kids_undo 0
 expect par1.level 100
 turn K1 -3 80
@@ -96,6 +97,7 @@ expect kids 1
 # Reversible typed swaps restore both banks and the exact kit velocity lane.
 reboot
 wait 300
+kids-legacy-band
 tap SEQ
 tapkey w0
 spin K1 -29
@@ -132,6 +134,7 @@ expect kids_history_bytes <22000
 # A take including overlapped notes is one action. It does not touch the transport.
 reboot
 wait 300
+kids-legacy-band
 spin SELECT 1
 spin K3 2
 expect kids_undo 1
@@ -172,6 +175,7 @@ tap PLAY
 expect playing 0
 reboot
 wait 300
+kids-legacy-band
 expect kids_undo 0
 expect kids_redo 0
 
@@ -200,6 +204,7 @@ release HOME
 # Eleven separately spaced edits leave ten, with only the first evicted.
 reboot
 wait 300
+kids-legacy-band
 spin K1 -1
 wait 370
 spin K1 -1

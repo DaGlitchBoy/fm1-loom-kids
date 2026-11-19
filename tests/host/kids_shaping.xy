@@ -1,5 +1,6 @@
 # One melodic track first: gate contour, bypass and independent panel state.
 wait 300
+kids-legacy-band
 master 2800
 spin SELECT 1
 param 2 a 0

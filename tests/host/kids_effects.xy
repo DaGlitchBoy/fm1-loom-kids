@@ -1,5 +1,6 @@
 # Panels retain the stage and control the selected track's individual switches.
 wait 300
+kids-legacy-band
 expect kids 1
 expect kids_send.1.1 0
 expect kids_send.1.2 0
@@ -114,6 +115,7 @@ expect kids_metro 0
 # Same drum hit in four independently initialized sessions.
 reboot
 wait 300
+kids-legacy-band
 master 2800
 wav dry.wav
 tapkey b4
@@ -121,6 +123,7 @@ wait 1500
 wavstop
 reboot
 wait 300
+kids-legacy-band
 master 2800
 tap FX
 wav reverb.wav
@@ -130,6 +133,7 @@ wait 1500
 wavstop
 reboot
 wait 300
+kids-legacy-band
 master 2800
 tap SEL
 wav delay.wav
@@ -139,6 +143,7 @@ wait 1500
 wavstop
 reboot
 wait 300
+kids-legacy-band
 master 2800
 tap FX
 tap SEL

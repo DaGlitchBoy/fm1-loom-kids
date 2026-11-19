@@ -16,7 +16,7 @@
  *   SELECT the button's pages     ALGORITHM the track      PRESETS the page's item     K1-K4 the page's four */
 
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
-static void kids_set(int mode);
+static void kids_enter(int startup);
 #endif
 static void speak(void);
 static void step_rec_start(void);
@@ -1867,7 +1867,7 @@ static void button_up(int b)
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
     if (b == B_HOME && ui.page == P_STATUS && !ui.ask && !lst.open) {
-        kids_set(1);
+        kids_enter(0);
         return;
     }
 #endif
@@ -3835,8 +3835,8 @@ static void save_key(int k)
 static void input(void)
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
-    /* Bit 30 is a browser-only, explicitly labelled Kids entry control. */
-    if (!kids_mode && (plat_buttons() & (1u << 30)) && !(ui.btn & (1u << 30))) kids_set(1);
+    /* Bit 30 lets emulator scenarios enter Kids from Studio. */
+    if (!kids_mode && (plat_buttons() & (1u << 30)) && !(ui.btn & (1u << 30))) kids_enter(0);
     if (kids_input()) return;
 #endif
     uint32_t btn = plat_buttons(), keys = plat_keys(), ch, i;
@@ -4748,9 +4748,9 @@ void ui_init(void)
 #endif
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
 #ifdef PLAT_WEB
-    kids_set(1);
+    kids_enter(1);
 #else
-    if (getenv("LOOM_KIDS")) kids_set(1);
+    if (getenv("LOOM_KIDS")) kids_enter(1);
 #endif
 #endif
     lcd_fill(0, 0, 240, 240, K_BG);

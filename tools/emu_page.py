@@ -8,6 +8,7 @@ after a line "<!-- emu-page: NAME -->":
   description  the page's meta description
   head         put in at the end of <head> (the app's colours and styles)
   header       the page's header, in place of fm1-base's (the heading alone; empty: none there)
+  start        label for the emulator switch (also shown after a failed start)
   top          put in at the start of <main> (a header inside the main part, under a site's own header)
   bar          put in at the end of the bar under the panel (status, mute, reset)
   reader       put in after the Screen Reader box
@@ -19,6 +20,8 @@ a change to fm1-base's page shows here as an error, not as a page without its he
 
     tools/emu_page.py            (./build.sh --web runs it)
 """
+from html import escape
+import json
 import re
 import sys
 from pathlib import Path
@@ -68,6 +71,10 @@ def main():
         if not m:
             raise SystemExit("emu_page: fm1-base's page has no header with its heading alone")
         page = page[:m.start()] + parts["header"] + page[m.end():]
+    if "start" in parts:
+        label = parts["start"].strip()
+        page = once(page, 'id="go">Switch on</button>', f'id="go">{escape(label)}</button>', "the start button")
+        page = once(page, 'go.textContent = "Switch on";', f'go.textContent = {json.dumps(label)};', "the retry label")
     if "top" in parts:
         page = once(page, "<main>\n", "<main>\n" + parts["top"] + "\n", "<main>")
     if "bar" in parts:

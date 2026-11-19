@@ -468,6 +468,8 @@ int app_expect(const char *what, int *got)
         *got = (int)kids_button_lights();
     else if (!strcmp(what, "kids_slot"))
         *got = ks_selected + 1;
+    else if (!strcmp(what, "kids_name_id"))
+        *got = kpix_song_id + 1;
     else if (!strcmp(what, "kids_loaded"))
         *got = ks_loaded < KS_SLOTS ? ks_loaded + 1 : 0;
     else if (!strcmp(what, "kids_names"))
@@ -753,7 +755,7 @@ static int expect_more(const char *what, const char *a, const char *b, const cha
             host_fails++;
         } else
             printf("  ok note %s %s %s == %d\n", t, pt, st, got);
-    } else if (!strcmp(what, "noteat") || !strcmp(what, "stepvel")) {   /* expect noteat T PAT S I VALUE: the step's
+    } else if (!strcmp(what, "noteat") || !strcmp(what, "stepvel") || !strcmp(what, "stepnudge")) {   /* expect noteat T PAT S I VALUE: the step's
                                                      * I-th note (1-4); expect stepvel T PAT S VALUE: its velocity */
         char t[16], pt[16], st[16], i[16], v[16];
         tpat_t *tp;
@@ -767,7 +769,7 @@ static int expect_more(const char *what, const char *a, const char *b, const cha
         tp = pat_of(atoi(t), atoi(pt));
         s = atoi(st) - 1;
         k = at ? atoi(i) - 1 : 0;
-        got = !tp || s < 0 || s >= NSTEP || k < 0 || k >= SN ? -1 : at ? tp->st[s].note[k] : tp->st[s].vel;
+        got = !tp || s < 0 || s >= NSTEP || k < 0 || k >= SN ? -1 : at ? tp->st[s].note[k] : !strcmp(what, "stepnudge") ? tp->st[s].nudge : tp->st[s].vel;
         if (got != atoi(v)) {
             printf("FAIL expect %s %s %s %s%s%s == %s, got %d\n", what, t, pt, st, at ? " " : "", at ? i : "", v, got);
             host_fails++;
@@ -1532,6 +1534,14 @@ static int song_cmd(const char *cmd)
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
 #if !defined(PLAT_WEB)
+    if (!strcmp(cmd, "kids-legacy-band")) {
+        /* Existing behavior scenarios explicitly use the factory band from before
+         * the Kids starter bank, including their specific kit and preset order. */
+        project_defaults();
+        project_apply();
+        kids_category_sync();
+        return 1;
+    }
     if (!strcmp(cmd, "kids-shelf-fail")) { ks_fail_next = 1; return 1; }
     if (!strcmp(cmd, "kids-shelf-conflict")) {
         int slot = clampi(atoi(a), 1, KS_SLOTS) - 1;

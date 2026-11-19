@@ -86,6 +86,10 @@ rm -rf "$B/scenarios/kids_shelf"
 mkdir -p "$B/scenarios/kids_shelf"
 run kids-shelf env LOOM_KIDS=1 LOOM_KIDS_SHELF="$B/scenarios/kids_shelf" \
     $B/host/loom_host tests/host/kids_shelf.xy "$B/scenarios/kids_shelf"
+rm -rf "$B/scenarios/kids_release"
+mkdir -p "$B/scenarios/kids_release"
+run kids-release env LOOM_KIDS=1 LOOM_KIDS_SHELF="$B/scenarios/kids_release" \
+    $B/host/loom_host tests/host/kids_release.xy "$B/scenarios/kids_release"
 run kids-shelf-bytes "$PY" tests/host/kids_shelf_test.py "$B/host/loom_host"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)
 # a bank image larger than the bank's windows is refused by the simulator's loader (as the tool and the FM-1 refuse it)

@@ -1,5 +1,6 @@
 # LOOM_KIDS=1: boot directly into playable HOME.
 wait 300
+kids-legacy-band
 expect kids 1
 expect kids_buttons 64
 expect project_slot 0
@@ -75,6 +76,7 @@ wait 400
 wavstop
 reboot
 wait 300
+kids-legacy-band
 expect kids 1
 expect project_slot 0
 # The audio engine supports three simultaneous kits. A fourth request must
