@@ -22,9 +22,9 @@ const TIP = { FX: "Kids: toggle reverb for this track. Studio: sends and effects
   SEL: "Kids: toggle delay for this track. Studio: page menu",
   ENV: "Kids: envelope graph and switch. Studio: envelope and filter",
   LFO: "Kids: modulation graph, signed depth and synced rate. Studio: LFO",
-  EDIT: "Kids: toggle four quick effects. Studio: sound editor",
-  GLO: "Kids: tempo, metronome and song slots. Studio: mix, master and setup", HOME: "Kids: Stage; hold and turn K1 to undo or redo. Studio: Arrange; held, shift", SAVE: "Kids: save song. Studio: save",
-  ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Kids: Steps; K4 left for Performance. Studio: Steps; held, play notes", PLAY: "Start / stop",
+  EDIT: "Toggle the selected step in Steps, open songs in GLO, or open Quick FX",
+  GLO: "Tempo, metronome, swing and song slots. Hold for five seconds to clear a slot.", HOME: "Kids: Stage; hold and turn K1 to undo or redo. Studio: Arrange; held, shift", SAVE: "Kids: save song. Studio: save",
+  ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Open the last sequencer view or alternate between Performance and Steps", PLAY: "Start / stop",
   REC: "Kids: overdub. Studio: recording", "OCT-": "Kids: octave down. Studio: octave / bar down",
   "OCT+": "Kids: octave up. Studio: octave / bar up", SELECT: "Kids: track. Studio: page",
   ALGORITHM: "Kids: sound preset. Studio: track", PRESETS: "Kids: sound group. Studio: page-specific selection", MASTER: "Volume" };

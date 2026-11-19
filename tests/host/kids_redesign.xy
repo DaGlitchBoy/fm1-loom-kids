@@ -5,6 +5,10 @@ expect kids 1
 expect kids_buttons 64
 expect project_slot 0
 spin SELECT -1
+expect trk 1
+spin SELECT 20
+expect trk 8
+spin SELECT 1
 expect trk 8
 master 2800
 wav playable-home.wav
@@ -12,25 +16,25 @@ peakreset
 key w0 down
 wait 360
 expect peak_db_min -40
-spin SELECT 1
+spin SELECT -20
 expect trk 1
 expect kids_sound 1
 spin ALGO -1
+expect kids_sound 1
+spin ALGO 30
 expect kids_sound 11
 spin ALGO 1
-expect kids_sound 1
+expect kids_sound 11
 key w0 up
 wait 1500
 expect voices 0
-# Category wrap (no custom user presets). T2 starts in Bass.
+# Category endpoints (no custom user presets). T2 starts in Bass.
 spin SELECT 1
 expect trk 2
 expect kids_category 1
 spin PRESET -1
 expect kids_category 0
 spin PRESET -1
-expect kids_category 6
-spin PRESET 1
 expect kids_category 0
 spin PRESET 1
 expect kids_category 1
@@ -43,6 +47,7 @@ spin PRESET 1
 expect kids_category 2
 expect note 2 1 1 0
 key w2 up
+tap SEQ
 tap SEQ
 tapkey w0
 expect note 2 1 1 1

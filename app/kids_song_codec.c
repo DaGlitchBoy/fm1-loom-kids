@@ -256,7 +256,7 @@ static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
         } else {
             int preset = preset_named(engines[t], names[t]);
             apply_preset(track, preset);
-            if (preset >= 0 && kids_role(PRESETS[preset].role) == KC_PLUCKS)
+            if (preset >= 0 && kids_wet_category(kids_role(PRESETS[preset].role)))
                 song->kids.fx_on[t][0] = song->kids.fx_on[t][1] = 1;
         }
         track->par[TP_CHAN] = 1;
@@ -427,6 +427,8 @@ static void ks_apply(ks_decoded_t *d, int dirty)
     kids_sound_error = NULL;
     kids_cell.track = -1;
     memset(kids_perf_page, 0, sizeof kids_perf_page);
+    memset(kids_cursor, 0, sizeof kids_cursor);
+    kids_perf_manual = 0;
     kids_category_sync();
     kids_remember_chord(sel_trk());
     ui.dirty = (uint8_t)dirty;

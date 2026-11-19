@@ -2,24 +2,25 @@ wait 300
 expect kids_loaded 1
 expect kids_shelf_mask 0
 tap SEQ
+tap SEQ
 tapkey w0
 tap HOME
 spin K1 -15
 tap SAVE
 expect kids_shelf_mask 1
 tap GLO
-spin K3 30
+spin K4 30
 expect kids_slot 3
-spin K3 1
+spin K4 1
 expect kids_slot 3
 expect kids_loaded 1
 tap SAVE
 expect kids_shelf_mask 1
-spin K3 -30
+spin K4 -30
 expect kids_slot 1
-spin K3 -1
+spin K4 -1
 expect kids_slot 1
-spin K3 1
+spin K4 1
 tap EDIT
 expect kids_loaded 2
 expect note 1 1 1 0
@@ -27,7 +28,7 @@ expect par1.level 100
 spin K1 -15
 tap SAVE
 expect kids_shelf_mask 3
-spin K3 1
+spin K4 1
 tap EDIT
 expect kids_loaded 3
 tap SAVE
@@ -36,25 +37,33 @@ expect kids_shelf_mask 7
 tap HOME
 spin K1 -9
 tap GLO
-spin K3 -2
+spin K4 -2
 tap SAVE
 expect kids_slot 1
 expect kids_loaded 3
 expect kids_shelf_mask 7
 expect par1.level 91
-# Delete always targets the preview. Both directions open the confirmation.
-spin K4 -5
+# Hold GLO for five seconds to delete the preview.
+press GLO
+wait 4900
+expect kids_dialog 0
+wait 150
+release GLO
 expect kids_dialog 2
 expect kids_loaded 3
 wait 5010
 expect kids_dialog 0
 expect kids_shelf_mask 7
-spin K4 1
+press GLO
+wait 5050
+release GLO
 expect kids_dialog 2
 tap HOME
 expect kids_dialog 0
 expect kids_shelf_mask 7
-spin K4 -1
+press GLO
+wait 5050
+release GLO
 wait 30
 shot kids-delete-preview.png
 tap EDIT
@@ -121,7 +130,7 @@ release EDIT
 tap SEL
 expect kids_pixel.1.0.0 0
 tap HOME
-spin K3 -2
+spin K4 -2
 tap EDIT
 expect kids_loaded 1
 expect par1.level 85

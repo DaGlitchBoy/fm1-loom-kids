@@ -14,10 +14,10 @@ typedef struct {
 } ks_slot_t;
 
 static ks_slot_t ks_slots[KS_RECORDS];
-static uint8_t ks_selected, ks_loaded, ks_modal, ks_target, ks_edit_held, ks_delete_latched;
+static uint8_t ks_selected, ks_loaded, ks_modal, ks_target, ks_edit_held, ks_glo_held;
 static uint8_t ks_ready, ks_bad, ks_saved_slot, ks_startup_dirty, ks_unopened;
 static int ks_replay_left;
-static uint32_t ks_edit_since, ks_delete_until, ks_message_until;
+static uint32_t ks_edit_since, ks_glo_since, ks_delete_until, ks_message_until;
 static const char *ks_message;
 static struct {
     ks_blob_t *blob;
@@ -124,7 +124,7 @@ static void ks_init(int startup)
 {
     ks_drop(ks_write.blob);
     memset(&ks_write, 0, sizeof ks_write);
-    ks_selected = ks_target = ks_modal = ks_bad = ks_edit_held = ks_delete_latched = ks_deferred = 0;
+    ks_selected = ks_target = ks_modal = ks_bad = ks_edit_held = ks_glo_held = ks_deferred = 0;
     ks_loaded = ks_startup_dirty = ks_unopened = 0;
     ks_message = NULL;
     ks_startup_retry = 0;
@@ -425,7 +425,7 @@ static void ks_open_preview(void)
 
 static int ks_input(uint32_t down, const int32_t ev[NE])
 {
-    const uint32_t home = 1u << B_HOME, save = 1u << B_SAVE, edit = 1u << B_EDIT;
+    const uint32_t home = 1u << B_HOME, save = 1u << B_SAVE, edit = 1u << B_EDIT, glo = 1u << B_GLO;
     int on_shelf = kids_mode == KIDS_HOME && kids_panel == KP_GLOBAL;
     if (ks_deferred && !ks_write.active) {
         int action = ks_deferred;
@@ -444,9 +444,7 @@ static int ks_input(uint32_t down, const int32_t ev[NE])
             ks_replay_left = clampi(ks_replay_left + clampi(ev[EN_K1], -KH_LIMIT, KH_LIMIT), -KH_LIMIT, KH_LIMIT);
         return 1;
     }
-    if (!ev[EN_K4]) ks_delete_latched = 0;
-    int delete_turn = ev[EN_K4] && !ks_delete_latched;
-    if (ev[EN_K4]) ks_delete_latched = 1;
+    if (!(ui.btn & glo) || (down & (home | (1u << B_SEQ)))) ks_glo_held = 0;
     if (ks_modal == KS_DELETE && (int32_t)(ks_delete_until - plat_ms()) <= 0) {
         ks_modal = KS_CLOSED;
         return 1; /* consume activity at the timeout boundary */
@@ -510,9 +508,14 @@ static int ks_input(uint32_t down, const int32_t ev[NE])
         else ks_save_to(0);
         return 1;
     }
-    if (on_shelf && !(down & ((1u << B_GLO) | (1u << B_SEQ)))) {
-        ks_selected = (uint8_t)clampi(ks_selected + clampi(ev[EN_K3], -KS_SLOTS, KS_SLOTS), 0, KS_SLOTS - 1);
-        if (delete_turn) {
+    if (down & glo) {
+        ks_glo_since = plat_ms();
+        ks_glo_held = 1;
+    }
+    if (on_shelf && !(down & (glo | (1u << B_SEQ)))) {
+        ks_selected = (uint8_t)clampi(ks_selected + clampi(ev[EN_K4], -KS_SLOTS, KS_SLOTS), 0, KS_SLOTS - 1);
+        if (ks_glo_held == 1 && plat_ms() - ks_glo_since >= KS_DELETE_MS) {
+            ks_glo_held = 2;
             if (ks_slot_available(ks_selected)) {
                 ks_target = ks_selected;
                 ks_modal = KS_DELETE;

@@ -25,6 +25,8 @@ expect par3.d5.model 25
 spin SELECT 1
 expect kids_category 0
 expect kids_preset.bellows 1
+expect kids_send.4.1 48
+expect kids_send.4.2 52
 spin SELECT 1
 expect kids_category 3
 expect kids_preset.dusty_pad 1
@@ -37,7 +39,7 @@ expect kids_preset.flute 1
 spin SELECT 1
 expect kids_category 3
 expect kids_preset.whisper_pad 1
-spin SELECT 1
+spin SELECT -7
 master 2800
 tap REC
 tap PLAY
@@ -56,12 +58,13 @@ expect note 1 1 4 55
 expect stepnudge 1 1 2 11
 expect stepnudge 1 1 4 -11
 tap SEQ
+tap SEQ
 tapkey w5
 expect stepnudge 1 1 6 0
 tap HOME
 tap SAVE
 tap GLO
-spin K3 1
+spin K4 1
 tap EDIT
 expect kids_loaded 2
 expect kids_name_id 1
@@ -90,11 +93,13 @@ expect kids_name_id 11
 expect kids_pixel.11.0.0 5
 expect kids_pixel.0.0.0 4
 tap GLO
-spin K3 1
+spin K4 1
 tap EDIT
 expect kids_loaded 3
 expect kids_name_id 8
-spin K4 -1
+press GLO
+wait 5050
+release GLO
 expect kids_dialog 2
 tap EDIT
 expect kids_dialog 0
@@ -105,7 +110,7 @@ expect kids_loaded 3
 expect kids_name_id 8
 expect note 3 1 1 0
 tap GLO
-spin K3 -2
+spin K4 -2
 tap EDIT
 expect kids_loaded 1
 expect note 1 1 2 53
@@ -126,9 +131,11 @@ expect kids_send.1.1 0
 expect kids_send.1.2 0
 spin PRESET -1
 expect kids_icon_category.1 0
+expect kids_send.1.1 48
+expect kids_send.1.2 52
 spin PRESET -1
-expect kids_icon_category.1 6
-spin PRESET -1
+expect kids_icon_category.1 0
+spin PRESET 5
 expect kids_icon_category.1 5
 expect kids_send.1.1 48
 expect kids_send.1.2 52

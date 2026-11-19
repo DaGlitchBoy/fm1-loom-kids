@@ -2,6 +2,7 @@
 kids-entry
 expect kids 1
 tap SEQ
+tap SEQ
 expect kids 2
 tapkey w0
 expect note 1 1 1 1
@@ -12,7 +13,7 @@ expect noteat 1 1 1 1 3
 tap HOME
 spin K2 2
 tap SEQ
-spin K3 3
+spin K4 -1
 expect kids_bar 4
 tapkey w15
 expect note 1 1 64 2

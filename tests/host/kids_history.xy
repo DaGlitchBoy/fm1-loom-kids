@@ -15,6 +15,7 @@ tap ENV
 expect kids_dsp.2.0 1
 spin SELECT 1
 tap SEQ
+tap SEQ
 tapkey w0
 expect note 3 1 1 60
 expect kids_undo 5
@@ -44,7 +45,7 @@ expect kids 2
 # Navigation and an audition leave redo available.
 spin SELECT -1
 expect kids_length 16
-spin K3 3
+spin K4 3
 tap HOME
 tapkey w0
 expect kids_redo 5
@@ -62,6 +63,7 @@ expect kids_dsp.2.0 1
 expect note 3 1 1 60
 spin SELECT 1
 tap SEQ
+spin K4 1
 spin K2 2
 expect kids_note 62
 tap HOME
@@ -98,6 +100,7 @@ expect kids 1
 reboot
 wait 300
 kids-legacy-band
+tap SEQ
 tap SEQ
 tapkey w0
 spin K1 -29
@@ -180,6 +183,7 @@ expect kids_undo 0
 expect kids_redo 0
 
 # An upcoming step's velocity remains reversible before the note is inserted.
+tap SEQ
 tap SEQ
 tapkey w0
 tapkey w0

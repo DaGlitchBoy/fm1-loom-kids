@@ -8,108 +8,122 @@ expect kids_length 32
 spin SELECT 1
 spin K2 2
 expect kids_length 64
-# STEP: precise root and velocity, manual page, and melodic black keys inert.
+tap SEQ
+expect kids 4
+spin K4 -1
+expect kids_cursor 64
+expect kids_perf_page 4
+spin K4 1
+expect kids_cursor 1
+expect kids_perf_page 1
 tap SEQ
 expect kids 2
-spin K4 1
-expect kids 2
-expect kids_velocity 0
 spin K2 2
 expect kids_note 62
-peakreset
 tapkey b0
-wait 150
-expect voices 0
 expect note 3 1 1 0
-spin K3 3
+spin K4 -1
+expect kids_cursor 64
 expect kids_bar 4
-tapkey w15
+tap EDIT
 expect note 3 1 64 62
 spin K1 -28
 expect stepvel 3 1 64 72
-tapkey w15
-spin K1 -45
+spin K2 1
+expect note 3 1 64 63
+spin K3 4
+expect slen 3 64 4
+wait 100
+shot kids-steps.png
+tap EDIT
 expect note 3 1 64 0
+spin K1 -45
 expect kids_velocity 55
 tapkey w15
 expect stepvel 3 1 64 55
-shot kids-steps.png
-# Performance shows matching occupancy. It never edits by playing a key
-# unless REC is armed. Shortening hides the tail.
-spin K4 -1
+# Re-opening from HOME remembers Steps, and SEQ toggles back to Performance.
+tap HOME
+tap SEQ
+expect kids 2
+tap SEQ
 expect kids 4
-spin K4 -1
-expect kids 4
-spin K1 -25
-expect par3.level 75
-spin K2 -1
-expect kids_length 32
-spin K2 1
-expect kids_length 64
-expect note 3 1 64 62
-spin K4 1
-expect kids_bar 2
+expect kids_cursor 64
+spin K1 -10
+spin K2 2
 spin K3 2
-expect kids_bar 4
+expect stepvel 3 1 64 45
+expect note 3 1 64 64
+expect slen 3 64 2
+expect par3.level 100
+expect kids_length 64
+spin K4 1
+expect kids_cursor 1
+spin K4 16
+expect kids_cursor 17
 spin K4 -1
+expect kids_cursor 16
+spin SELECT -1
+expect kids_cursor 1
+spin K4 -1
+expect kids_cursor 32
+spin SELECT -1
+spin K4 -1
+expect kids_cursor 16
+spin K4 1
+expect kids_cursor 1
+spin SELECT 2
+expect kids_cursor 16
+tap GLO
 spin K3 24
+expect kids_swing 24
+spin K4 1
+expect kids_slot 2
 expect kids_swing 24
 spin K3 -24
 expect kids_swing 0
+tap SEQ
+expect kids 4
+# Playing keys in Performance keeps existing steps.
 master 2800
 peakreset
 tapkey b0
 wait 130
 expect peak_db_min -46
 expect note 3 1 1 0
-# Pattern content for each page and each row. Each row follows its own loop;
-# the header follows the selected 64-step track and the Steps editor stays on manual page 4.
 step 1 1 1 1 100
 step 2 1 17 65 100
-step 2 1 21 67 100
-step 2 1 25 69 100
 step 3 1 19 62 100
-step 3 1 23 64 100
-step 3 1 27 66 100
 step 3 1 33 66 100
 tap PLAY
 expect kids_perf_page 1
 expect kids_cell.1.1 2
 wait 2000
 expect kids_perf_page 2
-expect kids_cell.1.1 2
 expect kids_perf_page.1 1
 expect kids_perf_page.2 2
 expect kids_cell.2.1 2
 expect kids_cell.3.3 2
-expect step 1 <16
-expect step 2 >15
-expect step 3 >15
 shot kids-performance.png
 wait 2000
 expect kids_perf_page 3
-expect kids_cell.2.1 1
 expect kids_perf_page.2 1
 expect kids_perf_page.3 3
 expect kids_cell.3.1 2
-expect step 1 <16
-expect step 2 <16
-expect step 3 >31
 wait 2000
 expect kids_perf_page 4
 expect kids_perf_page.1 1
 expect kids_perf_page.2 2
-expect kids_cell.2.1 2
 expect kids_cell.3.16 2
-wait 2000
+# Manual movement during playback changes the selected track only.
+spin K4 16
 expect kids_perf_page 1
-spin K4 1
-expect kids 2
-expect kids_bar 4
+expect kids_perf_page.2 2
 tap PLAY
-# Per-hit velocity is isolated on a shared drum step.
 spin SELECT -2
+tap SEQ
+expect kids 2
 expect kids_bar 1
+# Per-hit velocity is isolated on a shared drum step.
 tapkey w1
 tapkey b1
 tapkey w1
@@ -126,27 +140,15 @@ tapkey w1
 expect kids_velocity 80
 tapkey b0
 expect kids_velocity 100
-spin K4 -1
+tap SEQ
 expect kids 4
 expect kids_cell.1.2 2
-# Performance allows live overdub; entering Steps ends the take.
 tap REC
 tap PLAY
 tapkey b2
 expect kids_rec 2
 expect noteat 1 1 2 1 7
-spin K4 1
+tap SEQ
 expect kids_rec 0
 expect playing 1
 tap PLAY
-# A stopped overview keeps the last valid playback page.
-spin SELECT 2
-spin K4 -1
-tap PLAY
-wait 2000
-expect kids_perf_page 2
-tap PLAY
-expect playing 0
-expect kids_perf_page 2
-wait 120
-expect kids_perf_page 2

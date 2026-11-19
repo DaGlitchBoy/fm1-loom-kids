@@ -452,6 +452,8 @@ int app_expect(const char *what, int *got)
         *got = proj_slot < NPROJ ? proj_slot + 1 : 0;
     else if (!strcmp(what, "kids_draws"))
         *got = (int)kids_draws;
+    else if (!strcmp(what, "kids_cursor"))
+        *got = kids_selected_step(sel_trk()) + 1;
     else if (!strcmp(what, "kids_perf_page"))
         *got = kids_perf_page[sel_trk()] + 1;
     else if (!strncmp(what, "kids_perf_page.", 15)) {

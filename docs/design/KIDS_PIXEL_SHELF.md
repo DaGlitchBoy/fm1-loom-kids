@@ -1,8 +1,8 @@
 # Song slots and pixel names
 
-- **GLO → K3** previews slots 1–3. The knob stops at both ends. **EDIT** opens the previewed slot, with its instruments, presets, settings and recordings.
+- **GLO → K4** previews slots 1–3. The knob stops at both ends. **EDIT** opens the previewed slot, with its instruments, presets, settings and recordings.
 - **SAVE** writes to the loaded slot. The emulator reopens the last loaded slot. A fresh shelf starts with slot 1 and empty patterns. Open another empty slot to start a new song with the starter sounds.
-- **K4** in either direction opens **Empty slot?** for the song in the preview. **EDIT** confirms. **HOME** cancels. The prompt also closes after five seconds. If you delete the loaded slot, your playing copy remains open and can be saved again.
+- **Hold GLO for five seconds** to open **Empty slot?** for the song in the preview. **EDIT** confirms. **HOME** cancels. The prompt also closes after five seconds. If you delete the loaded slot, your playing copy remains open and can be saved again.
 - **Hold HOME and turn K1** left to undo or right to redo. The last ten actions can include saves, overwrites, deletes and names. History resets when the emulator restarts.
 
 ## Make a pixel name

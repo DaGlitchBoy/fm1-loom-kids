@@ -6,6 +6,7 @@ kids-entry
 expect kids 1
 expect project_slot 0
 tap SEQ
+tap SEQ
 tapkey w0
 expect note 1 1 1 0
 tapkey w4

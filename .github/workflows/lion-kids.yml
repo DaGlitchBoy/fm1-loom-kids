@@ -3,7 +3,8 @@ name: Build LION KIDS emulator
 
 on:
   push:
-    branches: [main, 'feat/lion-kids-release']
+    branches: [main, 'feat/lion-kids-release', 'feat/lion-kids-sequencer-release']
+    tags: ['v[0-9]*']
   pull_request:
   workflow_dispatch:
 
@@ -38,8 +39,10 @@ jobs:
           emcc --version
           ./build.sh --host
           sh tests/run_tests.sh
+      - name: Package the browser emulator and corresponding source
+        run: sh tools/package_lion_kids.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: lion-kids-emulator
-          path: app/build/emu/
+          name: lion-kids-release
+          path: build/lion-kids-release/
           if-no-files-found: error

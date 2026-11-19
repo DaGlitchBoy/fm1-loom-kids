@@ -38,6 +38,7 @@ async function run(path, shaping) {
     tap(HOME);
     if (track) turn(K3, 2);  // three-note melodic chords
     tap(SEQ);
+    if (track === 0) tap(SEQ);
     if (!track) key(BLACK[0]);
     for (let step = 0; step < 16; step += 4) key(WHITE[step]);
     key(WHITE[2 + track % 2]);

@@ -44,13 +44,13 @@ LION KIDS starten
     <p>Auf <b>HOME</b> regeln K1 die Lautstärke und K2 die Länge (16, 32 oder 64 Steps).
       K3 wählt die Akkordform, K4 die Tonleiter. <b>REC</b> schaltet die Aufnahme für den ausgewählten Track ein.
       Wenn die Wiedergabe steht, startet <b>PLAY</b> die Aufnahme. Ein erneuter Druck auf REC beendet die Aufnahme.</p>
-    <p><b>HOME</b> öffnet die Bühne, <b>SEQ</b> die Steps und <b>EDIT</b> die vier Klangeffekte.
-      Beim Wechsel zwischen Drum-Kit und Melodie bleiben beide Pattern im laufenden Projekt erhalten.</p>
-    <p>Auf <b>SEQ</b> bearbeiten weiße Tasten die Steps. K1 regelt die Anschlagstärke des zuletzt gewählten
-      Steps, K2 den Grundton und K3 den Takt. Schwarze Tasten wählen beim Drum-Kit den einzelnen Klang. Das Symbol zeigt die Klanggruppe, die Zahl daneben die Position in der Gruppe.
-      K4 nach links öffnet die <b>Performance</b>-Übersicht. Dort spielen die Tasten live, K1 regelt die
-      Lautstärke, K2 die Länge und K3 den Swing. Jede Spur blättert im eigenen Loop. Eine Spur mit 16 Steps
-      bleibt immer auf Seite 1. K4 nach rechts bringt dich zurück zu Steps.</p>
+    <p><b>SEQ</b> öffnet zuerst Performance. Erneutes Drücken wechselt zwischen Performance und Steps.
+      Beim Zurückkehren öffnet sich die zuletzt verwendete Ansicht. K4 wählt den Step der gewählten Spur
+      und blättert bei längeren Spuren automatisch.</p>
+    <p>In <b>Steps</b> fügt <b>EDIT</b> am Cursor eine Note hinzu oder entfernt sie. Die weißen Tasten
+      schalten Steps direkt, die schwarzen wählen beim Drum-Kit einen Klang. In <b>Performance</b> spielen
+      die Tasten live. In beiden Ansichten regelt K1 die Anschlagstärke, K2 den Grundton und K3 die
+      Notenlänge. Die Spurlänge stellst du auf HOME mit K2 ein.</p>
     <p><b>FX</b> schaltet Hall für die gewählte Spur ein oder aus, <b>SEL</b> das Echo. Beide können
       gleichzeitig leuchten. K1 regelt den Effektanteil der Spur, K2 bis K4 verändern den gemeinsamen
       Hall oder das gemeinsame Echo. <b>ARP</b> spielt gehaltene Akkorde im Takt. K1 wählt die Reihenfolge,
@@ -60,42 +60,28 @@ LION KIDS starten
       Verzerrung, Bitcrush und Chorus für die gewählte Spur. Im LFO regelt K1 die Tiefe, auch mit negativen
       Werten, und K3 das Tempo-Raster. Die Leuchten zeigen, was eingeschaltet ist. Drücke die Taste eines
       Effekts, um seine Regler zu öffnen. Drücke sie dort erneut, um ihn auszuschalten.</p>
-    <p><b>GLO</b> öffnet das Songtempo auf K1 und die Metronomlautstärke auf K2. Ganz links ist das
-      Metronom aus.</p>
+    <p><b>GLO</b> zeigt Tempo (K1), Metronomlautstärke (K2), Swing für die gewählte Spur (K3) und
+      die Songvorschau (K4). <b>EDIT</b> öffnet den gewählten Song. <b>SAVE</b> speichert den offenen Song.
+      Halte <b>GLO</b> fünf Sekunden, um den gewählten Platz zu leeren. <b>EDIT</b> bestätigt, <b>HOME</b> bricht ab.</p>
     <p><b>HOME halten</b> öffnet den Verlauf. K1 nach links macht je einen Schritt rückgängig,
       K1 nach rechts stellt ihn wieder her.</p>
-    <p><b>GLO</b> zeigt drei Songplätze. K3 wählt die Vorschau, <b>EDIT</b> öffnet den Platz.
-      <b>SAVE</b> speichert den geöffneten Song. K4 fragt, ob du den Platz in der Vorschau löschen
-      möchtest. <b>EDIT</b> bestätigt, <b>HOME</b> bricht ab.</p>
     <p>Halte <b>EDIT</b> in GLO für die Pixelnamen. K1 wählt ein Bild, K2 und K3 bewegen den Cursor.
       K4 wählt und malt die Farbe. <b>PLAY</b> malt mit der aktuellen Farbe, <b>SEL</b> setzt das Bild zurück.
       <b>EDIT</b> übernimmt das Bild als Songnamen, <b>HOME</b> schließt den Editor.</p>
-  </div>
-  <div>
-    <h2>Studio (separater Host-Entwicklermodus)</h2>
-    <ul>
-      <li><b>SEQ</b> the steps: on a drum track, a black key picks the sound and the white keys are steps 1–16.</li>
-      <li><b>SEQ</b> held, play notes, let go, then press steps: the notes go on them.</li>
-      <li><b>HOME</b> held is the shift key: a step for its tricks, a key for a throw, <b>REC</b> undo, <b>PLAY</b> redo.</li>
-      <li><b>EDIT</b> the sound, <b>ENV</b> envelope and filter, <b>FX</b> sends, <b>LFO</b>, <b>ARP</b> players, <b>GLO</b> mix and master.</li>
-      <li><b>PLAY</b> start / stop. <b>REC</b> held while playing records; stopped, a tap starts step record.</li>
-      <li><b>SEL</b> the page's list: copy, paste, weave, presets.</li>
-      <li><b>SELECT</b> the page, <b>ALGORITHM</b> the track, <b>PRESETS</b> the next sound, <b>KNOB 1–4</b> the values on the screen. <b>SAVE</b> saves.</li>
-    </ul>
   </div>
   <div>
     <h2>Mouse and touch</h2>
     <ul>
       <li>Drag a knob up or down, or use the scroll wheel over it.</li>
       <li>Click or touch buttons and keys. Several fingers at once work on a touch screen.</li>
-      <li>Combinations with a mouse: <kbd>Shift</kbd>-click (or right-click) a button or key to hold it down, click again to let go. A step held this way takes its locks from the knobs.</li>
+      <li>Combinations with a mouse: <kbd>Shift</kbd>-click (or right-click) a button or key to hold it down, click again to let go.</li>
     </ul>
   </div>
   <div>
     <h2>Keyboard</h2>
     <ul>
       <li>White keys 1–8: <kbd>Q</kbd>–<kbd>I</kbd>, 9–16: <kbd>A</kbd>–<kbd>K</kbd>. Black keys 1–11: <kbd>1</kbd>–<kbd>0</kbd>, <kbd>-</kbd>.</li>
-      <li>Hold <kbd>Esc</kbd> for HOME (the shift key), <kbd>/</kbd> for SEQ (held: play the notes a step will take).</li>
+      <li>Hold <kbd>Esc</kbd> for HOME, or press <kbd>/</kbd> for SEQ.</li>
       <li><kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Z</kbd> / <kbd>X</kbd> OCT− / OCT+.</li>
       <li><kbd>↑</kbd> <kbd>↓</kbd> turn SELECT.</li>
       <li><kbd>Tab</kbd> moves through the knobs, buttons and keys; there <kbd>Space</kbd> or <kbd>Enter</kbd> presses the one you are on, and the arrow keys turn a knob.</li>

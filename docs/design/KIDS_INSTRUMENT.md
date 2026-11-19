@@ -1,5 +1,7 @@
 # LION KIDS • playable instrument design and implementation brief
 
+Historical design brief. See the [current manual](../LION_KIDS_MANUAL.md) for the controls in the release.
+
 Design only. Baseline: feature branch `feat/loom-kids-ui`, commit `4fe6e52`. The controls below supersede the milestone-one Kids mappings. Implement one numbered delivery at a time on a new feature branch. Start with the emulator. Never flash, install, connect to or test against physical hardware.
 
 ## Architecture decision
@@ -73,7 +75,7 @@ Live Kids recording keeps timing offsets at 24 ticks per sixteenth. A step still
 
 A Kids song captures the settings and patterns for all eight tracks, alternate banks, arrangement, levels and a snapshot of its pixel name. User sample references depend on the matching sample bank. Studio storage stays separate.
 
-1. **Browse and open.** GLO K3 stops at slots 1 and 3. EDIT opens the highlighted slot. If leaving unsaved work, the prompt offers HOME to cancel, EDIT to discard, and SAVE to save the loaded song before opening another slot. Opening an empty slot starts a fresh song when switching from a loaded slot, or assigns the current working song when no slot is open.
+1. **Browse and open.** GLO K4 stops at slots 1 and 3. EDIT opens the highlighted slot. If leaving unsaved work, the prompt offers HOME to cancel, EDIT to discard, and SAVE to save the loaded song before opening another slot. Opening an empty slot starts a fresh song when switching from a loaded slot, or assigns the current working song when no slot is open.
 2. **Save.** SAVE writes to the loaded slot, independent of the preview. A fresh empty shelf starts with slot 1 open. Reopening an emulator with saved songs requires an explicit slot selection before SAVE can write.
 3. **Delete.** Either direction on K4 opens a confirmation for the previewed saved slot. EDIT confirms, HOME cancels, and the prompt expires after five seconds. Deleting the loaded slot leaves the working song available to save again.
 4. **Pixel names.** Hold EDIT in GLO. K1 browses ten starter symbols and five blank 12×12 canvases. K2 and K3 move the cursor, K4 selects and paints a color, and PLAY paints with the current color. SEL resets the current template. EDIT takes a snapshot of the chosen template as the loaded song’s name. HOME exits. Templates persist separately. The preview and the top bar show the song’s own snapshot.
