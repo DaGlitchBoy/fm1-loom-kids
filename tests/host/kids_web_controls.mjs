@@ -19,7 +19,7 @@ vm.createContext(context);
 vm.runInContext(readFileSync('app/web/emu/app.js', 'utf8').replace('export function attach', 'function attach'), context);
 vm.runInContext('attach()', context);
 assert.equal(entry.disabled, false);
-assert.match(selectHit.title, /Kids: pattern/);
+assert.match(selectHit.title, /Kids: track/);
 entry.onclick();
 assert.deepEqual(calls, [['kids-entry', 'btn', 30], ['release', 'kids-entry']]);
 calls.length = 0;

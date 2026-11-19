@@ -18,5 +18,5 @@ with TemporaryDirectory() as directory:
     assert "<title>LOOM Kids in the browser</title>" in page
     assert page.count('id="kids-entry"') == 1
     assert "{{" not in page
-    assert "PRESETS</b> immer Klang" in page
+    assert "PRESETS</b> die Klanggruppe" in page
 print("Kids browser page: real template composition, direct entry, matching control help")

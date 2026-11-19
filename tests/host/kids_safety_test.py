@@ -7,9 +7,6 @@ import sys
 root = Path(sys.argv[1])
 original = (root / "original.store").read_bytes()
 assert original, "baseline store missing"
-for name in ("after_kids", "after_unlock", "after_cancel"):
+for name in ("after_kids", "after_reboot"):
     assert (root / f"{name}.store").read_bytes() == original, f"saved objects changed: {name}"
-saved = (root / "adult_saved.store").read_bytes()
-assert saved != original, "explicit adult save did not persist edits"
-assert (root / "after_reboot.store").read_bytes() == saved, "locked reboot changed saved objects"
-print("Kids, unlock and cancelled save preserve every saved byte; adult save persists explicitly")
+print("Kids edits, SAVE and reboot preserve every saved byte")

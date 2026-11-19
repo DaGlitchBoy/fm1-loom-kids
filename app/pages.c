@@ -1385,6 +1385,9 @@ static int hit_same(const hit_t *a, const hit_t *b)
 static void hits_gc(void)
 {
     uint64_t used = 0;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    used = kids_stashed_hits();
+#endif
     for (int k = 0; k < NLANE; k++)
         if (pats.lane[k].used && lane_is_hit(pats.lane[k].param))
             for (int i = 0; i < NSTEP; i++)

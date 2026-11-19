@@ -1,112 +1,90 @@
-# Run with LOOM_KIDS=1: the same default entry as the browser, no Debug navigation.
+# LOOM_KIDS=1: boot directly into playable HOME.
 wait 300
 expect kids 1
-expect kids_gate 1
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids_gate 0
 expect kids_buttons 64
-expect kids_draws 30
-wait 1000
-expect kids_draws 30
-shot redesign_stage.png
-# All eight track icons have direct white-key access on Stage.
-tapkey w7
+expect project_slot 0
+spin SELECT -1
 expect trk 8
-tapkey w0
-expect trk 1
-tap EDIT
-expect kids 3
-expect kids_buttons 16
-expect kids_sound 1
-expect kids_sounds >1
-spin PRESET 1
-expect kids_sound 2
-expect par1.0 8
-# Preview really produces sound, and releasing the key stops the held note.
 master 2800
+wav playable-home.wav
 peakreset
-key b0 down
-wait 100
+key w0 down
+wait 360
 expect peak_db_min -40
-shot redesign_kit.png
-key b0 up
-# Sound changes must leave the drum pattern's hit semantics intact.
-tap SEQ
-expect kids_buttons 512
-tapkey w0
-expect note 1 1 1 1
-spin PRESET 1
-expect kids_sound 3
-expect note 1 1 1 1
-expect par1.0 8
-tapkey w4
-tapkey w8
-tapkey w12
-tap PLAY
-wait 220
-shot redesign_steps.png
-tap HOME
-shot redesign_pulse.png
-tap PLAY
-# Real melodic preset groups, including across engines, without opening Studio.
-tapkey w1
-expect trk 2
-tap EDIT
-expect kids_category 0
-spin K2 2
-expect kids_category 2
-expect kids_sound 1
-expect kids_sounds >1
-spin PRESET 1
-expect kids_sound 2
-key w3 down
-wait 120
-shot redesign_sounds.png
-# Switching tracks with a note held must release it.
-spin K1 1
-expect trk 3
-key w3 up
-wait 2000
-expect voices 0
-spin K1 -1
-expect kids_category 2
-expect kids_sound 2
-spin K1 1
-# PRESETS selects a sound; SELECT selects a pattern, including on the sound screen.
 spin SELECT 1
+expect trk 1
+expect kids_sound 1
+spin ALGO -1
+expect kids_sound 11
+spin ALGO 1
+expect kids_sound 1
+key w0 up
+wait 1500
+expect voices 0
+# Category wrap (no custom user presets). T2 starts in Bass.
+spin SELECT 1
+expect trk 2
+expect kids_category 1
+spin PRESET -1
+expect kids_category 0
+spin PRESET -1
+expect kids_category 6
+spin PRESET 1
+expect kids_category 0
+spin PRESET 1
+expect kids_category 1
+# Separate note encodings survive a full round trip, including non-active patterns.
+chord 2 1 1 4 60 64 67
+chord 2 8 64 4 48 55 60
+lock 2 1 1 cut 40
+key w2 down
+spin PRESET 1
+expect kids_category 2
+expect note 2 1 1 0
+key w2 up
 tap SEQ
 tapkey w0
-expect note 3 2 1 59
-spin K2 3
-tapkey w15
-expect note 3 2 64 59
-shot redesign_bar4.png
-# PIN protection is still active after the entire workflow.
-tap SEL
-expect kids_gate 3
-expect kids_locked 1
+expect note 2 1 1 1
+spin ALGO 1
+expect kids_sound 2
+expect note 2 1 1 1
 tap HOME
-expect kids_locked 1
-expect project_slot 0
-
-# Adult unlock, then the browser's direct-entry button returns without Debug navigation.
+spin PRESET -1
+expect noteat 2 1 1 1 60
+expect noteat 2 1 1 2 64
+expect noteat 2 1 1 3 67
+expect noteat 2 8 64 1 48
+expect lock 2 1 1 cut 40
+spin PRESET 1
+expect kids_sound 2
+expect note 2 1 1 1
+spin PRESET -1
+tap OCT+
+expect kids_octave 1
+expect kids_bar 1
+key w0 down
+expect kids_note 65
+wait 300
+shot playable-home.png
+key w0 up
+tap OCT-
+expect kids_octave 0
 tap SEL
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids 0
-kids-entry
 expect kids 1
-expect kids_locked 1
+wait 400
+wavstop
+reboot
+wait 300
+expect kids 1
 expect project_slot 0
+# The audio engine supports three simultaneous kits. A fourth request must
+# keep the selected melodic sound and its patterns.
+param 3 engine 8
+param 4 engine 8
+spin SELECT 1
+expect trk 2
+expect kids_category 1
+chord 2 1 1 4 60 64 67
+spin PRESET 1
+expect kids_category 1
+expect noteat 2 1 1 2 64

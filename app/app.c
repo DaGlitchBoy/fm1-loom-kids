@@ -8,6 +8,9 @@
 #include "gfx_loom.c"
 #include "engine.c"
 #include "project.c"
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+static uint64_t kids_stashed_hits(void);
+#endif
 #include "pages.c"
 #include "ui.c"
 #include "midicc.c"

@@ -29,30 +29,21 @@ LOOM Kids: eight colorful instruments, steps and sounds. A protected emulator pl
   <h1>LOOM Kids</h1>
   <p>Acht Instrumente. Deine Sounds. Dein Beat.</p>
   <button type="button" id="kids-entry" disabled>Kids-Modus öffnen</button>
-  <p>Start → Erwachsenen-PIN einrichten → Bühne. Kein Debug-Menü nötig.</p>
+  <p>Start → Bühne → spielen.</p>
 </header>
 <!-- emu-page: end -->
 <section class="help">
   <div>
     <h2>Direkt losspielen</h2>
-    <p>Der Emulator startet direkt im Kids-Einstieg. Ein Erwachsener wählt mit K1–K4 vier PIN-Ziffern und
-      bestätigt sie zweimal mit SEL. Danach erscheint die Bühne mit acht farbigen Instrument-Symbolen.
-      Aus Studio führt der Button „Kids-Modus öffnen“ direkt zurück.</p>
-    <p><b>HOME</b> Bühne · <b>SEQ</b> Steps · <b>EDIT</b> Sounds · <b>SEL</b> Erwachsenen-PIN für Studio.
-      <b>ALGORITHM / K1</b> Track · <b>PRESETS</b> immer Klang · <b>SELECT</b> immer Pattern · <b>PLAY</b> Start/Stopp.</p>
-    <p>Auf der Bühne wählen die weißen Tasten 1–8 direkt ein Instrument. Auf Steps schalten die 16 weißen
-      Tasten die Schritte; OCT−/+ blättert durch vier Takte. Auf Sounds wählt K2 eine Klanggruppe,
-      K3 oder PRESETS einen Sound. Die Klaviertasten spielen den Klang zum Vorhören. Bei Drum-Tracks
-      werden komplette Kits ausgewählt, damit vorhandene Drum-Patterns erhalten bleiben.</p>
-    <p>Die vier Regler sind unten auf jedem Bildschirm beschriftet. Die Symbole bewegen sich nur mit
-      echten Sequencer-Schritten oder gespielten Tasten, nicht im Leerlauf.</p>
-    <p>Kids arbeitet mit einer ungespeicherten Kopie. Auch nach der PIN-Freigabe überschreibt Studio nichts
-      automatisch: SAVE verlangt eine ausdrückliche Bestätigung. Die PIN schützt diese Sitzung;
-      Schließen oder Neuladen beendet sie und verwirft ungespeicherte Änderungen. Dies ist keine
-      Betriebssystem-Kindersicherung. Es wird keine Hardware verbunden oder Firmware installiert.</p>
+    <p>Der Emulator startet direkt auf der spielbaren Bühne. Alle Klaviertasten spielen den ausgewählten Track.</p>
+    <p><b>SELECT</b> wählt den Track, <b>PRESETS</b> die Klanggruppe und <b>ALGORITHM</b> den einzelnen Klang.
+      <b>OCT−/+</b> wechselt die Oktave. <b>PLAY</b> startet und stoppt die Wiedergabe.</p>
+    <p><b>HOME</b> öffnet die Bühne, <b>SEQ</b> die Steps und <b>EDIT</b> die Klangansicht.
+      Beim Wechsel zwischen Drum-Kit und Melodie bleiben beide Pattern im laufenden Projekt erhalten.</p>
+    <p>Die Bühne arbeitet mit einer ungespeicherten Kopie. Die Song-Speicherfunktion folgt in einem späteren Schritt.</p>
   </div>
   <div>
-    <h2>Studio: vollständige Bedienung nach PIN-Freigabe</h2>
+    <h2>Studio (separater Host-Entwicklermodus)</h2>
     <ul>
       <li><b>SEQ</b> the steps: on a drum track, a black key picks the sound and the white keys are steps 1–16.</li>
       <li><b>SEQ</b> held, play notes, let go, then press steps: the notes go on them.</li>

@@ -427,10 +427,10 @@ int app_expect(const char *what, int *got)
         int pos; *got = kids_sound_count(&pos);
     } else if (!strcmp(what, "kids_category"))
         *got = kids_category;
-    else if (!strcmp(what, "kids_gate"))
-        *got = kids_gate;
-    else if (!strcmp(what, "kids_locked"))
-        *got = kids_locked;
+    else if (!strcmp(what, "kids_octave"))
+        *got = ui.oct;
+    else if (!strcmp(what, "kids_note"))
+        *got = ui.rem[0];
     else if (!strcmp(what, "project_slot"))
         *got = proj_slot < NPROJ ? proj_slot + 1 : 0;
     else if (!strcmp(what, "kids_draws"))

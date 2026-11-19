@@ -1,118 +1,24 @@
-# Saved baseline, then a detached Kids copy. No hidden holds or host unlock commands.
-wait 300
+# Save fixture in Studio, then verify Kids edits never write it.
 step 1 1 1 1 100
-projsave 1 Adult_original
+projsave 1 Original
 storesave app/build/scenarios/kids_safety/original.store
-tap GLO
-turn SELECT 6
-tap HOME
-expect kids_gate 1
-# SEL alone must not create an all-zero default PIN.
-tap SEL
-expect kids_gate 1
-# Adult chooses PIN 1234, twice.
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids_gate 2
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids_locked 1
-expect kids_gate 0
+kids-entry
+expect kids 1
 expect project_slot 0
-shot protected_stage.png
 tap SEQ
 tapkey w0
 expect note 1 1 1 0
 tapkey w4
 expect note 1 1 5 1
-spin K4 20
-wait 6000
-expect dirty 1
-# SAVE, system/page buttons, holds and keyboard combos cannot escape or write.
-tap SAVE
-tap EDIT
-expect kids 3
 spin PRESET 1
-tap SEQ
-tap GLO
-tap ENV
-tap FX
-tap LFO
-tap ARP
-tap REC
-press SAVE
-tapkey w0
-release SAVE
-wait 4000
+tap SAVE
+tap SEL
 expect kids 2
-expect kids_locked 1
-expect project_slot 0
+wait 7000
 storesave app/build/scenarios/kids_safety/after_kids.store
-# Wrong PIN, cancel and quick retry cannot unlock.
-tap SEL
-expect kids_gate 3
-spin K1 9
-spin K2 9
-spin K3 9
-spin K4 9
-tap SEL
-expect kids_locked 1
-shot adult_wrong_pin.png
-tap HOME
-expect kids_gate 0
-tap SEL
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids_locked 1
-wait 3100
-spin K1 1
-spin K2 2
-spin K3 3
-spin K4 4
-tap SEL
-expect kids 0
-expect kids_locked 0
-expect project_slot 0
-wait 6000
-storesave app/build/scenarios/kids_safety/after_unlock.store
-# Explicit adult SAVE still requires overwrite confirmation for the original.
-tap SAVE
-expect ask 1
-tap HOME
-expect ask 0
-storesave app/build/scenarios/kids_safety/after_cancel.store
-tap SAVE
-expect ask 1
-tap SEL
-expect ask 0
-expect project_slot 1
-expect dirty 0
-storesave app/build/scenarios/kids_safety/adult_saved.store
-# Lock again, make an unsaved edit, then simulated reboot must relock and restore saved notes.
-tap GLO
-turn SELECT 6
-tap HOME
-expect kids_locked 1
-tap SEQ
-tapkey w4
-expect note 1 1 5 0
 reboot
-wait 400
-expect kids 1
-expect kids_locked 1
-expect project_slot 0
-expect note 1 1 5 1
-tap SEL
-expect kids_gate 3
-tap HOME
-expect kids_locked 1
+wait 300
+expect kids 0
+expect note 1 1 1 1
+expect note 1 1 5 0
 storesave app/build/scenarios/kids_safety/after_reboot.store
