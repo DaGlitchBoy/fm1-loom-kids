@@ -288,6 +288,10 @@ typedef struct synth synth_t;         /* opaque: dsp/synth.c */
 void synth_glfo_restart(synth_t *s);              /* the shared LFO from its start (the transport started) */
 float synth_glfo_now(const synth_t *s);            /* its value now, -1..1 (the page's picture) */
 #define SYNTH_BYTES 12288             /* room for the struct (checked at compile time in synth.c) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#undef SYNTH_BYTES
+#define SYNTH_BYTES 12672
+#endif
 
 void synth_init(synth_t *s, uint8_t (*par)[NTP]);   /* par: the tracks' parameter arrays, NTRK + 1 of them (the conductor's, SY_GLFO_TRK: the shared LFO) */
 void synth_tempo(synth_t *s, float bpm);
@@ -339,6 +343,9 @@ extern uint32_t synth_load_steals;                            /* notes that took
 /* what voice vi costs to render, in rough units for the cores' split (engine.c split_at): 0 silent, 4 an
  * ordinary voice (bellows 5), knit 3 + its unison (+ 1 osc 2, + 1 sub or noise); the Braids engines by their model
  * (braids.h: 3 .. 8, cane's bell the most) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+int synth_kids_track(const synth_t *s, int vi);
+#endif
 int synth_voice_cost(const synth_t *s, int vi);
 extern volatile uint16_t synth_peak[NTRK];                     /* per track meters, Q14, decaying (UI) */
 /* the profiler (samples.c SB_PROF, tools/perf_read.py): the time each voice took, by its engine, in synth_clock's

@@ -466,6 +466,14 @@ int app_expect(const char *what, int *got)
     }
     else if (!strcmp(what, "kids_lights"))
         *got = (int)kids_button_lights();
+    else if (!strcmp(what, "kids_phase"))
+        *got = kids_phase_pixel;
+    else if (!strncmp(what, "kids_dsp.", 9)) {
+        int track, parameter;
+        if (sscanf(what + 9, "%d.%d", &track, &parameter) != 2 ||
+            track < 1 || track > NTRK || parameter < 0 || parameter >= KD_COUNT) return 0;
+        *got = kids_dsp_tracks[track - 1].value[parameter];
+    }
     else if (!strcmp(what, "kids_panel"))
         *got = kids_panel;
     else if (!strcmp(what, "kids_delay"))

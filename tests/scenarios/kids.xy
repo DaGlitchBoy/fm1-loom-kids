@@ -24,6 +24,7 @@ expect note 1 1 64 0
 tap HOME
 expect kids 1
 tap EDIT
-expect kids 3
+expect kids 1
+expect kids_panel 5
 spin SELECT 1
 expect trk 2

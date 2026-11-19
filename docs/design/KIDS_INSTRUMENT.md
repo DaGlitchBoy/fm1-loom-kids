@@ -39,8 +39,8 @@ The three global encoders retain their roles on every musical page, including GL
 | EDIT | Low-pass amount | Distortion amount | Bitcrush amount | Chorus amount | Four simple intensity bars; fixed musical recipes |
 | GLO | Song BPM | Metronome loudness, zero = off | Song slot 1–3 | Arm/request delete | Song number, occupied/empty, and protection state |
 | ARP | Up / Down / Up-down / Down-up / Chaotic | Synced rate | HOME chord mode | HOME scale | Note staircase; LED tracks active state |
-| SEQ • Steps | Last touched step/hit velocity | Root for inserting notes | Edit page 1–4 within length | Right → Performance | 16 numbered cells + page and selected hit/root |
-| SEQ • Performance | Selected track volume | Selected track length 16 / 32 / 64 | Swing amount | Left → Steps | Eight track rows × 16 columns + current page |
+| SEQ • Steps | Last touched step/hit velocity | Root for inserting notes | Edit page 1–4 within length | Left → Performance | 16 numbered cells + page and selected hit/root |
+| SEQ • Performance | Selected track volume | Selected track length 16 / 32 / 64 | Swing amount | Right → Steps | Eight track rows × 16 columns + current page |
 
 GLO is a settings page with no audio bypass. SEQ opens Steps; K4 is a two-position selector with end stops. Use continuously variable controls for amounts, detents for enumerations. The named track length is the active pattern's loop length for that track. If a song imports a mixture of pattern lengths, editing one pattern must not resize unrelated patterns. A sixteenth-note step means 16 steps per 4/4 bar, so the three choices are one, two and four bars. Shortening hides later notes and preserves them for re-extension.
 

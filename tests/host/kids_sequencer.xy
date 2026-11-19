@@ -10,6 +10,8 @@ expect kids_length 64
 # STEP: precise root and velocity, manual page, and melodic black keys inert.
 tap SEQ
 expect kids 2
+spin K4 1
+expect kids 2
 expect kids_velocity 0
 spin K2 2
 expect kids_note 62
@@ -33,7 +35,9 @@ expect stepvel 3 1 64 55
 shot kids-steps.png
 # Performance shows matching occupancy. It never edits by playing a key
 # unless REC is armed. Shortening hides the tail.
-spin K4 1
+spin K4 -1
+expect kids 4
+spin K4 -1
 expect kids 4
 spin K1 -25
 expect par3.level 75
@@ -42,11 +46,11 @@ expect kids_length 32
 spin K2 1
 expect kids_length 64
 expect note 3 1 64 62
-spin K4 -1
+spin K4 1
 expect kids_bar 2
 spin K3 2
 expect kids_bar 4
-spin K4 1
+spin K4 -1
 spin K3 24
 expect kids_swing 24
 spin K3 -24
@@ -98,7 +102,7 @@ expect kids_cell.2.1 2
 expect kids_cell.3.16 2
 wait 2000
 expect kids_perf_page 1
-spin K4 -1
+spin K4 1
 expect kids 2
 expect kids_bar 4
 tap PLAY
@@ -121,7 +125,7 @@ tapkey w1
 expect kids_velocity 80
 tapkey b0
 expect kids_velocity 100
-spin K4 1
+spin K4 -1
 expect kids 4
 expect kids_cell.1.2 2
 # Performance allows live overdub; entering Steps ends the take.
@@ -130,13 +134,13 @@ tap PLAY
 tapkey b2
 expect kids_rec 2
 expect noteat 1 1 2 1 7
-spin K4 -1
+spin K4 1
 expect kids_rec 0
 expect playing 1
 tap PLAY
 # A stopped overview keeps the last valid playback page.
 spin SELECT 2
-spin K4 1
+spin K4 -1
 tap PLAY
 wait 2000
 expect kids_perf_page 2

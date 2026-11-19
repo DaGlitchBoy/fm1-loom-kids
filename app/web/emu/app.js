@@ -20,9 +20,11 @@ function moveStore() {
 // what each control does, on hover and for a screen reader (the Buttons list below the panel says the same)
 const TIP = { FX: "Kids: toggle reverb for this track. Studio: sends and effects",
   SEL: "Kids: toggle delay for this track. Studio: page menu",
-  ENV: "Studio: envelope and filter", LFO: "Studio: LFO", EDIT: "Kids: Sounds and presets. Studio: sound editor",
+  ENV: "Kids: envelope graph and switch. Studio: envelope and filter",
+  LFO: "Kids: timed modulation graph and switch. Studio: LFO",
+  EDIT: "Kids: toggle four quick effects. Studio: sound editor",
   GLO: "Kids: tempo and metronome. Studio: mix, master and setup", HOME: "Kids: Stage. Studio: Arrange; held, shift", SAVE: "Studio: save",
-  ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Kids: Steps; K4 right for Performance. Studio: Steps; held, play notes", PLAY: "Start / stop",
+  ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Kids: Steps; K4 left for Performance. Studio: Steps; held, play notes", PLAY: "Start / stop",
   REC: "Kids: overdub. Studio: recording", "OCT-": "Kids: octave down. Studio: octave / bar down",
   "OCT+": "Kids: octave up. Studio: octave / bar up", SELECT: "Kids: track. Studio: page",
   ALGORITHM: "Kids: sound preset. Studio: track", PRESETS: "Kids: sound group. Studio: page-specific selection", MASTER: "Volume" };

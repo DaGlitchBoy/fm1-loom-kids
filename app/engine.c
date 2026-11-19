@@ -240,7 +240,7 @@ static void guard_apply(void)
 /* uint32 commands, single producer (main loop) / single consumer (audio ISR): type:4 | a:8 | b:8 | c:12 (C_PARAM: b
  * the parameter's low eight bits, c its value and, at bit 8, its ninth: synth.h NTP) */
 enum { C_PARAM, C_ALL, C_KEY, C_KEYS_OFF, C_PUNCH, C_BRAIN_KEY, C_MASTER, C_FX, C_PANIC,
-       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP, C_KIDS_PLAYER };     /* at most sixteen: the type is four bits */
+       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP, C_KIDS_PLAYER, C_KIDS_DSP };     /* at most sixteen: the type is four bits */
 #define CQ 512u
 static uint32_t cq[CQ];
 static volatile uint32_t cq_w, cq_r;
@@ -315,6 +315,11 @@ void engine_metronome(int mode) { cq_put(C_METRO, (uint32_t)mode, 0, 0); }
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
 static void engine_kids_metro(int gain) { cq_put(C_METRO, gain ? 2u : 0u, (uint32_t)gain + 1u, 0); }
 static void engine_kids_player(int track, int mode) { cq_put(C_KIDS_PLAYER, (uint32_t)track, (uint32_t)mode, 0); }
+static void kids_insert_reset(int track);
+static void engine_kids_dsp(int track, int parameter, int value)
+{
+    cq_put(C_KIDS_DSP, (uint32_t)track, (uint32_t)parameter, (uint32_t)value);
+}
 #endif
 void engine_tempo(int bpm_x10)                  /* 400..3000 fits the command's twelve-bit value */
 {
@@ -582,6 +587,9 @@ static void s_drum(void *x, int trk, int sound, int vel, int pitch_semi, int sho
     PROF_T(pn);
     if (trk < 0 || trk >= NTRK || !eng_drum[trk] || sound < 0 || sound >= NDRUM)
         return;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    drumline_kids_env(DL(trk), &kids_dsp_tracks[trk]);
+#endif
     drumline_hit(DL(trk), sound, vel, pitch_semi + glfo_kit_semis(trk, sound), short_gate, long_tail || perf_tail[trk]);
 #ifdef PLAT_HOST
     host_drum_hits++;                                  /* (the host's load model: a hit's own cost) */
@@ -1019,6 +1027,16 @@ static void drain(void)
             seq_kids_player_reset(&seq, (int)a, &SINK);
             ppar[a][TP_PLAYER] = epar[a][TP_PLAYER] = (uint8_t)b;
             break;
+        case C_KIDS_DSP: {
+            kids_dsp_track_t *p = &kids_dsp_tracks[a];
+            p->value[b] = (uint8_t)v;
+            if (b == KD_ATTACK) p->attack = (float)kids_envelope_ms(KD_ATTACK, (int)v) * KD_FRAMES_PER_MS;
+            if (b == KD_HOLD) p->hold = (float)kids_envelope_ms(KD_HOLD, (int)v) * KD_FRAMES_PER_MS;
+            if (b == KD_SUSTAIN) p->sustain = (float)v * (1.0f / 127.0f);
+            if (b == KD_RELEASE) p->release = (float)kids_envelope_ms(KD_RELEASE, (int)v) * KD_FRAMES_PER_MS;
+            if (!v && (b == KD_EDIT_ON || b == KD_CHORUS)) kids_insert_reset((int)a);
+            break;
+        }
 #endif
         case C_TEMPO: seq.bpm = (float)v * 0.1f; break;
         case C_GROOVE: seq.groove_type = (uint8_t)a; break;
@@ -1332,6 +1350,24 @@ static void metro_tick(uint32_t n)
 #endif
 /* one stretch: the upper half of the voices and the drumlines here while the second core renders the
  * lower half; then the halves are summed in the order one core always used, the FX tracks, the master */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#include "kids_insert.c"
+#endif
+static inline void render_primary_voice(int vi, uint32_t n)
+{
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_mix_mask) {
+        int t = synth_kids_track(SY, vi);
+        if (kids_mix_mask >> t & 1u) {
+            float (*b)[STRETCH_MAX] = kids_mix[t];
+            synth_render_on(SY, 0, vi, vi + 1, b[0], b[1], b[2], b[3], n);
+            return;
+        }
+    }
+#endif
+    synth_render_on(SY, 0, vi, vi + 1, mel_l, mel_r, s1, s2, n);
+}
+
 static void render_drums(uint32_t n)                    /* the drum tracks (the first core's: render_sub) */
 {
     int t;
@@ -1339,8 +1375,18 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
     for (t = 0; t < NTRK; t++) {
         float g, gl, gr;
         uint32_t pt1;
-        if (!eng_drum[t] || !drumline_sounding(DL(t)))
-            continue;
+        if (!eng_drum[t]) continue;
+        int sounding = drumline_sounding(DL(t));
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        if (seq.kids_mode && kids_dsp_tracks[t].value[KD_EDIT_ON] && kids_dsp_tracks[t].value[KD_CHORUS]) {
+            if (sounding) kids_insert[t].tail = 600;
+            else if (kids_insert[t].tail) {
+                kids_insert[t].tail -= n < kids_insert[t].tail ? n : kids_insert[t].tail;
+                sounding = 1;
+            }
+        }
+#endif
+        if (!sounding) continue;
         pt1 = plat_cycles();
         zerof(tl, n);
         zerof(tr, n);
@@ -1357,8 +1403,6 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
             tap_drum(t, tl, tr, trk_glide[t][GL_SEND].cur < 0.0f ? g : trk_glide[t][GL_SEND].cur, g, n);
 #endif
         glide_set(&trk_glide[t][GL_SEND], g);
-        add_glide(perc_l, tl, &trk_glide[t][GL_L], n);
-        add_glide(perc_r, tr, &trk_glide[t][GL_R], n);
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
         if (kids_send_override) {
             float *source[] = {ts1, ts2};
@@ -1377,7 +1421,10 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
                 }
             }
         }
+        if (seq.kids_mode) kids_track_insert(t, tl, tr, ts1, ts2, n);
 #endif
+        add_glide(perc_l, tl, &trk_glide[t][GL_L], n);
+        add_glide(perc_r, tr, &trk_glide[t][GL_R], n);
         add_glide(s1, ts1, &trk_glide[t][GL_SEND], n);
         add_glide(s2, ts2, &trk_glide[t][GL_SEND], n);
         meter(t, tl, tr, g * gl, g * gr, n);
@@ -1443,6 +1490,9 @@ static void render_sub(uint32_t n, uint32_t at)
     zerof(s1, n);
     zerof(s2, n);
     perf_tick(n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    kids_mix_begin(n);
+#endif
 #if TRK_TAP
     tap_set(n, at);                                       /* the USB audio input's tracks: this stretch's sinks */
 #endif
@@ -1455,6 +1505,12 @@ static void render_sub(uint32_t n, uint32_t at)
     late = late_at0 = fx_c2 && plat_cpu2_busy();          /* the second core still at the effects' job (begun with the
                                                            * block): it takes the voices straight after it (c2_chain),
                                                            * or, past it already, the first starts it (c2_late) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_mix_mask) {   /* each per-track insert has one owner */
+        fx_done();
+        late = late_at0 = 0;
+    } else
+#endif
     if (!late) {
         fx_done();                                        /* (done already, or one core) */
         on2 = c2_run ? c2_run(core2_job, arg | 0x100u) : 0;
@@ -1471,7 +1527,7 @@ static void render_sub(uint32_t n, uint32_t at)
     if (late)
         late = c2_late(arg, &on2);
     while ((vi = ws_take0()) >= 0) {
-        synth_render_on(SY, 0, vi, vi + 1, mel_l, mel_r, s1, s2, n);
+        render_primary_voice(vi, n);
         if (late)
             late = c2_late(arg, &on2);
     }
@@ -1498,7 +1554,7 @@ static void render_sub(uint32_t n, uint32_t at)
         zerof(c2_s2, n);
     }
     for (i = ws_a; i < ws_n - ws_b; i++)                  /* any both gave back */
-        synth_render_on(SY, 0, ws_ord[i], ws_ord[i] + 1, mel_l, mel_r, s1, s2, n);
+        render_primary_voice(ws_ord[i], n);
     split_last[0] = (uint8_t)ws_a;                        /* (the profiler: the voices each core took) */
     split_last[1] = (uint8_t)ws_b;
     split_last[2] = (uint8_t)(late_at0 ? 128u : 0u);
@@ -1512,6 +1568,9 @@ static void render_sub(uint32_t n, uint32_t at)
     add_in(mel_r, c2_r, n);
     add_in(s1, c2_s1, n);
     add_in(s2, c2_s2, n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    kids_mix_finish(n);
+#endif
     for (t = 0; t < NTRK; t++)                            /* the synth's meters, into the common ones */
         if (!eng_drum[t]) {
             float v = (float)synth_peak[t] * (1.0f / 16383.5f);
@@ -1638,6 +1697,9 @@ void engine_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12)
         drain();
         PROF_ADD(PR_DRAIN, pt);
         bpm = seq_tempo(&seq);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        kids_phase_step = bpm * (1.0f / (240.0f * SY_SR));
+#endif
         synth_tempo(SY, bpm);
         fx_tempo(FXS(0), bpm);
         fx_tempo(FXS(1), bpm);
@@ -1834,6 +1896,14 @@ void engine_init(patterns_t *P, uint8_t (*par)[NTP])
         seq_prof = &eng_prof[PR_SIX];
     }
     synth_init(SY, par);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    kids_phase = kids_chorus_phase = 0.0f;
+    kids_phase_pixel = kids_phase_playing = 0;
+    for (t = 0; t < NTRK; t++) {
+        kids_dsp_tracks[t] = (kids_dsp_track_t){0};
+        kids_insert[t] = (kids_insert_t){0};
+    }
+#endif
     for (k = 0; k < NDL; k++)
         dl_owner[k] = 0xFF;
     for (t = 0; t < NTRK; t++) {

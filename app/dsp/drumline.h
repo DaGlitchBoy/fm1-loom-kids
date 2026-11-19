@@ -76,6 +76,12 @@ typedef struct drumline drumline_t;
 #define DRUMLINE_BYTES 2560                            /* 8 voices (each with its key's envelope and filter state),
                                                         * four sample windows (80 B each), the dynamic filter (the
                                                         * strings' lines and the 909 slots: drumline.c, every kit's) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#include "kids_dsp.h"
+#undef DRUMLINE_BYTES
+#define DRUMLINE_BYTES 2720
+#endif
+
 
 void drumline_init(drumline_t *d, const uint8_t *par);  /* par: the track's par[] (reads TP_DRUM0.., TP_A..TP_R at a hit,
                                                          * TP_SEND* each chunk) */
@@ -96,6 +102,9 @@ void drumline_filter(drumline_t *d, int type, int locut, int comp, int drive, in
 /* render n frames: dry L/R (through the dynamic filter when on) and sends (the track's TP_SEND*), added into
  * the buffers. Stack: about 400 bytes (three 32-sample sub-block buffers) */
 void drumline_render(drumline_t *d, float *l, float *r, float *s1, float *s2, uint32_t n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+void drumline_kids_env(drumline_t *d, const kids_dsp_track_t *track);
+#endif
 int drumline_sounding(const drumline_t *d);
 int drumline_voices(const drumline_t *d);              /* the voices sounding (the engine's core split) */
 extern volatile uint8_t drumline_hitv[DL_NSOUND];      /* the last hit of each sound, 255 = full (UI lets it fall) */

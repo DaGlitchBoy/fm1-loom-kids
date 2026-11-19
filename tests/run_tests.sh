@@ -76,6 +76,9 @@ run kids-sequencer env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_sequencer.x
 mkdir -p "$B/scenarios/kids_effects"
 run kids-effects env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_effects.xy "$B/scenarios/kids_effects"
 run kids-effects-audio "$PY" tests/host/kids_effects_test.py "$B/scenarios/kids_effects"
+mkdir -p "$B/scenarios/kids_shaping"
+run kids-shaping env LOOM_KIDS=1 LOOM_LOAD=0 LOOM_MST=raw $B/host/loom_host tests/host/kids_shaping.xy "$B/scenarios/kids_shaping"
+run kids-shaping-audio "$PY" tests/host/kids_shaping_test.py "$B/scenarios/kids_shaping"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)
 # a bank image larger than the bank's windows is refused by the simulator's loader (as the tool and the FM-1 refuse it)
 run bank-too-big sh -c "mkdir -p $OUT/big && head -c 221185 /dev/zero > $OUT/big.bin && \
@@ -85,6 +88,7 @@ if command -v emcc >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then   # 
     run emu sh -c "sh build.sh --web >/dev/null && node tests/host/emu_test.mjs $B/emu/app.wasm"
     # fm1-base's page with LOOM-8's bits, its worklet with the part resample (in time at 48 kHz)
     run emu-page node tests/host/emu_page_test.mjs $B/emu
+    run emu-kids-dsp node tests/host/kids_dsp_web.mjs $B/emu/app.wasm
 else
     echo "  skip emu (no emcc or node)"
 fi
