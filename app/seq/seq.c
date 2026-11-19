@@ -608,6 +608,9 @@ static int chord_deg(int note, uint32_t w, int key, int scale)   /* the scale's 
 /* a routed track's note through the brain (steps and live keys alike) */
 static int brain_note(const seq_t *s, int t, int note)
 {
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (s->kids_mode) return note;
+#endif
     int mode = brain_follows(s, t) ? s->par[t][TP_BRAIN] : 0;
     if (!mode)
         return note;
@@ -2723,6 +2726,12 @@ static void rec_key_on(seq_t *s, int t, int note, int vel)
                     st->note[i] = (uint8_t)note;
                     break;
                 }
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        if (s->kids_mode && i == SN) {
+            s->rec_overflow++;
+            return;
+        }
+#endif
     }
     for (i = 0; i < 8; i++)
         if (!s->rec_note[i]) {
@@ -2755,9 +2764,20 @@ static void rec_key_off(seq_t *s, int t, int note)
                         st->len = (uint8_t)len;
         }
         s->rec_note[i] = 0;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        if (s->kids_mode) continue;  /* aliased drum keys can retrigger a held hit */
+#endif
         return;
     }
 }
+
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+void seq_rec_finish_keys(seq_t *s)
+{
+    for (int i = 0; i < 8; i++)
+        if (s->rec_note[i]) rec_key_off(s, s->rec_trk[i], s->rec_note[i]);
+}
+#endif
 
 static void tracks_go(seq_t *s)
 {
@@ -2858,12 +2878,16 @@ static void key_in(seq_t *s, int t, int note, int on, int vel, int raw, const se
     pl = &s->player[t];
     player = s->par[t][TP_PLAYER];
     had_phys = pl->nphys;
-    if (on && s->rec && s->playing && !s->count_in) {
+    int record_on = on;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (s->kids_mode && t != s->rec_target) record_on = 0;
+#endif
+    if (record_on && s->rec && s->playing && !s->count_in) {
         if (s->rec_wait)
             rec_go(s, t, note, vel, o);
         else
             rec_key_on(s, t, note, vel);
-    } else if (on && s->rec && s->playing && s->count_in && !s->rec_wait) {
+    } else if (record_on && s->rec && s->playing && s->count_in && !s->rec_wait) {
         rec_count_in(s, t, note, vel);
     } else if (!on)
         rec_key_off(s, t, note);      /* (a no-op unless the key was recorded) */

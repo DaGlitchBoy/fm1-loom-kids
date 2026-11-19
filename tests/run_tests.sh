@@ -36,6 +36,7 @@ run sample-bank sh -c "'$PY' tools/loom_samples.py build build/gen/user_bank.bin
     'sweep two=build/gen/wav/sweep.wav:57' && '$PY' tools/loom_samples.py syx build/gen/user_bank.syx \
     'piano two=build/gen/wav/piano.wav:60%16k' 'sweep two=build/gen/wav/sweep.wav:57'"
 run bank-tool "$PY" tests/host/bank_test.py
+run kids-music-map sh -c '"$0" -std=c99 -Wall -Wextra -Werror -Iapp tests/host/kids_music_test.c -o "$1/kids_music_test" && "$1/kids_music_test"' "$CC" "$OUT"
 run kids-page "$PY" tests/host/kids_page_test.py
 # the units' own tests, written beside them (their WAVs in build/host/)
 for t in synth braids drumline fx seq factory; do
@@ -68,6 +69,8 @@ fi
 run host-build sh build.sh --host
 mkdir -p "$B/scenarios/kids_redesign"
 run kids-redesign env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_redesign.xy "$B/scenarios/kids_redesign"
+mkdir -p "$B/scenarios/kids_music"
+run kids-music env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_music.xy "$B/scenarios/kids_music"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)
 # a bank image larger than the bank's windows is refused by the simulator's loader (as the tool and the FM-1 refuse it)
 run bank-too-big sh -c "mkdir -p $OUT/big && head -c 221185 /dev/zero > $OUT/big.bin && \

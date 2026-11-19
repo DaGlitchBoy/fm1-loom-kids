@@ -299,6 +299,10 @@ typedef struct {
     volatile uint8_t rec_replace;     /* live record replaces: the steps the playhead passes on rec_target are
                                        * cleared, unless written in this pass (the UI's MODE) */
     volatile uint8_t rec_target;      /* the track the keys record into (the UI's) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    volatile uint8_t kids_mode;       /* Kids owns scale mapping and records the selected track only */
+    volatile uint32_t rec_overflow;    /* distinct notes refused by a full melodic step */
+#endif
     uint32_t rec_written[NSEQT][2];   /* steps written since the playhead last passed them */
     uint32_t rec_age[8];
     /* the weave (pattern.h weave_step): a track weaving plays its pattern crossed with wv_from's pattern wv_pat by
@@ -367,6 +371,9 @@ uint32_t seq_punch_mask(const seq_t *s, int trk);   /* the 12 PX_* bits in force
 /* on: 0 off; 1 the keys write steps (quantised) while playing (momentary: on while REC is held); 2 the same,
  * and if the transport is started afterwards it waits for the first key, which lands on step 1 (the OP-XY's
  * live recording); count_in (bars) stays as an option on top */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+void seq_rec_finish_keys(seq_t *s);
+#endif
 void seq_rec(seq_t *s, int on);
 void seq_rec_knob(seq_t *s, int trk, int param, int val);   /* REC held + a knob: a lock on the step playing */
 int seq_rec_pos(const seq_t *s, int trk);           /* the step live keys land on now */

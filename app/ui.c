@@ -4806,6 +4806,10 @@ void ui_frame(void)
         mark_dirty();
     }
     seq.rec_target = (uint8_t)(sel_trk() == AUX_BRAIN ? AUX_BRAIN : inst_trk());   /* where live recording writes */
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_mode) seq.rec_replace = 0;
+    else
+#endif
     seq.rec_replace = (uint8_t)(proj.rsv[2] & 1u);
     ink_follow();
     if (ui.wv_latched && !proj.trk[AUX_WEAVE].par[TP_E1]) {   /* latch off: the latched weaves end */

@@ -431,6 +431,18 @@ int app_expect(const char *what, int *got)
         *got = ui.oct;
     else if (!strcmp(what, "kids_note"))
         *got = ui.rem[0];
+    else if (!strncmp(what, "kids_note.", 10)) {
+        int i = atoi(what + 10) - 1;
+        *got = i >= 0 && i < ui.nrem ? ui.rem[i] : 0;
+    } else if (!strncmp(what, "kids_held.", 10)) {
+        int pitch = atoi(what + 10);
+        *got = pitch >= 1 && pitch <= 127 ? kids_note_users[pitch] : 0;
+    } else if (!strcmp(what, "kids_length"))
+        *got = tpat(sel_trk())->len;
+    else if (!strcmp(what, "kids_rec"))
+        *got = seq.rec ? 2 : kids_rec_armed;
+    else if (!strcmp(what, "kids_overflow"))
+        *got = (int)seq.rec_overflow;
     else if (!strcmp(what, "project_slot"))
         *got = proj_slot < NPROJ ? proj_slot + 1 : 0;
     else if (!strcmp(what, "kids_draws"))
