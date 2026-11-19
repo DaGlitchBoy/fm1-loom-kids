@@ -40,12 +40,18 @@ expect kids_lights 64
 spin SELECT -1
 expect kids_lights 67
 tap FX
+expect kids_panel 1
+expect kids_lights 67
+tap FX
 expect kids_panel 0
 expect kids_send.1.1 48
 expect kids_send.1.2 0
 expect kids_lights 66
 tap FX
 expect kids_send.1.2 62
+tap SEL
+expect kids_panel 2
+expect kids_send.1.1 48
 tap SEL
 expect kids_send.1.1 0
 expect kids_send.1.2 62

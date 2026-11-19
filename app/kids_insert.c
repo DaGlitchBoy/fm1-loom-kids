@@ -10,8 +10,8 @@ typedef struct {
 static kids_insert_t kids_insert[NTRK];
 static float kids_mix[NTRK][4][STRETCH_MAX];
 static uint32_t kids_mix_mask;
-static float kids_phase, kids_phase_step, kids_chorus_phase;
-static volatile uint8_t kids_phase_pixel;
+static float kids_phase[NTRK], kids_phase_step, kids_chorus_phase;
+static volatile uint8_t kids_phase_pixel[NTRK];
 static uint8_t kids_phase_playing;
 
 static void kids_insert_reset(int track)
@@ -24,7 +24,7 @@ static void kids_insert_reset(int track)
 static int kids_insert_active(const kids_dsp_track_t *p)
 {
     const uint8_t *v = p->value;
-    return (v[KD_LFO_ON] && v[KD_DEPTH]) ||
+    return (v[KD_LFO_ON] && v[KD_DEPTH] != KD_DEPTH_ZERO) ||
         (v[KD_EDIT_ON] && (v[KD_LOWPASS] || v[KD_DRIVE] || v[KD_CRUSH] || v[KD_CHORUS]));
 }
 
@@ -32,10 +32,11 @@ static void kids_mix_begin(uint32_t n)
 {
     kids_mix_mask = 0;
     if (!seq.kids_mode) return;
-    if (seq.playing && !kids_phase_playing) kids_phase = 0;
+    int restart = seq.playing && !kids_phase_playing;
     kids_phase_playing = seq.playing;
-    kids_phase_pixel = (uint8_t)(kids_phase * 192.0f);
     for (int t = 0; t < NTRK; t++) {
+        if (restart) kids_phase[t] = 0;
+        kids_phase_pixel[t] = (uint8_t)(kids_phase[t] * 192.0f);
         if (eng_drum[t] || !kids_insert_active(&kids_dsp_tracks[t])) continue;
         kids_mix_mask |= 1u << t;
         for (int c = 0; c < 4; c++) zerof(kids_mix[t][c], n);
@@ -71,16 +72,18 @@ static void kids_track_insert(int t, float *l, float *r, float *send1, float *se
     const float drive = p[KD_EDIT_ON] ? p[KD_DRIVE] * unit : 0.0f;
     const float crush = p[KD_EDIT_ON] ? p[KD_CRUSH] * unit : 0.0f;
     const float chorus = p[KD_EDIT_ON] ? p[KD_CHORUS] * unit * 0.32f : 0.0f;
-    const float depth = p[KD_LFO_ON] ? p[KD_DEPTH] * unit : 0.0f;
+    const int signed_depth = p[KD_LFO_ON] ? p[KD_DEPTH] - KD_DEPTH_ZERO : 0;
+    const float depth = (float)signed_depth * unit;
     const int target = p[KD_TARGET], wave = p[KD_WAVE];
-    float phase = kids_phase;
+    float phase = kids_phase[t];
+    float phase_step = kids_phase_step * kids_lfo_cycles_per_bar[p[KD_RATE]];
     float warp = chorus ? 95.0f * fm_sin_turns(kids_chorus_phase) : 0.0f;
     if (!chorus) s->valid = 0;
     if (!crush) s->crush_clock = 0;
     for (uint32_t i = 0; i < n; i++) {
-        float shape = depth ? 0.5f + 0.5f * kids_lfo_shape(wave, phase) : 0.0f;
-        float wet = depth * (target == KD_DISTORTION ? shape : 1.0f - shape);
-        phase += kids_phase_step;
+        float shape = depth ? kids_lfo_shape(wave, phase) * depth : 0.0f;
+        float wet = 0.5f * (fm_fabsf(depth) + (target == KD_DISTORTION ? shape : -shape));
+        phase += phase_step;
         if (phase >= 1.0f) phase -= 1.0f;
         float cutoff = target == KD_CUTOFF ? wet : 0.0f;
         float low = lowpass + cutoff * (1.0f - lowpass);
@@ -127,8 +130,10 @@ static void kids_mix_finish(uint32_t n)
         add_in(s1, b[2], n);
         add_in(s2, b[3], n);
     }
-    kids_phase += kids_phase_step * (float)n;
-    if (kids_phase >= 1.0f) kids_phase -= 1.0f;
+    for (int t = 0; t < NTRK; t++) {
+        kids_phase[t] += kids_phase_step * kids_lfo_cycles_per_bar[kids_dsp_tracks[t].value[KD_RATE]] * (float)n;
+        if (kids_phase[t] >= 1.0f) kids_phase[t] -= 1.0f;
+    }
     kids_chorus_phase += (0.75f / SY_SR) * (float)n;
     if (kids_chorus_phase >= 1.0f) kids_chorus_phase -= 1.0f;
 }

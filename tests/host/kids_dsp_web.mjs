@@ -6,7 +6,7 @@ import { performance } from "node:perf_hooks";
 
 const FRAMES = 128, RATE = 44100, DEADLINE_MS = 1000 * FRAMES / RATE;
 const FX = 1, SEL = 2, ENV = 4, LFO = 8, EDIT = 16, HOME = 64, SEQ = 512, PLAY = 1024;
-const SELECT = 0, K3 = 5, K4 = 6;
+const SELECT = 0, K1 = 3, K3 = 5, K4 = 6;
 const WHITE = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26];
 const BLACK = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
 
@@ -46,7 +46,8 @@ async function run(path, shaping) {
     if (shaping) {
       tap(ENV);
       tap(LFO);
-      turn(K3, 27);
+      turn(K1, 27);
+      turn(K3, track % 5);
       turn(K4, track % 4);
       tap(EDIT);
       assert.equal(ex.web_lit_buttons() & 31, 31, `track ${track + 1} all five switches`);
@@ -79,7 +80,31 @@ async function run(path, shaping) {
            budgetMs: +DEADLINE_MS.toFixed(3) };
 }
 
+async function history(path) {
+  const ex = await boot(path);
+  const wait = (n = 16) => { for (let i = 0; i < n; ++i) ex.web_render(FRAMES); };
+  const tap = (mask) => { ex.web_buttons(mask); wait(); ex.web_buttons(0); wait(); };
+  tap(FX);
+  tap(SEL);
+  tap(FX);
+  assert.equal(ex.web_lit_buttons() & 3, 3, "opening the reverb controls preserves both sends");
+  ex.web_buttons(HOME);
+  wait(110);
+  ex.web_enc(K1, -1);
+  wait();
+  assert.equal(ex.web_lit_buttons() & 3, 1, "HOME + K1 left undoes the delay toggle");
+  ex.web_enc(K1, 1);
+  wait();
+  assert.equal(ex.web_lit_buttons() & 3, 3, "HOME + K1 right redoes the delay toggle");
+  ex.web_buttons(0);
+  wait();
+  tap(FX);
+  assert.equal(ex.web_lit_buttons() & 3, 2, "using the hold preserves reverb focus on release");
+  console.log("WebAssembly effect focus, undo and redo verified");
+}
+
 const [current, baseline] = process.argv.slice(2);
+await history(current);
 if (baseline) console.log("Delivery 4, eight tracks and two sends", await run(baseline, false));
-console.log("Delivery 5, eight tracks and two sends", await run(current, false));
-console.log("Delivery 5, eight tracks, ENV, LFO, four quick effects and two sends", await run(current, true));
+console.log("Current build, eight tracks and two sends", await run(current, false));
+console.log("Current build, eight tracks, ENV, LFO, four quick effects and two sends", await run(current, true));

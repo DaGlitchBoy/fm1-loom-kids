@@ -51,6 +51,14 @@ for name, period in (("tremolo", 2), ("tremolo-90", 8 / 3)):
         assert 0.15 < rms(name, offset + 0.68 * period, offset + 0.83 * period) / high < 0.30, name
     assert 0.85 < rms(name, period + 0.27, period + 0.42) / high < 1.15, name
 
+# At 120 BPM the inverted quarter-note square starts quiet and repeats every 500 ms.
+name = "tremolo-quarter-inverse"
+first_hot = rms(name, 0.32, 0.43)
+assert first_hot > 400
+for offset in (0, 0.5, 1.0):
+    assert 0.15 < rms(name, offset + 0.14, offset + 0.22) / first_hot < 0.30
+    assert 0.85 < rms(name, offset + 0.32, offset + 0.43) / first_hot < 1.15
+
 assert rms("lfo-cutoff", 1.60, 1.83, True) > 1.15 * rms("lfo-cutoff", 0.24, 0.42, True)
 assert rms("lfo-drive", 1.20, 1.40) > 1.25 * rms("lfo-drive", 0.27, 0.42)
 

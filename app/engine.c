@@ -1024,6 +1024,9 @@ static void drain(void)
             break;
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
         case C_KIDS_PLAYER:
+            /* The UI publishes the new knob immediately. Release any voices owned
+             * by the previous player before routing queued keys to the new one. */
+            ppar[a][TP_PLAYER] = epar[a][TP_PLAYER];
             seq_kids_player_reset(&seq, (int)a, &SINK);
             ppar[a][TP_PLAYER] = epar[a][TP_PLAYER] = (uint8_t)b;
             break;
@@ -1897,9 +1900,11 @@ void engine_init(patterns_t *P, uint8_t (*par)[NTP])
     }
     synth_init(SY, par);
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
-    kids_phase = kids_chorus_phase = 0.0f;
-    kids_phase_pixel = kids_phase_playing = 0;
+    kids_chorus_phase = 0.0f;
+    kids_phase_playing = 0;
     for (t = 0; t < NTRK; t++) {
+        kids_phase[t] = 0.0f;
+        kids_phase_pixel[t] = 0;
         kids_dsp_tracks[t] = (kids_dsp_track_t){0};
         kids_insert[t] = (kids_insert_t){0};
     }

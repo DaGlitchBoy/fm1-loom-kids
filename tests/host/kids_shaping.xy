@@ -51,16 +51,16 @@ wavstop
 # LFO phase is attached to 120 BPM. Square tremolo holds two gain levels.
 tap LFO
 expect kids 5
-spin K3 36
+spin K1 36
 spin K4 3
 wait 20
 expect kids_dsp.2.5 1
-expect kids_dsp.2.7 100
+expect kids_dsp.2.7 227
 expect kids_dsp.2.8 3
-spin K1 -1
-expect kids 5
-expect kids_lights 0
-spin K1 1
+tap LFO
+expect kids 1
+expect kids_lights 64
+tap LFO
 expect kids_lights 8
 shot kids-lfo-square.png
 wav tremolo.wav
@@ -102,6 +102,19 @@ wav lfo-drive.wav
 tap PLAY
 key w8 down
 wait 2110
+key w8 up
+tap PLAY
+wavstop
+spin K2 -2
+spin K1 -200
+spin K3 3
+wait 12
+expect kids_dsp.2.7 27
+expect kids_dsp.2.14 4
+wav tremolo-quarter-inverse.wav
+tap PLAY
+key w8 down
+wait 1450
 key w8 up
 tap PLAY
 wavstop
@@ -168,7 +181,10 @@ key w8 up
 wait 1300
 wavstop
 tap FX
+tap FX
 tap SEL
+tap SEL
+tap EDIT
 tap EDIT
 expect kids_lights 64
 wav bypass.wav

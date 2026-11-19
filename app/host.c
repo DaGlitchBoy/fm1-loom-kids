@@ -466,8 +466,22 @@ int app_expect(const char *what, int *got)
     }
     else if (!strcmp(what, "kids_lights"))
         *got = (int)kids_button_lights();
+    else if (!strcmp(what, "kids_undo"))
+        *got = kh_cursor;
+    else if (!strcmp(what, "kids_redo"))
+        *got = kh_count - kh_cursor;
+    else if (!strcmp(what, "kids_history"))
+        *got = kh_visible;
+    else if (!strcmp(what, "kids_history_bytes")) {
+        *got = 0;
+        for (int i = 0; i < kh_count; i++) {
+            const kh_edit_t *e = &kh_entries[i];
+            *got += (int)e->size;
+            if (e->bank) *got += (int)(sizeof *e->bank + e->bank->nlanes * sizeof(lane_t));
+        }
+    }
     else if (!strcmp(what, "kids_phase"))
-        *got = kids_phase_pixel;
+        *got = kids_phase_pixel[sel_trk()];
     else if (!strncmp(what, "kids_dsp.", 9)) {
         int track, parameter;
         if (sscanf(what + 9, "%d.%d", &track, &parameter) != 2 ||
