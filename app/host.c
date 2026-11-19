@@ -447,6 +447,18 @@ int app_expect(const char *what, int *got)
         *got = proj_slot < NPROJ ? proj_slot + 1 : 0;
     else if (!strcmp(what, "kids_draws"))
         *got = (int)kids_draws;
+    else if (!strcmp(what, "kids_perf_page"))
+        *got = kids_perf_page + 1;
+    else if (!strcmp(what, "kids_velocity"))
+        *got = kids_step_velocity();
+    else if (!strcmp(what, "kids_swing"))
+        *got = tpat(sel_trk())->groove;
+    else if (!strncmp(what, "kids_cell.", 10)) {
+        int track, cell;
+        if (sscanf(what + 10, "%d.%d", &track, &cell) != 2 ||
+            track < 1 || track > NTRK || cell < 1 || cell > 16) return 0;
+        *got = kids_performance_cell(track - 1, cell - 1);
+    }
     else if (!strcmp(what, "kids_bar"))
         *got = ui.bar + 1;
     else if (!strcmp(what, "playing"))

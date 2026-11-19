@@ -2,7 +2,13 @@
 /* Emulator-only vertical slice. Included by ui.c after the original input helpers.
  * Musical state stays in proj/pats/seq; only presentation state lives here. */
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
-static uint8_t kids_mode;                       /* 0 Studio, 1 Stage, 2 Steps, 3 Sounds */
+static uint8_t kids_mode;                       /* 0 Studio */
+enum { KIDS_HOME = 1, KIDS_STEPS, KIDS_SOUNDS, KIDS_PERFORMANCE };
+static uint8_t kids_perf_page;
+static struct {
+    int track, pattern, step;
+    int next_hit, next_velocity;
+} kids_cell;
 static uint32_t kids_sig[8], kids_draws;
 #include <stdlib.h>
 #include "kids_music.h"
@@ -79,6 +85,8 @@ static void kids_remap_kit_mutes(int restore)
 static void kids_reset_banks(void)
 {
     kids_sound_error = NULL;
+    kids_cell.track = -1;
+    kids_perf_page = 0;
     memset(kids_scale, 0, sizeof kids_scale);
     memset(kids_chord, 0, sizeof kids_chord);
     memset(kids_root, 60, sizeof kids_root);
@@ -234,26 +242,34 @@ static void kids_rec_start(void)
     mark_dirty();
 }
 
-static void kids_home_knobs(const int32_t ev[NE])
+static void kids_set_length(int delta)
 {
     static const uint8_t lengths[] = {16, 32, 64};
+    tpat_t *pattern = tpat(sel_trk());
+    int length = pattern->len;
+    int index = 0;
+    while (index < 2 && lengths[index] < length) index++;
+    if (length != lengths[index] && delta > 0) delta--;
+    int chosen = lengths[clampi(index + delta, 0, 2)];
+    if (chosen == length) return;
+    kids_rec_stop();
+    undo_keep();
+    pattern->len = (uint8_t)chosen;
+    ui.bar = (uint8_t)clampi(ui.bar, 0, (chosen - 1) / 16);
+    mark_dirty();
+}
+
+static void kids_mix_knobs(const int32_t ev[NE])
+{
     int track = sel_trk();
-    tpat_t *pattern = tpat(track);
     if (ev[EN_K1]) set_tp(track, TP_LEVEL, proj.trk[track].par[TP_LEVEL] + clampi(ev[EN_K1], -100, 100));
-    if (ev[EN_K2]) {
-        int delta = clampi(ev[EN_K2], -3, 3), index = 0;
-        int length = pattern->len;
-        while (index < 2 && lengths[index] < length) index++;
-        if (length != lengths[index] && delta > 0) delta--;
-        int chosen = lengths[clampi(index + delta, 0, 2)];
-        if (chosen != length) {
-            kids_rec_stop();
-            undo_keep();
-            pattern->len = (uint8_t)chosen;
-            ui.bar = (uint8_t)clampi(ui.bar, 0, (chosen - 1) / 16);
-            mark_dirty();
-        }
-    }
+    if (ev[EN_K2]) kids_set_length(clampi(ev[EN_K2], -3, 3));
+}
+
+static void kids_home_knobs(const int32_t ev[NE])
+{
+    kids_mix_knobs(ev);
+    int track = sel_trk();
     if (is_drum(track)) return;
     kids_chord[track] = (uint8_t)clampi(kids_chord[track] + clampi(ev[EN_K3], -KC_VOICINGS, KC_VOICINGS), 0, KC_VOICINGS - 1);
     kids_scale[track] = (uint8_t)clampi(kids_scale[track] + clampi(ev[EN_K4], -KS_COUNT, KS_COUNT), 0, KS_COUNT - 1);
@@ -344,7 +360,10 @@ static int kids_apply_sound(int category, int index)
     kids_sound_error = NULL;
     if (drum) kit_apply(track, kit, dev);
     else preset_apply(track, index);
-    if (changes_type) kids_remap_kit_mutes(1);
+    if (changes_type) {
+        kids_remap_kit_mutes(1);
+        kids_cell.track = -1;
+    }
     kids_remember_chord(track);
     kids_category = (uint8_t)category;
     kids_picks[track][category] = (uint16_t)(index + 1);
@@ -403,6 +422,81 @@ static void kids_track(int d)
     kids_remember_chord(sel_trk());
     kids_category_sync();
 }
+static int kids_page_count(int track)
+{
+    return clampi((tpat(track)->len + 15) / 16, 1, 4);
+}
+
+static void kids_update_performance_page(void)
+{
+    int selected = sel_trk();
+    if (playing()) kids_perf_page = eng_step[selected] / 16;
+    kids_perf_page = (uint8_t)clampi(kids_perf_page, 0, kids_page_count(selected) - 1);
+}
+
+/* 0: outside the loop, 1: empty, 2: occupied. The overview shows all kit hits. */
+static int kids_performance_cell(int track, int column)
+{
+    int step = kids_perf_page * 16 + column;
+    const tpat_t *pattern = tpat(track);
+    if (step >= pattern->len) return 0;
+    return step_empty(&pattern->st[step]) ? 1 : 2;
+}
+
+static int kids_step_velocity(void)
+{
+    int track = sel_trk(), pattern = cur_pat(track), step = kids_cell.step;
+    const tpat_t *tp = tpat(track);
+    if (kids_cell.track != track || kids_cell.pattern != pattern || step >= tp->len) return 0;
+    const step_t *st = &tp->st[step];
+    int hit = is_drum(track) ? ui.dsound + 1 : 0;
+    if (hit ? kit_has(st, hit) : !step_empty(st)) {
+        int own = hit ? step_vel(pats.lane, track, pattern, step, hit - 1) : 0;
+        return own ? own : st->vel;
+    }
+    return kids_cell.next_hit == hit && kids_cell.next_velocity ? kids_cell.next_velocity : 100;
+}
+
+static void kids_edit_velocity(int delta)
+{
+    int velocity = kids_step_velocity();
+    if (!velocity) return;
+    int track = sel_trk(), step = kids_cell.step;
+    step_t *st = &tpat(track)->st[step];
+    int hit = is_drum(track) ? ui.dsound + 1 : 0;
+    int target = clampi(velocity + delta, 1, 127);
+    if (target == velocity) return;
+    if (hit ? kit_has(st, hit) : !step_empty(st)) {
+        undo_keep();
+        if (hit) kit_vel(track, step, target - velocity);
+        else st->vel = (uint8_t)target;
+        mark_dirty();
+    } else {
+        kids_cell.next_hit = hit;
+        kids_cell.next_velocity = target;
+    }
+}
+
+static void kids_toggle_step(int column)
+{
+    int track = sel_trk(), pattern = cur_pat(track), step = step_shown(column);
+    int hit = is_drum(track) ? ui.dsound + 1 : 0;
+    if (step >= tpat(track)->len) return;
+    int pending = 0;
+    if (kids_cell.track == track && kids_cell.pattern == pattern && kids_cell.step == step && kids_cell.next_hit == hit)
+        pending = kids_cell.next_velocity;
+    step_toggle(column);
+    kids_cell.track = track;
+    kids_cell.pattern = pattern;
+    kids_cell.step = step;
+    kids_cell.next_velocity = 0;
+    step_t *st = &tpat(track)->st[step];
+    if (hit && kit_has(st, hit)) {
+        int own = step_vel(pats.lane, track, pattern, step, hit - 1);
+        kit_vel(track, step, (pending ? pending : 100) - (own ? own : st->vel));
+    } else if (!hit && pending && !step_empty(st)) st->vel = (uint8_t)pending;
+}
+
 static int kids_input(void)
 {
     if (!kids_mode) return 0;
@@ -419,11 +513,12 @@ static int kids_input(void)
     ui.btn = btn; ui.keys = keys; ui.btn_used = btn;
     /* SEL is reserved for delay in a later delivery. */
     if (down & ((1u << B_HOME) | (1u << B_SEQ) | (1u << B_EDIT))) {
-        if (!(down & (1u << B_HOME)) && (down & (1u << B_SEQ))) kids_rec_stop();
+        int next = down & (1u << B_HOME) ? KIDS_HOME : down & (1u << B_SEQ) ? KIDS_STEPS : KIDS_SOUNDS;
+        if (next == KIDS_STEPS) kids_rec_stop();
         kids_notes_off();
-        kids_mode = down & (1u << B_HOME) ? 1 : down & (1u << B_SEQ) ? 2 : 3;
+        kids_mode = next;
     }
-    if ((down & (1u << B_REC)) && kids_mode != 2) {
+    if ((down & (1u << B_REC)) && kids_mode != KIDS_STEPS) {
         if (kids_rec_armed || seq.rec) kids_rec_stop();
         else if (playing()) kids_rec_start();
         else kids_rec_armed = 1;
@@ -453,37 +548,58 @@ static int kids_input(void)
         kids_remember_chord(sel_trk());
     }
 
-    if (kids_mode == 1) kids_home_knobs(ev);
-    if (kids_mode == 2)
-        ui.bar = (uint8_t)clampi(ui.bar + clampi(ev[EN_K2], -3, 3), 0, (tpat(sel_trk())->len - 1) / 16);
-    if (kids_mode == 2 && ev[EN_K3]) {
-        if (is_drum(sel_trk())) ui.dsound = (uint8_t)clampi(ui.dsound + ev[EN_K3], 0, DL_NSOUND - 1);
-        else {
+    if (ev[EN_PRESET]) kids_category_step(ev[EN_PRESET]);
+    if (ev[EN_ALGO]) kids_sound_step(ev[EN_ALGO]);
+    if ((kids_mode == KIDS_STEPS && ev[EN_K4] > 0) ||
+        (kids_mode == KIDS_PERFORMANCE && ev[EN_K4] < 0)) {
+        if (kids_mode == KIDS_PERFORMANCE) {
+            kids_rec_stop();
+            kids_notes_off();
+            kids_mode = KIDS_STEPS;
+        } else kids_mode = KIDS_PERFORMANCE;
+    }
+    if (kids_mode == KIDS_HOME) kids_home_knobs(ev);
+    if (kids_mode == KIDS_PERFORMANCE) {
+        kids_mix_knobs(ev);
+        if (ev[EN_K3]) {
+            tpat_t *pattern = tpat(sel_trk());
+            int swing = clampi(pattern->groove + clampi(ev[EN_K3], -99, 99), 0, 99);
+            if (swing != pattern->groove || proj.groove != GR_SWING) {
+                undo_keep();
+                if (proj.groove != GR_SWING) set_groove_type(GR_SWING);
+                pattern->groove = (int8_t)swing;
+                mark_dirty();
+            }
+        }
+        kids_update_performance_page();
+    }
+    if (kids_mode == KIDS_STEPS) {
+        ui.bar = (uint8_t)clampi(ui.bar + clampi(ev[EN_K3], -3, 3), 0, kids_page_count(sel_trk()) - 1);
+        if (ev[EN_K2] && !is_drum(sel_trk())) {
             int track = sel_trk();
-            kids_root[track] = (uint8_t)clampi(kids_root[track] + clampi(ev[EN_K3], -127, 127), 1, 127);
+            kids_root[track] = (uint8_t)clampi(kids_root[track] + clampi(ev[EN_K2], -127, 127), 1, 127);
             kids_remember_chord(track);
         }
     }
-    if (ev[EN_PRESET]) kids_category_step(ev[EN_PRESET]);
-    if (ev[EN_ALGO]) kids_sound_step(ev[EN_ALGO]);
     for (int i = 0; i < NKEYS; i++) if (kd & (1u << i)) {
         int w = ordinal(WHITE_K, 16, i), b = ordinal(BLACK_K, 11, i);
-        if (kids_mode == 2) {
-            if (w >= 0 && step_shown(w) < tpat(sel_trk())->len) step_toggle(w);
+        if (kids_mode == KIDS_STEPS) {
+            if (w >= 0) kids_toggle_step(w);
             else if (b >= 0 && is_drum(sel_trk())) ui.dsound = (uint8_t)b;
         } else kids_key_press(i);
     }
+    if (kids_mode == KIDS_STEPS && ev[EN_K1]) kids_edit_velocity(clampi(ev[EN_K1], -127, 127));
     return 1;
 }
 static void kids_leds(void)
 {
-    uint32_t buttons = 1u << (kids_mode == 1 ? B_HOME : kids_mode == 2 ? B_SEQ : B_EDIT);
+    uint32_t buttons = 1u << (kids_mode == KIDS_HOME ? B_HOME : kids_mode == KIDS_SOUNDS ? B_EDIT : B_SEQ);
     uint32_t keys = 0, mid = 0;
     if (playing()) buttons |= 1u << B_PLAY;
     if (seq.rec || kids_rec_armed) buttons |= 1u << B_REC;
     if (proj.lights) {
         keys = ui.keys;
-        if (kids_mode == 2) {
+        if (kids_mode == KIDS_STEPS) {
             const tpat_t *tp = tpat(sel_trk());
             for (int i = 0; i < 16; i++) {
                 int st = ui.bar * 16 + i;
@@ -561,7 +677,7 @@ static void kids_sound_name(char *name)
 }
 static int kids_lit(int t)
 {
-    if (t == sel_trk() && kids_mode != 2 && ui.keys) return 1;
+    if (t == sel_trk() && kids_mode != KIDS_STEPS && ui.keys) return 1;
     return playing() && !(seq.mute & (1u << t)) && step_on(&tpat(t)->st[eng_step[t] % NSTEP], t);
 }
 static void kids_draw(void)
@@ -569,23 +685,36 @@ static void kids_draw(void)
     static const uint8_t stage_h[] = {28, 64, 64, 20, 24, 40};
     static const uint8_t steps_h[] = {28, 24, 29, 29, 29, 29, 32, 40};
     static const uint8_t sound_h[] = {28, 32, 64, 38, 38, 40};
-    const uint8_t *heights = kids_mode == 1 ? stage_h : kids_mode == 2 ? steps_h : sound_h;
-    int bands = kids_mode == 2 ? 8 : 6, trk = sel_trk(), y = 0;
+    static const uint8_t perf_h[] = {28, 24, 36, 36, 36, 36, 4, 40};
+    int performance = kids_mode == KIDS_PERFORMANCE;
+    const uint8_t *heights = performance ? perf_h : kids_mode == KIDS_HOME ? stage_h :
+        kids_mode == KIDS_STEPS ? steps_h : sound_h;
+    int bands = performance || kids_mode == KIDS_STEPS ? 8 : 6, trk = sel_trk(), y = 0;
     int now = playing() ? eng_step[trk] : -1, pos, count = kids_sound_count(&pos);
     uint16_t ink = THEMES[THEME_BW].ink[trk];
     char name[NAME_LEN + 1]; kids_sound_name(name);
     const tpat_t *tp = tpat(trk);
     int rec_status = seq.rec ? 2 : kids_rec_armed ? 1 : 0;
     int full = (int32_t)(kids_full_until - plat_ms()) > 0;
+    int velocity = kids_mode == KIDS_STEPS ? kids_step_velocity() : 0;
+    int focused = velocity ? kids_cell.step : -1;
     for (int b = 0; b < bands; b++) {
         uint32_t h = hash_u(2166136261u, kids_mode | trk << 4);
         if (b == 0) {
             h = hash_u(h, rec_status); h = hash_u(h, full);
             h = hash_u(h, now + 1); h = hash_u(h, cur_pat(trk)); h = hash_u(h, cued_pat(trk));
-        } else if (kids_mode == 1 && (b == 1 || b == 2)) {
+        } else if (kids_mode == KIDS_HOME && (b == 1 || b == 2)) {
             h = hash_u(h, seq.mute);
             for (int t = (b - 1) * 4; t < b * 4; t++) h = hash_u(h, kids_lit(t));
-        } else if (kids_mode == 2 && b >= 2 && b <= 5) {
+        } else if (performance && b >= 2 && b <= 5) {
+            h = hash_u(h, kids_perf_page);
+            for (int t = (b - 2) * 2; t < (b - 2) * 2 + 2; t++) {
+                h = hash_u(h, playing() ? eng_step[t] + 1 : 0);
+                h = hash_u(h, (seq.mute >> t) & 1u);
+                for (int col = 0; col < 16; col++) h = hash_u(h, kids_performance_cell(t, col));
+            }
+        } else if (kids_mode == KIDS_STEPS && b >= 2 && b <= 5) {
+            h = hash_u(h, (uint32_t)(focused + 1));
             h = hash_u(h, now + 1); h = hash_u(h, ui.bar); h = hash_u(h, tp->len);
             for (int i = 0; i < 4; i++) {
                 int st = ui.bar * 16 + (b - 2) * 4 + i;
@@ -597,15 +726,17 @@ static void kids_draw(void)
             h = hash_u(h, kids_category); h = hash_u(h, pos);
             h = hash_u(h, proj.trk[trk].par[TP_LEVEL]); h = hash_u(h, tp->len);
             h = hash_u(h, kids_chord[trk]); h = hash_u(h, kids_scale[trk]);
+            h = hash_u(h, kids_perf_page); h = hash_u(h, (uint8_t)tp->groove);
+            h = hash_u(h, velocity); h = hash_u(h, (uint32_t)(focused + 1));
             h = hash_u(h, ui.bar); h = hash_u(h, (uint8_t)ui.oct); h = hash_u(h, ui.dsound); h = hash_u(h, ui.rem[0]);
             h = hash_u(h, proj.tempo_x10); h = hash_u(h, cued_pat(trk));
-            if (kids_mode == 3 && (b == 2 || b == 4)) h = hash_u(h, ui.keys);
+            if (kids_mode == KIDS_SOUNDS && (b == 2 || b == 4)) h = hash_u(h, ui.keys);
         }
         if (kids_sig[b] == h) { y += heights[b]; continue; }
         kids_sig[b] = h; kids_draws++;
         cv_begin(240, heights[b], KIDS_BG);
         if (b == 0) {
-            kids_label(6, 5, &LFONT_B, kids_mode == 1 ? "LOOM KIDS" : kids_mode == 2 ? "STEPS" : "SOUNDS", KIDS_WHITE, 104);
+            kids_label(6, 5, &LFONT_B, performance ? "PERFORMANCE" : kids_mode == KIDS_HOME ? "LOOM KIDS" : kids_mode == KIDS_STEPS ? "STEPS" : "SOUNDS", KIDS_WHITE, 104);
             kids_text(116, 7, "P"); kids_number(125, 7, cur_pat(trk) + 1);
             if (cued_pat(trk) != cur_pat(trk)) { kids_text(140, 7, ">"); kids_number(149, 7, cued_pat(trk) + 1); }
             if (playing()) {
@@ -618,7 +749,7 @@ static void kids_draw(void)
 
             cv_rect(6, 27, 228, 1, KIDS_PANEL);
         } else if (b == bands - 1) {
-            if (kids_mode == 1) {
+            if (kids_mode == KIDS_HOME) {
                 static const char *const chord_names[] = {"Single", "In scale", "Major", "Minor", "Power", "Min 7", "Octaves", "Maj 7"};
                 static const char *const scale_names[] = {"Chromatic", "Major", "Minor", "Maj pent", "Min pent", "Dorian", "Egyptian"};
                 kids_text(6, 3, "K1 Volume");
@@ -629,7 +760,7 @@ static void kids_draw(void)
                 kids_number(66, 20, tp->len);
                 kids_label(126, 20, &LFONT_XS, is_drum(trk) ? "-" : chord_names[kids_chord[trk]], ink, 54);
                 kids_label(186, 20, &LFONT_XS, is_drum(trk) ? "-" : scale_names[kids_scale[trk]], ink, 51);
-            } else if (kids_mode == 3) {
+            } else if (kids_mode == KIDS_SOUNDS) {
                 char octave[4] = {ui.oct < 0 ? '-' : '+', (char)('0' + (ui.oct < 0 ? -ui.oct : ui.oct)), 0};
                 kids_text(6, 3, "SELECT");
                 kids_text(65, 3, "PRESETS");
@@ -639,13 +770,58 @@ static void kids_draw(void)
                 kids_label(65, 19, &LFONT_XS, KIDS_CATEGORY[kids_category], ink, 61);
                 kids_number(131, 20, pos);
                 kids_text(207, 20, is_drum(trk) ? "KIT" : octave);
+            } else if (performance) {
+                kids_text(6, 3, "K1 Volume");
+                kids_text(66, 3, "K2 Length");
+                kids_text(126, 3, "K3 Swing");
+                kids_text(186, 3, "K4 Left");
+                kids_number(6, 20, proj.trk[trk].par[TP_LEVEL]);
+                kids_number(66, 20, tp->len);
+                if (tp->groove <= 0) kids_text(126, 20, "Straight");
+                else kids_number(126, 20, tp->groove);
+                kids_text(186, 20, "Steps");
             } else {
-                kids_text(6, 4, "SELECT track");
-                kids_text(92, 4, "PRESETS group");
-                kids_text(6, 20, "ALGORITHM sound");
-                kids_text(134, 20, kids_sound_error ? "Sound kept" : "K2 bar / K3 note");
+                char root[12];
+                kids_text(6, 3, "K1 Vel.");
+                kids_text(58, 3, is_drum(trk) ? "Black keys" : "K2 Root");
+                kids_text(124, 3, "K3 Page");
+                kids_text(181, 3, "K4 Right");
+                if (velocity) kids_number(6, 20, velocity);
+                else kids_text(6, 20, "-");
+                kids_label(58, 20, &LFONT_XS, is_drum(trk) ? DL_SOUND_NAME[ui.dsound] :
+                    (note_name(ui.rem[0], root), root), ink, 62);
+                kids_number(124, 20, ui.bar + 1);
+                kids_label(181, 20, &LFONT_XS, "Perform", ink, 56);
             }
-        } else if (kids_mode == 1) {
+        } else if (performance) {
+            if (b == 1) {
+                char page[24];
+                num_s((uint32_t)kids_page_count(trk), s_cat(num_s((uint32_t)kids_perf_page + 1, s_cat(page, "Page ")), "/"));
+                kids_text(6, 4, page);
+                kids_label(76, 4, &LFONT_XS, name, ink, 100);
+                kids_text(186, 4, "Play keys");
+            } else if (b >= 2 && b <= 5) {
+                for (int row = 0; row < 2; row++) {
+                    int t = (b - 2) * 2 + row, line = row * 18;
+                    int playhead = playing() ? eng_step[t] : -1;
+                    uint16_t color = THEMES[THEME_BW].ink[t];
+                    if (seq.mute & (1u << t)) color = col_mix(KIDS_PANEL, color, 7);
+                    if (t == trk) cv_rect(5, line + 3, 2, 12, color);
+                    kids_number(12, line + 2, t + 1);
+                    for (int col = 0; col < 16; col++) {
+                        int x = 30 + col * 13, cell = kids_performance_cell(t, col);
+                        if (!cell) {
+                            cv_rect(x + 3, line + 8, 4, 1, KIDS_PANEL);
+                            continue;
+                        }
+                        int active = playhead == kids_perf_page * 16 + col;
+                        uint16_t fill = cell == 2 ? color : KIDS_PANEL;
+                        cv_rect(x, line + 3, 10, 12, active ? KIDS_WHITE : fill);
+                        if (active) cv_rect(x + 2, line + 5, 6, 8, fill);
+                    }
+                }
+            }
+        } else if (kids_mode == KIDS_HOME) {
             if (b == 1 || b == 2) for (int i = 0; i < 4; i++) {
                 int t = (b - 1) * 4 + i, x = 4 + 59 * i, lit = kids_lit(t);
                 uint16_t c = THEMES[THEME_BW].ink[t];
@@ -667,26 +843,27 @@ static void kids_draw(void)
                 kids_text(180, 5, "OCT");
                 kids_text(208, 5, is_drum(trk) ? "-" : octave);
             }
-        } else if (kids_mode == 2) {
+        } else if (kids_mode == KIDS_STEPS) {
             if (b == 1) {
                 kids_icon(trk, 6, 2, 20, ink);
                 kids_label(31, 4, &LFONT_XS, name, ink, 130);
                 kids_label(170, 4, &LFONT_XS, is_drum(trk) ? DL_SOUND_NAME[ui.dsound] : "WHITE keys", KIDS_WHITE, 65);
             } else if (b <= 5) for (int i = 0; i < 4; i++) {
                 int st = ui.bar * 16 + (b - 2) * 4 + i, x = 5 + 59 * i;
-                int on = is_drum(trk) ? kit_has(&tp->st[st], ui.dsound + 1) : step_on(&tp->st[st], trk);
+                int on = st < tp->len && (is_drum(trk) ? kit_has(&tp->st[st], ui.dsound + 1) : step_on(&tp->st[st], trk));
                 cv_rect(x, 2, 53, 24, st == now ? KIDS_WHITE : on ? ink : KIDS_PANEL);
                 if (st == now) cv_rect(x + 2, 4, 49, 20, on ? ink : KIDS_BG);
                 char value[12]; num_s((uint32_t)st + 1, value);
                 cv_text(x + 7, 5, &LFONT_B, value, on ? KIDS_BG : st < tp->len ? KIDS_WHITE : RGB(97, 110, 130));
                 if (on) cv_rect(x + 39, 11, 5, 5, KIDS_BG);
+                if (st == focused) cv_rect(x + 6, 22, 40, 2, on ? KIDS_BG : ink);
             } else {
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < kids_page_count(trk); i++) {
                     cv_rect(6 + i * 43, 5, 38, 22, ui.bar == i ? ink : KIDS_PANEL);
                     char digit[4]; num_s((uint32_t)i + 1, digit);
                     cv_text(21 + i * 43, 8, &LFONT_XS, digit, ui.bar == i ? KIDS_BG : KIDS_WHITE);
                 }
-                kids_text(182, 10, "OCT-/+");
+                kids_text(182, 10, "K3 Page");
             }
         } else { /* Sounds: categories, an instrument, a real preset name and a live preview keyboard. */
             if (b == 1) {

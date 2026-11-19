@@ -71,6 +71,8 @@ mkdir -p "$B/scenarios/kids_redesign"
 run kids-redesign env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_redesign.xy "$B/scenarios/kids_redesign"
 mkdir -p "$B/scenarios/kids_music"
 run kids-music env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_music.xy "$B/scenarios/kids_music"
+mkdir -p "$B/scenarios/kids_sequencer"
+run kids-sequencer env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_sequencer.xy "$B/scenarios/kids_sequencer"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)
 # a bank image larger than the bank's windows is refused by the simulator's loader (as the tool and the FM-1 refuse it)
 run bank-too-big sh -c "mkdir -p $OUT/big && head -c 221185 /dev/zero > $OUT/big.bin && \
