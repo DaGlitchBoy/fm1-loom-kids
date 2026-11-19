@@ -34,7 +34,7 @@ expect kids_send.2.2 52
 expect kids_send.1.2 62
 shot kids-reverb.png
 tap FX
-expect kids_panel 0
+expect kids_panel 2
 expect kids_send.2.2 0
 expect kids_lights 64
 spin SELECT -1
@@ -43,7 +43,7 @@ tap FX
 expect kids_panel 1
 expect kids_lights 67
 tap FX
-expect kids_panel 0
+expect kids_panel 2
 expect kids_send.1.1 48
 expect kids_send.1.2 0
 expect kids_lights 66
@@ -55,7 +55,7 @@ expect kids_send.1.1 48
 tap SEL
 expect kids_send.1.1 0
 expect kids_send.1.2 62
-expect kids_panel 0
+expect kids_panel 1
 tap GLO
 expect kids_panel 4
 spin K1 -80

@@ -103,7 +103,55 @@ async function history(path) {
   console.log("WebAssembly effect focus, undo and redo verified");
 }
 
+async function shelf(path) {
+  const ex = await boot(path);
+  const wait = (n = 16) => { for (let i = 0; i < n; ++i) ex.web_render(FRAMES); };
+  const tap = (mask) => { ex.web_buttons(mask); wait(); ex.web_buttons(0); wait(); };
+  assert.equal(ex.web_kids_seed_pending(), 1);
+  ex.web_kids_ready(1);
+  tap(FX);
+  tap(128);
+  let id = ex.web_kids_write_id();
+  assert.ok(id);
+  assert.equal(ex.web_kids_write_rev(), 0);
+  ex.web_kids_complete(id, -1);
+  assert.equal(ex.web_kids_write_id(), 0);
+  tap(128);
+  id = ex.web_kids_write_id();
+  assert.equal(ex.web_kids_write_rev(), 0);
+  const song = new Uint8Array(ex.memory.buffer, ex.web_kids_write_data(), ex.web_kids_write_len()).slice();
+  assert.ok(song.length > 100);
+  ex.web_kids_complete(id, 0);
+  ex.web_buttons(HOME);
+  wait(110);
+  ex.web_enc(K1, -1);
+  wait();
+  assert.ok(ex.web_kids_write_id());
+  assert.equal(ex.web_kids_write_rev(), 1);
+  assert.equal(ex.web_kids_write_len(), 0);
+  ex.web_kids_complete(ex.web_kids_write_id(), 0);
+  ex.web_enc(K1, 1);
+  wait();
+  assert.equal(ex.web_kids_write_rev(), 2);
+  assert.deepEqual(new Uint8Array(ex.memory.buffer, ex.web_kids_write_data(), ex.web_kids_write_len()), song);
+  ex.web_kids_complete(ex.web_kids_write_id(), 0);
+  const restarted = await boot(path);
+  new Uint8Array(restarted.memory.buffer, restarted.web_kids_incoming(), song.length).set(song);
+  restarted.web_kids_seed(0, 3, song.length, 0);
+  restarted.web_kids_ready(1);
+  assert.equal(restarted.web_lit_buttons() & FX, 0);
+  for (const button of [32, EDIT]) {
+    restarted.web_buttons(button);
+    for (let i = 0; i < 16; ++i) restarted.web_render(FRAMES);
+    restarted.web_buttons(0);
+    for (let i = 0; i < 16; ++i) restarted.web_render(FRAMES);
+  }
+  assert.equal(restarted.web_lit_buttons() & FX, FX);
+  console.log("WebAssembly song shelf, failed and acknowledged writes, undo/redo and reload verified");
+}
+
 const [current, baseline] = process.argv.slice(2);
+await shelf(current);
 await history(current);
 if (baseline) console.log("Delivery 4, eight tracks and two sends", await run(baseline, false));
 console.log("Current build, eight tracks and two sends", await run(current, false));

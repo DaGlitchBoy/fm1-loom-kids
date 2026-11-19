@@ -6,6 +6,10 @@ static uint8_t kids_mode;                       /* 0 Studio */
 enum { KIDS_HOME = 1, KIDS_STEPS, KIDS_ENV, KIDS_PERFORMANCE, KIDS_LFO };
 enum { KP_HOME, KP_REVERB, KP_DELAY, KP_ARP, KP_GLOBAL, KP_QUICK };
 static uint8_t kids_panel;
+static struct {
+    int button, track, mode, panel;
+    uint32_t at;
+} kids_effect_return;
 static uint8_t kids_shaping[NTRK][KD_COUNT];
 static const char *const kids_lfo_targets[] = {"Volume", "Cutoff", "Drive"};
 static const char *const kids_lfo_rates[KD_RATE_COUNT] = {
@@ -39,6 +43,7 @@ static uint32_t kids_overflow_seen, kids_full_until;
 static void kids_category_sync(void);
 static void kids_reset_banks(void);
 static void kids_init_panels(void);
+static void ks_init(void);
 static void kids_detach(void)
 {
     /* Keep the current musical model, but remove its saved-slot association.
@@ -67,6 +72,7 @@ static void kids_set(int mode)
         seq.rec_replace = 0;
         kids_category_sync();
         kids_init_panels();
+        ks_init();
     }
     ui_redraw();
 }
@@ -112,6 +118,7 @@ static void kids_remap_kit_mutes(int restore)
 static void kids_reset_banks(void)
 {
     kh_reset();
+    kids_effect_return.button = 0;
     kids_sound_error = NULL;
     kids_send_override = 0;
     kids_cell.track = -1;
@@ -270,7 +277,6 @@ static void kids_rec_start(void)
     seq.rec_target = (uint8_t)track;
     seq.rec_replace = 0;
     seq_rec(&seq, 1);
-    mark_dirty();
 }
 
 static void kids_set_length(int delta)
@@ -735,6 +741,8 @@ static void kids_toggle_step(int column)
     } else if (!hit && pending && !step_empty(st)) st->vel = (uint8_t)pending;
 }
 
+#include "kids_shelf.c"
+
 static int kids_history_input(uint32_t down, uint32_t btn, int32_t turn)
 {
     const uint32_t home = 1u << B_HOME;
@@ -754,8 +762,7 @@ static int kids_history_input(uint32_t down, uint32_t btn, int32_t turn)
         if (turn || plat_ms() - kh_home_since >= KH_HOLD_MS) kh_visible = 1;
         if (turn) {
             kids_rec_stop();
-            int count = clampi(turn, -KH_LIMIT, KH_LIMIT);
-            for (int i = 0; i < abs(count); i++) kh_replay(count > 0);
+            ks_replay_turn(turn);
         }
     }
     return 1;
@@ -777,10 +784,29 @@ static void kids_effect_buttons(uint32_t down)
     }
     for (unsigned i = 0; i < sizeof effects / sizeof effects[0]; i++) {
         if (!(down & (1u << effects[i].button))) continue;
-        kh_begin(&kh_edit, KH_SMALL, effects[i].action, sel_trk(), 0);
+        int before_mode = kids_mode, before_panel = kids_panel, track = sel_trk();
+        int button = effects[i].button;
+        uint32_t now = plat_ms();
+        kh_begin(&kh_edit, KH_SMALL, effects[i].action, track, 0);
         if (i < 3) kids_toggle_panel(effects[i].setting);
         else kids_toggle_shaping(effects[i].setting);
         kh_end(&kh_edit);
+        int changed_focus = before_mode != kids_mode || before_panel != kids_panel;
+        int from_effect = before_mode == KIDS_ENV || before_mode == KIDS_LFO ||
+            (before_mode == KIDS_HOME && before_panel != KP_HOME && before_panel != KP_GLOBAL);
+        if (changed_focus && kids_mode == KIDS_HOME && kids_panel == KP_HOME &&
+            kids_effect_return.button == button + 1 && kids_effect_return.track == track &&
+            now - kids_effect_return.at <= 300u) {
+            kids_mode = (uint8_t)kids_effect_return.mode;
+            kids_panel = (uint8_t)kids_effect_return.panel;
+            kids_effect_return.button = 0;
+        } else {
+            kids_effect_return.button = changed_focus && from_effect ? button + 1 : 0;
+            kids_effect_return.track = track;
+            kids_effect_return.mode = before_mode;
+            kids_effect_return.panel = before_panel;
+            kids_effect_return.at = now;
+        }
         return;
     }
 }
@@ -843,6 +869,10 @@ static int kids_input(void)
     ui.btn = btn; ui.keys = keys; ui.btn_used = btn;
     if (kh_take.active && !seq.rec) kh_end(&kh_take);
     if (down || kd || ev[EN_SELECT] || ev[EN_PRESET] || ev[EN_ALGO]) kh_merge = 0;
+    if (ev[EN_SELECT] || ev[EN_K1] || ev[EN_K2] || ev[EN_K3] || ev[EN_K4] ||
+        (down & ((1u << B_HOME) | (1u << B_SEQ) | (1u << B_GLO))))
+        kids_effect_return.button = 0;
+    if (ks_input(down, kd, ev)) return 1;
     if (kids_history_input(down, btn, ev[EN_K1])) return 1;
 
     if (down & (1u << B_SEQ)) {
@@ -1034,7 +1064,7 @@ static int kids_lit(int t)
 }
 static void kids_panel_title(void)
 {
-    static const char *const names[] = {"", "Reverb", "Delay", "Arpeggiator", "Global", "Quick FX"};
+    static const char *const names[] = {"", "Reverb", "Delay", "Arpeggiator", "Songs", "Quick FX"};
     uint16_t color = THEMES[THEME_BW].ink[sel_trk()];
     if (kids_panel == KP_REVERB) {
         for (int i = 0; i < 3; i++) {
@@ -1054,6 +1084,15 @@ static void kids_panel_title(void)
         cv_rect(14, 3, 2, 14, KIDS_BG);
     }
     kids_text(30, 5, names[kids_panel]);
+    if (kids_panel == KP_GLOBAL) {
+        cv_rect(70, 11, 10, 7, color);
+        cv_rect(72, 7, 1, 4, color);
+        cv_rect(72, 6, 6, 1, color);
+        cv_rect(77, 7, 1, ks_adult ? 2 : 4, color);
+        kids_text(85, 5, ks_adult ? "Adult" : "Child");
+        kids_text(154, 5, "EDIT Open");
+        return;
+    }
     if (kids_panel == KP_REVERB || kids_panel == KP_DELAY) kids_text(138, 5, "K2-K4 shared");
     else if (kids_panel == KP_ARP && is_drum(sel_trk())) kids_text(138, 5, "Melodic only");
     else if (kids_panel == KP_ARP) kids_text(172, 5, "BPM sync");
@@ -1068,13 +1107,14 @@ static void kids_panel_labels(const tpat_t *pattern)
         {"K1 Amount", "K2 Decay", "K3 Room", "K4 Tone"},
         {"K1 Amount", "K2 Repeats", "K3 Time", "K4 Tone"},
         {"K1 Order", "K2 Rate", "K3 Chord", "K4 Scale"},
-        {"K1 BPM", "K2 Click", "", ""},
+        {"K1 BPM", "K2 Click", "K3 Slot", "K4 Delete"},
         {"K1 Filter", "K2 Drive", "K3 Crush", "K4 Chorus"}
     };
     int track = sel_trk(), drum = is_drum(track);
     uint16_t ink = THEMES[THEME_BW].ink[track];
     int value[4] = {0};
     const char *word[4] = {NULL};
+    char slot_text[12];
     switch (kids_panel) {
     case KP_HOME:
         value[0] = proj.trk[track].par[TP_LEVEL];
@@ -1107,6 +1147,11 @@ static void kids_panel_labels(const tpat_t *pattern)
         value[0] = proj.tempo_x10 / 10;
         value[1] = kids_metro;
         if (!kids_metro) word[1] = "Off";
+        s_cat(num_s((uint32_t)ks_selected + 1u, slot_text),
+            !ks_ready || (ks_bad >> ks_selected & 1u) ? " Check" :
+            ks_slots[ks_selected].blob ? " Used" : " Empty");
+        word[2] = slot_text;
+        word[3] = "Ask >";
         break;
     }
     for (int k = 0; k < 4; k++) if (*labels[kids_panel][k]) {
@@ -1214,8 +1259,67 @@ static void kids_history_strip(void)
     }
 }
 
+static int kids_shelf_dialog(void)
+{
+    static uint8_t visible;
+    if (!ks_modal) {
+        if (visible) memset(kids_sig, 0, sizeof kids_sig);
+        visible = 0;
+        return 0;
+    }
+    if (!visible) memset(kids_sig, 0, sizeof kids_sig);
+    visible = 1;
+    int pin = ks_modal == KS_PIN_REPLACE || ks_modal == KS_PIN_DELETE;
+    int opening = ks_modal == KS_OPEN_DIRTY;
+    int deleting = ks_modal == KS_PIN_DELETE || ks_modal == KS_DELETE;
+    uint16_t ink = THEMES[THEME_BW].ink[sel_trk()];
+    int notice = ks_note_active();
+    for (int band = 0; band < 4; band++) {
+        uint32_t h = hash_u(2166136261u, 128 + ks_modal);
+        h = hash_u(h, ks_target); h = hash_u(h, ks_pin_digits);
+        if (notice) h = hash_s(h, ks_message);
+        if (kids_sig[band] == h) continue;
+        kids_sig[band] = h;
+        kids_draws++;
+        cv_begin(240, 60, KIDS_BG);
+        if (!band) {
+            const char *action = opening ? "Open song" : deleting ? "Delete song" : "Replace song";
+            char title[24];
+            num_s((uint32_t)ks_target + 1u, s_cat(s_cat(title, action), " "));
+            kids_label(12, 20, &LFONT_B, title, ink, 212);
+            cv_rect(12, 58, 216, 1, KIDS_PANEL);
+        } else if (band == 1) {
+            kids_text(12, 10, opening ? "Working song has unsaved edits" :
+                pin ? "Enter the four-digit PIN" : deleting ? "Remove the saved song?" : "Replace the saved song?");
+            if (pin) for (int k = 0; k < 4; k++)
+                cv_rect(12 + k * 24, 33, 16, 10, k < ks_pin_digits ? ink : KIDS_PANEL);
+        } else if (band == 2) {
+            if (opening) {
+                kids_text(12, 5, "SAVE  Keep a copy");
+                kids_text(12, 29, "EDIT  Discard edits and open");
+            } else if (pin) {
+                kids_text(12, 5, "White keys = 1 2 3 4 5 6 7 8 9 0");
+                kids_text(12, 29, "SAVE  Check PIN");
+            } else kids_text(12, 16, "SAVE  Confirm");
+        } else {
+            kids_text(12, 6, "HOME  Cancel");
+            if (notice) kids_label(12, 29, &LFONT_XS, ks_message, ink, 210);
+        }
+        cv_blit(0, band * 60);
+    }
+    return 1;
+}
+
+static void kids_shelf_notice(uint16_t ink)
+{
+    char slot[8];
+    kids_label(6, 5, &LFONT_B, ks_message, ink, 195);
+    if (ks_saved_slot) kids_label(203, 5, &LFONT_B, num_s(ks_saved_slot, slot), ink, 26);
+}
+
 static void kids_draw(void)
 {
+    if (kids_shelf_dialog()) return;
     static const uint8_t stage_h[] = {28, 64, 64, 20, 24, 40};
     static const uint8_t steps_h[] = {28, 24, 29, 29, 29, 29, 32, 40};
     static const uint8_t graph_h[] = {28, 28, 128, 16, 40};
@@ -1230,6 +1334,9 @@ static void kids_draw(void)
     char name[NAME_LEN + 1]; kids_sound_name(name);
     const tpat_t *tp = tpat(trk);
     int rec_status = seq.rec ? 2 : kids_rec_armed ? 1 : 0;
+    int shelf = kids_mode == KIDS_HOME && kids_panel == KP_GLOBAL;
+    int shelf_notice = ks_note_active();
+    int notice_band = shelf ? 4 : bands - 1;
     int full = (int32_t)(kids_full_until - plat_ms()) > 0;
     int velocity = kids_mode == KIDS_STEPS ? kids_step_velocity() : 0;
     int focused = velocity ? kids_cell.step : -1;
@@ -1279,8 +1386,16 @@ static void kids_draw(void)
             h = hash_u(h, ui.bar); h = hash_u(h, (uint8_t)ui.oct); h = hash_u(h, ui.dsound); h = hash_u(h, ui.rem[0]);
             h = hash_u(h, proj.tempo_x10); h = hash_u(h, cued_pat(trk));
         }
+        if (shelf && b >= 4) {
+            h = hash_u(h, (uint32_t)(ks_selected | ks_adult << 2 | ks_ready << 3 | ks_bad << 4));
+            h = hash_u(h, ks_slots[ks_selected].blob != NULL);
+        }
+        if (shelf_notice && b == notice_band) {
+            h = hash_s(h, ks_message);
+            h = hash_u(h, ks_saved_slot);
+        }
         if (b == bands - 1 && kh_visible) {
-            h = hash_u(h, 1 + kh_cursor + 8 * kh_count + 64 * kh_memory_full);
+            h = hash_u(h, 1 + kh_cursor + 16 * kh_count + 256 * kh_memory_full);
             for (int i = 0; i <= 1; i++) {
                 const kh_edit_t *e = kh_next(i);
                 if (e) { h = hash_s(h, e->name); h = hash_u(h, e->track); }
@@ -1304,6 +1419,7 @@ static void kids_draw(void)
             cv_rect(6, 27, 228, 1, KIDS_PANEL);
         } else if (b == bands - 1) {
             if (kh_visible) kids_history_strip();
+            else if (shelf_notice && b == notice_band) kids_shelf_notice(ink);
             else if (kids_mode == KIDS_HOME) {
                 kids_panel_labels(tp);
             } else if (graph) {
@@ -1375,7 +1491,8 @@ static void kids_draw(void)
                 cv_rect(6, 3, 3, 14, ink);
                 kids_number(14, 2, trk + 1);
                 kids_label(29, 1, &LFONT_B, kids_sound_error ? kids_sound_error : name, ink, 204);
-            } else if (kids_panel != KP_HOME) kids_panel_title();
+            } else if (shelf_notice && b == notice_band) kids_shelf_notice(ink);
+            else if (kids_panel != KP_HOME) kids_panel_title();
             else {
                 char octave[4] = {ui.oct < 0 ? '-' : '+', (char)('0' + (ui.oct < 0 ? -ui.oct : ui.oct)), 0};
                 kids_label(6, 5, &LFONT_XS, KIDS_CATEGORY[kids_category], ink, 82);

@@ -3,8 +3,8 @@
  * Each entry owns a compact set of changed byte runs and, for an engine-type
  * change, the inactive alternate bank. Each changed run keeps both values so
  * a later audition cannot replace the recorded redo value. */
-enum { KH_SMALL, KH_SOUND, KH_STEP, KH_RECORD };
-#define KH_LIMIT 5
+enum { KH_SMALL, KH_SOUND, KH_STEP, KH_RECORD, KH_SLOT, KH_LOAD };
+#define KH_LIMIT 10
 #define KH_SWEEP_MS 350u
 #define KH_HOLD_MS 250u
 #define KH_CAPTURE_BYTES (sizeof pats.pat[0] + sizeof pats.lane + sizeof pats.hit + \
@@ -16,6 +16,9 @@ typedef struct {
     size_t size;
 } kh_region_t;
 
+typedef struct ks_blob ks_blob_t;
+static void ks_drop(ks_blob_t *blob);
+
 typedef struct {
     const char *name;
     uint16_t group;
@@ -24,7 +27,11 @@ typedef struct {
     kids_cell_t cell, cell_after;
     size_t size;
     uint8_t *runs;
+    ks_blob_t *song_before, *song_after;
+    uint8_t slot, was_dirty, after_dirty;
 } kh_edit_t;
+
+static int ks_replay(const kh_edit_t *e, int redo);
 
 typedef struct {
     kh_edit_t edit;
@@ -84,6 +91,8 @@ static void kh_discard(kh_edit_t *e)
 {
     free(e->runs);
     free(e->bank);
+    ks_drop(e->song_before);
+    ks_drop(e->song_after);
     *e = (kh_edit_t){0};
 }
 
@@ -167,6 +176,19 @@ static int kh_pending_changed(const kh_edit_t *e)
         memcmp(&e->cell, &kids_cell, sizeof kids_cell) != 0;
 }
 
+static void kh_push(kh_edit_t e)
+{
+    while (kh_count > kh_cursor) kh_discard(&kh_entries[--kh_count]);
+    if (kh_count == KH_LIMIT) {
+        kh_discard(&kh_entries[0]);
+        memmove(kh_entries, kh_entries + 1, (KH_LIMIT - 1) * sizeof kh_entries[0]);
+        kh_count--;
+    }
+    kh_entries[kh_count++] = e;
+    kh_cursor = kh_count;
+    kh_merge = kh_memory_full = 0;
+}
+
 static void kh_end(kh_capture_t *c)
 {
     if (!c->active) return;
@@ -199,16 +221,12 @@ static void kh_end(kh_capture_t *c)
         return;
     }
     e->size = kh_encode(c->before, r, n, e->runs);
-    while (kh_count > kh_cursor) kh_discard(&kh_entries[--kh_count]);
-    if (merge) kh_discard(&kh_entries[--kh_count]);
-    if (e->size || e->bank_changed || e->cell_changed) {
-        if (kh_count == KH_LIMIT) {
-            kh_discard(&kh_entries[0]);
-            memmove(kh_entries, kh_entries + 1, (KH_LIMIT - 1) * sizeof kh_entries[0]);
-            kh_count--;
-        }
-        kh_entries[kh_count++] = *e;
+    if (merge) {
+        kh_discard(&kh_entries[--kh_count]);
+        kh_cursor = kh_count;
     }
+    if (e->size || e->bank_changed || e->cell_changed) kh_push(*e);
+    mark_dirty();
     *e = (kh_edit_t){0};
     kh_cursor = kh_count;
     kh_touched = now;
@@ -264,10 +282,17 @@ static void kh_sync(const kh_edit_t *e, const trk_t *old, const uint8_t old_shap
     mark_dirty();
 }
 
-static void kh_replay(int redo)
+static int kh_replay(int redo)
 {
-    if (!kh_next(redo)) return;
+    if (!kh_next(redo)) return 0;
     kh_edit_t *e = &kh_entries[redo ? kh_cursor : kh_cursor - 1];
+    if (e->scope == KH_SLOT) return ks_replay(e, redo);
+    if (e->scope == KH_LOAD) {
+        if (!ks_replay(e, redo)) return 0;
+        kh_cursor = (uint8_t)(kh_cursor + (redo ? 1 : -1));
+        kh_merge = 0;
+        return 1;
+    }
     int t = e->track;
     if (t == sel_trk() && (e->scope == KH_SOUND || !strcmp(e->name, "Arp switch")))
         kids_notes_off();
@@ -289,4 +314,5 @@ static void kh_replay(int redo)
     kh_sync(e, &old, shape, fx, tempo, groove, delay, metro);
     kh_cursor = (uint8_t)(kh_cursor + (redo ? 1 : -1));
     kh_merge = 0;
+    return 1;
 }

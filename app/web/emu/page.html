@@ -61,7 +61,18 @@ LOOM Kids: eight colorful instruments, steps and sounds. A protected emulator pl
       Metronom aus.</p>
     <p><b>HOME halten</b> öffnet den Verlauf. K1 nach links macht je einen Schritt rückgängig,
       K1 nach rechts stellt ihn wieder her.</p>
-    <p>Die Bühne arbeitet mit einer ungespeicherten Kopie. Die Song-Speicherfunktion folgt in einem späteren Schritt.</p>
+    <p><b>GLO</b> zeigt drei Songplätze. K3 wählt einen Platz, <b>EDIT</b> öffnet ihn, <b>SAVE</b> speichert.
+      K4 nach rechts fragt vor dem Löschen. Fünf schnelle GLO-Tastendrücke wechseln zwischen Kinder- und Erwachsenenmodus.</p>
+    <details>
+      <summary>PIN für Überschreiben und Löschen</summary>
+      <form id="kids-pin-settings">
+        <label for="kids-pin">Vier Ziffern</label>
+        <input id="kids-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password" required>
+        <button type="submit">PIN speichern</button>
+        <button type="button" id="kids-pin-clear">PIN entfernen</button>
+        <span id="kids-pin-status" role="status"></span>
+      </form>
+    </details>
   </div>
   <div>
     <h2>Studio (separater Host-Entwicklermodus)</h2>

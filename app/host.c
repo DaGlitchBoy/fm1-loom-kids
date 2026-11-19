@@ -466,6 +466,34 @@ int app_expect(const char *what, int *got)
     }
     else if (!strcmp(what, "kids_lights"))
         *got = (int)kids_button_lights();
+    else if (!strcmp(what, "kids_slot"))
+        *got = ks_selected + 1;
+    else if (!strcmp(what, "kids_adult"))
+        *got = ks_adult;
+    else if (!strcmp(what, "kids_dialog"))
+        *got = ks_modal;
+    else if (!strcmp(what, "kids_shelf_mask")) {
+        *got = 0;
+        for (int i = 0; i < KS_SLOTS; i++) if (ks_slots[i].blob) *got |= 1 << i;
+    }
+    else if (!strncmp(what, "kids_kit_live.", 14)) {
+        int i = atoi(what + 14) - 1;
+        if (i < 0 || i >= NTRK) return 0;
+        *got = eng_drum[i];
+    }
+    else if (!strcmp(what, "kids_song_limit"))
+        *got = KS_BLOB_MAX;
+    else if (!strncmp(what, "kids_slot_crc.", 14)) {
+        int i = atoi(what + 14) - 1;
+        if (i < 0 || i >= KS_SLOTS) return 0;
+        const ks_blob_t *b = ks_slots[i].blob;
+        *got = b ? (int32_t)crc32_of(b->data, b->len) : 0;
+    }
+    else if (!strncmp(what, "kids_slot_size.", 15)) {
+        int i = atoi(what + 15) - 1;
+        if (i < 0 || i >= KS_SLOTS) return 0;
+        *got = ks_slots[i].blob ? (int)ks_slots[i].blob->len : 0;
+    }
     else if (!strcmp(what, "kids_undo"))
         *got = kh_cursor;
     else if (!strcmp(what, "kids_redo"))
@@ -1493,6 +1521,15 @@ static int song_cmd(const char *cmd)
 
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
+#if !defined(PLAT_WEB)
+    if (!strcmp(cmd, "kids-shelf-fail")) { ks_fail_next = 1; return 1; }
+    if (!strcmp(cmd, "kids-shelf-conflict")) {
+        int slot = clampi(atoi(a), 1, KS_SLOTS) - 1;
+        if (ks_file_write(slot, ks_slots[slot].revision, ks_slots[slot].blob)) host_die("shelf conflict fixture failed", a);
+        return 1;
+    }
+#endif
+
     if (song_cmd(cmd))
         return 1;
     if (!strcmp(cmd, "expect"))

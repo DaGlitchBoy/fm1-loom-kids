@@ -180,6 +180,7 @@ wait 400
 key w8 up
 wait 1300
 wavstop
+tap HOME
 tap FX
 tap FX
 tap SEL

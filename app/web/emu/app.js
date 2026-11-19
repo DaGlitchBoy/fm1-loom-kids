@@ -23,7 +23,7 @@ const TIP = { FX: "Kids: toggle reverb for this track. Studio: sends and effects
   ENV: "Kids: envelope graph and switch. Studio: envelope and filter",
   LFO: "Kids: modulation graph, signed depth and synced rate. Studio: LFO",
   EDIT: "Kids: toggle four quick effects. Studio: sound editor",
-  GLO: "Kids: tempo and metronome. Studio: mix, master and setup", HOME: "Kids: Stage; hold and turn K1 to undo or redo. Studio: Arrange; held, shift", SAVE: "Studio: save",
+  GLO: "Kids: tempo, metronome and song slots. Studio: mix, master and setup", HOME: "Kids: Stage; hold and turn K1 to undo or redo. Studio: Arrange; held, shift", SAVE: "Kids: save song. Studio: save",
   ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Kids: Steps; K4 left for Performance. Studio: Steps; held, play notes", PLAY: "Start / stop",
   REC: "Kids: overdub. Studio: recording", "OCT-": "Kids: octave down. Studio: octave / bar down",
   "OCT+": "Kids: octave up. Studio: octave / bar up", SELECT: "Kids: track. Studio: page",
@@ -64,7 +64,8 @@ function keyboard() {
   }, true);
 }
 
-export function attach() {
+export function attach(context) {
+  shelfSettings(context);
   const entry = document.getElementById("kids-entry");
   if (entry) {
     entry.disabled = false;
@@ -77,4 +78,105 @@ export function attach() {
   moveStore();
   tips();
   keyboard();
+}
+
+// A transaction compares the slot generation and commits one record. Keeping
+// a generation even for an empty slot makes deletion and stale undo detectable.
+const SHELF_DB = "loom-kids-song-shelf", PIN_KEY = "loom-kids-shelf-pin-v1";
+let shelfDb, shelfNode, shelfPin = 0;
+
+function openShelf() {
+  if (!shelfDb) shelfDb = new Promise((resolve, reject) => {
+    const request = indexedDB.open(SHELF_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("songs", { keyPath: "slot" });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = request.onblocked = () => reject(request.error);
+  });
+  return shelfDb;
+}
+
+async function readShelf() {
+  const db = await openShelf();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("songs", "readonly");
+    const req = tx.objectStore("songs").getAll();
+    tx.oncomplete = () => resolve(req.result);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+async function writeShelf(msg) {
+  const db = await openShelf();
+  return new Promise((resolve) => {
+    const tx = db.transaction("songs", "readwrite");
+    const songs = tx.objectStore("songs");
+    let status = -1;
+    tx.oncomplete = () => resolve(0);
+    tx.onabort = () => resolve(status);
+    const req = songs.get(msg.slot);
+    req.onsuccess = () => {
+      if ((req.result?.rev ?? 0) !== msg.rev) {
+        status = -2;
+        tx.abort();
+        return;
+      }
+      songs.put({ slot: msg.slot, rev: msg.rev + 1, bytes: msg.bytes });
+    };
+  });
+}
+
+export async function message(msg) {
+  if (msg.shelf === "read") {
+    try {
+      const records = await readShelf();
+      const slots = {};
+      for (const record of records) {
+        if (Number.isInteger(record.slot) && record.slot >= 0 && record.slot < 3) slots[record.slot] = record;
+      }
+      const transfer = Object.values(slots).map((record) => record.bytes).filter((bytes) => bytes instanceof ArrayBuffer);
+      shelfNode.port.postMessage({ type: "app", shelf: "pin", token: shelfPin });
+      shelfNode.port.postMessage({ type: "app", shelf: "seed", ok: true, slots }, transfer);
+    } catch {
+      shelfNode.port.postMessage({ type: "app", shelf: "seed", ok: false, slots: {} });
+    }
+  } else if (msg.shelf === "write") {
+    let status = -1;
+    try {
+      if (Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < 3) status = await writeShelf(msg);
+    } catch { /* send a failed acknowledgement so the working song and history stay put */ }
+    shelfNode.port.postMessage({ type: "app", shelf: "complete", id: msg.id, status });
+  }
+}
+
+function shelfSettings(context) {
+  shelfNode = context?.node;
+  const form = document.getElementById("kids-pin-settings");
+  if (!shelfNode || !form) return;
+  const input = document.getElementById("kids-pin");
+  const status = document.getElementById("kids-pin-status");
+  const update = (token) => {
+    shelfPin = token;
+    shelfNode.port.postMessage({ type: "app", shelf: "pin", token });
+  };
+  const set = (token) => {
+    try {
+      if (token) localStorage.setItem(PIN_KEY, String(token));
+      else localStorage.removeItem(PIN_KEY);
+      update(token);
+      status.textContent = token ? "PIN eingerichtet" : "Kein PIN eingerichtet";
+      input.value = "";
+    } catch {
+      status.textContent = "PIN konnte nicht gespeichert werden";
+    }
+  };
+  try {
+    const stored = Number(localStorage.getItem(PIN_KEY)) >>> 0;
+    update(stored);
+    status.textContent = stored ? "PIN eingerichtet" : "Kein PIN eingerichtet";
+  } catch { status.textContent = "PIN-Speicher nicht verfügbar"; }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (/^\d{4}$/.test(input.value)) set(Math.imul(Number(input.value) ^ 0x4c4f4f4d, 2654435761) >>> 0);
+  });
+  document.getElementById("kids-pin-clear").addEventListener("click", () => set(0));
 }

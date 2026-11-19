@@ -1,4 +1,4 @@
-# Five mixed actions across tracks, then the sixth action evicts the oldest.
+# Five mixed actions across tracks and a sixth root edit.
 wait 300
 expect kids_undo 0
 expect par1.level 100
@@ -74,14 +74,14 @@ expect kids_note 62
 release HOME
 tap SEQ
 press HOME
-spin K1 -5
+spin K1 -6
 release HOME
 expect kids 2
 expect kids_note 60
 expect note 3 1 1 0
-expect par1.level 97
+expect par1.level 100
 expect kids_undo 0
-expect kids_redo 5
+expect kids_redo 6
 tapkey w2
 expect kids_undo 1
 expect kids_redo 0
@@ -126,7 +126,7 @@ expect kids_category 2
 expect stepvel 1 1 1 71
 spin PRESET -1
 expect note 1 1 3 60
-expect kids_undo 5
+expect kids_undo 6
 expect kids_history_bytes <22000
 
 # A take including overlapped notes is one action. It does not touch the transport.
@@ -195,4 +195,39 @@ expect note 1 1 1 0
 expect kids_velocity 87
 spin K1 1
 expect stepvel 1 1 1 87
+release HOME
+
+# Eleven separately spaced edits leave ten, with only the first evicted.
+reboot
+wait 300
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+spin K1 -1
+wait 370
+expect par1.level 89
+expect kids_undo 10
+press HOME
+spin K1 -10
+expect par1.level 99
+expect kids_redo 10
+spin K1 10
+expect par1.level 89
 release HOME

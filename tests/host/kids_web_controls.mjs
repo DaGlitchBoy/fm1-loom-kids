@@ -16,7 +16,7 @@ const context = {
   holdDown: (...args) => calls.push(args), letGo: id => calls.push(['release', id]),
 };
 vm.createContext(context);
-vm.runInContext(readFileSync('app/web/emu/app.js', 'utf8').replace('export function attach', 'function attach'), context);
+vm.runInContext(readFileSync('app/web/emu/app.js', 'utf8').replaceAll(/^export /gm, ''), context);
 vm.runInContext('attach()', context);
 assert.equal(entry.disabled, false);
 assert.match(selectHit.title, /Kids: track/);

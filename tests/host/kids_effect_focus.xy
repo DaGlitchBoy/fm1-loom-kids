@@ -7,7 +7,7 @@ tap LFO
 tap EDIT
 tap ARP
 expect kids_lights 351
-expect kids_undo 5
+expect kids_undo 6
 # Opening each of the already enabled effects leaves all states intact.
 tap FX
 expect kids_panel 1
@@ -116,3 +116,19 @@ expect voices 0
 key w8 up
 tap ARP
 expect kids_lights 72
+# Both a graph and a home overlay come back after a quick detour.
+tap ENV
+tap SEL
+tap SEL
+expect kids 3
+expect kids_send.2.1 0
+tap FX
+tap SEL
+tap SEL
+expect kids 1
+expect kids_panel 1
+expect kids_send.2.1 0
+tap SEL
+wait 320
+tap SEL
+expect kids_panel 0
