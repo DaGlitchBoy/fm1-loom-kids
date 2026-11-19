@@ -84,7 +84,7 @@ run kids-effect-focus env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_effect_f
 run kids-history env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_history.xy "$B/scenarios/kids_history"
 rm -rf "$B/scenarios/kids_shelf"
 mkdir -p "$B/scenarios/kids_shelf"
-run kids-shelf env LOOM_KIDS=1 LOOM_KIDS_PIN=1234 LOOM_KIDS_SHELF="$B/scenarios/kids_shelf" \
+run kids-shelf env LOOM_KIDS=1 LOOM_KIDS_SHELF="$B/scenarios/kids_shelf" \
     $B/host/loom_host tests/host/kids_shelf.xy "$B/scenarios/kids_shelf"
 run kids-shelf-bytes "$PY" tests/host/kids_shelf_test.py "$B/host/loom_host"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)

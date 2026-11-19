@@ -468,8 +468,18 @@ int app_expect(const char *what, int *got)
         *got = (int)kids_button_lights();
     else if (!strcmp(what, "kids_slot"))
         *got = ks_selected + 1;
-    else if (!strcmp(what, "kids_adult"))
-        *got = ks_adult;
+    else if (!strcmp(what, "kids_loaded"))
+        *got = ks_loaded < KS_SLOTS ? ks_loaded + 1 : 0;
+    else if (!strcmp(what, "kids_names"))
+        *got = kpix_open;
+    else if (!strcmp(what, "kids_name_slot"))
+        *got = kpix_slot + 1;
+    else if (!strncmp(what, "kids_pixel.", 11)) {
+        int slot, x, y;
+        if (sscanf(what + 11, "%d.%d.%d", &slot, &x, &y) != 3 || slot < 0 || slot > KPIX_COUNT ||
+            x < 0 || x >= KPIX_SIDE || y < 0 || y >= KPIX_SIDE) return 0;
+        *got = kpix_get(slot ? kpix_bank[slot - 1] : kpix_song, x, y);
+    }
     else if (!strcmp(what, "kids_dialog"))
         *got = ks_modal;
     else if (!strcmp(what, "kids_shelf_mask")) {

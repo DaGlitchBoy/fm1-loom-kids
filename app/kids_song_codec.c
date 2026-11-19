@@ -18,8 +18,9 @@ typedef struct {
     ks_meta_t kids;
 } ks_song_t;
 
-#define KS_VERSION 1u
-#define KS_HEADER 24u
+#define KS_VERSION 2u
+#define KS_HEADER_V1 24u
+#define KS_HEADER (KS_HEADER_V1 + 4u + KPIX_BYTES)
 #define KS_RAW_MAX (sizeof(ks_song_t) + NTRK * (4u + sizeof pats.pat[0] + NLANE * sizeof(lane_t)))
 #define KS_BLOB_MAX (KS_HEADER + KS_RAW_MAX)
 #define KS_MAGIC 0x53444b4cu /* LKDS */
@@ -51,6 +52,41 @@ static void ks_drop(ks_blob_t *blob)
 static int ks_same(const ks_blob_t *a, const ks_blob_t *b)
 {
     return a == b || (a && b && a->len == b->len && !memcmp(a->data, b->data, a->len));
+}
+
+/* The fixed pixel-name prefix can be read or replaced without unpacking music. */
+static uint32_t ks_header(const ks_blob_t *blob)
+{
+    if (!blob || blob->len < KS_HEADER_V1 || get32(blob->data) != KS_MAGIC) return 0;
+    unsigned version = get32(blob->data + 4);
+    if (version == 1) return KS_HEADER_V1;
+    if (version != KS_VERSION || blob->len < KS_HEADER ||
+        get32(blob->data + KS_HEADER_V1) != crc32_of(blob->data + KS_HEADER_V1 + 4, KPIX_BYTES)) return 0;
+    return KS_HEADER;
+}
+
+static const uint8_t *ks_name(const ks_blob_t *blob)
+{
+    return ks_header(blob) == KS_HEADER ? blob->data + KS_HEADER_V1 + 4 : NULL;
+}
+
+static void ks_set_name(ks_blob_t *blob, const uint8_t *pixels)
+{
+    put32(blob->data + KS_HEADER_V1, crc32_of(pixels, KPIX_BYTES));
+    memcpy(blob->data + KS_HEADER_V1 + 4, pixels, KPIX_BYTES);
+}
+
+static ks_blob_t *ks_rename(const ks_blob_t *old, const uint8_t *pixels)
+{
+    uint32_t header = ks_header(old);
+    if (!header || get32(old->data + 12) != old->len - header) return NULL;
+    ks_blob_t *blob = ks_blob(KS_HEADER + old->len - header);
+    if (!blob) return NULL;
+    memcpy(blob->data, old->data, KS_HEADER_V1);
+    put32(blob->data + 4, KS_VERSION);
+    ks_set_name(blob, pixels);
+    memcpy(blob->data + KS_HEADER, old->data + header, old->len - header);
+    return blob;
 }
 
 /* User sample numbers are local bank references. Refuse to open with a
@@ -104,6 +140,29 @@ static int ks_write_bytes(void *ctx, const uint8_t *p, uint32_t n)
     return 0;
 }
 
+static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, const uint8_t *pixels)
+{
+    uint8_t *compressed = malloc(len);
+    if (!compressed) return NULL;
+    ks_sink_t out = {compressed, 0, (uint32_t)len};
+    lz_sink_t sink = {ks_write_bytes, &out};
+    int packed = !lz_compress((const uint8_t *)song, (uint32_t)len, &sink) && out.used < len;
+    uint32_t stored = packed ? out.used : (uint32_t)len;
+    ks_blob_t *blob = ks_blob(KS_HEADER + stored);
+    if (blob) {
+        put32(blob->data, KS_MAGIC);
+        put32(blob->data + 4, KS_VERSION);
+        put32(blob->data + 8, (uint32_t)len);
+        put32(blob->data + 12, stored);
+        put32(blob->data + 16, crc32_of((const uint8_t *)song, (uint32_t)len));
+        put32(blob->data + 20, (uint32_t)packed);
+        ks_set_name(blob, pixels);
+        memcpy(blob->data + KS_HEADER, packed ? compressed : (const uint8_t *)song, stored);
+    }
+    free(compressed);
+    return blob;
+}
+
 static ks_blob_t *ks_pack(void)
 {
     size_t len = sizeof(ks_song_t);
@@ -113,8 +172,7 @@ static ks_blob_t *ks_pack(void)
     }
     if (len > KS_RAW_MAX) return NULL;
     ks_song_t *song = malloc(len);
-    uint8_t *compressed = malloc(len);
-    if (!song || !compressed) { free(song); free(compressed); return NULL; }
+    if (!song) return NULL;
     song->settings = proj;
     song->settings.format = PROJ_FORMAT;
     song->patterns = pats;
@@ -144,21 +202,28 @@ static ks_blob_t *ks_pack(void)
         memcpy(dst, b->lanes, (size_t)b->nlanes * sizeof(lane_t));
         dst += (size_t)b->nlanes * sizeof(lane_t);
     }
-    ks_sink_t out = {compressed, 0, (uint32_t)len};
-    lz_sink_t sink = {ks_write_bytes, &out};
-    int packed = !lz_compress((const uint8_t *)song, (uint32_t)len, &sink) && out.used < len;
-    uint32_t stored = packed ? out.used : (uint32_t)len;
-    ks_blob_t *blob = ks_blob(KS_HEADER + stored);
-    if (blob) {
-        put32(blob->data, KS_MAGIC);
-        put32(blob->data + 4, KS_VERSION);
-        put32(blob->data + 8, (uint32_t)len);
-        put32(blob->data + 12, stored);
-        put32(blob->data + 16, crc32_of((const uint8_t *)song, (uint32_t)len));
-        put32(blob->data + 20, (uint32_t)packed);
-        memcpy(blob->data + KS_HEADER, packed ? compressed : (const uint8_t *)song, stored);
+    ks_blob_t *blob = ks_encode(song, (uint32_t)len, kpix_song);
+    free(song);
+    return blob;
+}
+
+static ks_blob_t *ks_new_song(void)
+{
+    uint32_t len = sizeof(ks_song_t) + NTRK * 4u;
+    ks_song_t *song = calloc(1, len);
+    if (!song) return NULL;
+    project_defaults_into(&song->settings, &song->patterns);
+    song->settings.trk[AUX_FX1].par[TP_SEND2] = 0;
+    song->kids.delay = 2;
+    for (int t = 0; t < NTRK; t++) {
+        song->kids.root[t] = 60;
+        song->kids.fx_amount[t][0] = 48;
+        song->kids.fx_amount[t][1] = 52;
+        song->kids.arp_rate[t] = 3;
+        memcpy(song->kids.shaping[t], kids_shape_defaults, KD_COUNT);
     }
-    free(compressed);
+    const uint8_t empty[KPIX_BYTES] = {0};
+    ks_blob_t *blob = ks_encode(song, len, empty);
     free(song);
     return blob;
 }
@@ -208,21 +273,21 @@ static int ks_meta_valid(const ks_meta_t *m)
 /* 0 success, -1 malformed/unsupported, -2 allocation, -3 unavailable asset. */
 static int ks_unpack(const ks_blob_t *blob, ks_decoded_t *d, int assets)
 {
-    if (!blob || blob->len < KS_HEADER || get32(blob->data) != KS_MAGIC ||
-        get32(blob->data + 4) != KS_VERSION) return -1;
+    uint32_t header = ks_header(blob);
+    if (!header) return -1;
     const uint8_t *src = blob->data;
     uint32_t len = get32(src + 8), stored = get32(src + 12), packed = get32(src + 20);
-    if (len < sizeof(ks_song_t) + NTRK * 4 || len > KS_RAW_MAX || stored != blob->len - KS_HEADER ||
+    if (len < sizeof(ks_song_t) + NTRK * 4 || len > KS_RAW_MAX || stored != blob->len - header ||
         packed > 1 || (!packed && stored != len)) return -1;
     d->song = malloc(len);
     if (!d->song) return -2;
     uint8_t *raw = (uint8_t *)d->song;
     int rc = -1;
     if (packed) {
-        set_in_t in = {src + KS_HEADER, stored};
+        set_in_t in = {src + header, stored};
         lz_src_t stream = {set_get, &in};
         if (lz_decompress(&stream, raw, len) || in.left) goto fail;
-    } else memcpy(raw, src + KS_HEADER, len);
+    } else memcpy(raw, src + header, len);
     if (crc32_of(raw, len) != get32(src + 16)) goto fail;
 
     const ks_song_t *song = d->song;

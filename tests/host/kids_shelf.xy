@@ -1,163 +1,139 @@
 wait 300
-expect kids 1
-expect kids_adult 0
+expect kids_loaded 1
 expect kids_shelf_mask 0
-expect project_slot 0
-# A typed alternate melody bank and the drum velocity are both stored.
-spin PRESET -1
 tap SEQ
-tapkey w2
-expect note 1 1 3 60
-spin PRESET 1
 tapkey w0
-spin K1 -20
-expect stepvel 1 1 1 80
 tap HOME
-spin K2 1
-tap FX
-spin K1 7
+spin K1 -15
 tap SAVE
 expect kids_shelf_mask 1
-expect kids_slot_size.1 >100
-expect dirty 0
-press HOME
-spin K1 -1
-expect kids_shelf_mask 0
-spin K1 1
-expect kids_shelf_mask 1
-release HOME
-# Save two more distinct revisions into free space.
-tap HOME
-spin SELECT 1
-spin K1 -20
-tap SAVE
-expect kids_slot 2
-expect kids_shelf_mask 3
-spin K1 -10
-tap SAVE
+tap GLO
+spin K3 30
 expect kids_slot 3
-expect kids_shelf_mask 7
-expect par2.level 70
-tap GLO
 spin K3 1
+expect kids_slot 3
+expect kids_loaded 1
+tap SAVE
+expect kids_shelf_mask 1
+spin K3 -30
 expect kids_slot 1
-expect par2.level 70
-wait 1850
-shot kids-song-shelf.png
-tap EDIT
-expect kids_dialog 0
-expect trk 1
-expect par2.level 100
-expect kids_length 32
-expect stepvel 1 1 1 80
-expect kids_send.1.2 59
-press HOME
-spin K1 -1
-expect par2.level 70
-spin K1 1
-expect par2.level 100
-release HOME
-# Dirty opens ask before replacing the work; HOME cancels without a write.
-tap HOME
-spin K1 -5
-tap GLO
+spin K3 -1
+expect kids_slot 1
 spin K3 1
 tap EDIT
-expect kids_dialog 1
-shot kids-open-confirm.png
-tap HOME
-expect kids_dialog 0
-expect par1.level 95
+expect kids_loaded 2
+expect note 1 1 1 0
+expect par1.level 100
+spin K1 -15
+tap SAVE
+expect kids_shelf_mask 3
+spin K3 1
 tap EDIT
-tap EDIT
-expect kids_dialog 0
-expect par2.level 80
-# A full protected shelf asks for PIN and then a separate confirmation.
+expect kids_loaded 3
 tap SAVE
-expect kids_dialog 2
-tapkey w0
-tapkey w0
-tapkey w0
-tapkey w0
-tap SAVE
-expect kids_dialog 2
-tap HOME
-expect kids_dialog 0
-tap SAVE
-tapkey w0
-tapkey w1
-tapkey w2
-tapkey w3
-tap SAVE
-expect kids_dialog 4
-tap HOME
 expect kids_shelf_mask 7
-# GLO taps count distinct presses within three seconds.
+# Overwrite the loaded song even when the preview is elsewhere and all slots are full.
+tap HOME
+spin K1 -9
 tap GLO
-tap GLO
-tap GLO
-tap GLO
-expect kids_adult 0
-wait 3200
-tap GLO
-expect kids_adult 0
-tap GLO
-tap GLO
-tap GLO
-tap GLO
-expect kids_adult 1
-shot kids-adult.png
-spin K4 1
-expect kids_dialog 5
-wait 25
-shot kids-delete-confirm.png
+spin K3 -2
 tap SAVE
-expect kids_shelf_mask 5
+expect kids_slot 1
+expect kids_loaded 3
+expect kids_shelf_mask 7
+expect par1.level 91
+# Delete always targets the preview. Both directions open the confirmation.
+spin K4 -5
+expect kids_dialog 2
+expect kids_loaded 3
+wait 5010
+expect kids_dialog 0
+expect kids_shelf_mask 7
+spin K4 1
+expect kids_dialog 2
+tap HOME
+expect kids_dialog 0
+expect kids_shelf_mask 7
+spin K4 -1
+wait 30
+shot kids-delete-preview.png
+tap EDIT
+expect kids_loaded 3
+expect kids_shelf_mask 6
+expect par1.level 91
 press HOME
 spin K1 -1
 expect kids_shelf_mask 7
 spin K1 1
-expect kids_shelf_mask 5
+expect kids_shelf_mask 6
+spin K1 -1
 release HOME
-tap SAVE
-expect kids_shelf_mask 7
-expect kids_dialog 0
+# Use a library emoji and draw in a blank slot without altering the assigned name.
+press EDIT
+wait 420
+expect kids_names 1
+release EDIT
+expect kids_loaded 3
+expect kids_name_slot 1
+tap EDIT
+expect kids_pixel.0.4.3 3
+spin K1 10
+expect kids_name_slot 11
+spin K2 2
+spin K3 3
+spin K4 1
+expect kids_pixel.11.2.3 4
+spin K1 1
+expect kids_pixel.12.2.3 0
+spin K1 -1
+expect kids_pixel.11.2.3 4
+tap EDIT
+expect kids_pixel.0.2.3 4
+wait 1900
+shot kids-pixel-editor.png
+tap SEL
+expect kids_pixel.11.2.3 0
+expect kids_pixel.0.2.3 4
+spin K1 -10
+spin K2 -2
+spin K3 -3
+tap PLAY
+expect kids_pixel.1.0.0 4
+tap HOME
+expect kids_names 0
+expect kids_panel 4
+wait 180
 reboot
 wait 300
-expect kids_adult 0
+expect kids_loaded 0
 expect kids_shelf_mask 7
-expect kids_undo 0
-tap GLO
-tap EDIT
-expect trk 1
-expect stepvel 1 1 1 80
-spin PRESET -1
-expect note 1 1 3 60
-# PIN-protected deletion and redo, with a failed commit between.
+tap SAVE
+expect kids_loaded 0
 tap GLO
 spin K3 2
-spin K4 1
-expect kids_dialog 3
-tapkey w0
-tapkey w1
-tapkey w2
-tapkey w3
-tap SAVE
-expect kids_dialog 5
-kids-shelf-fail
-tap SAVE
-expect kids_shelf_mask 7
-spin K4 1
-tapkey w0
-tapkey w1
-tapkey w2
-tapkey w3
-tap SAVE
-tap SAVE
-expect kids_shelf_mask 3
-kids-shelf-conflict 3
+tap EDIT
+expect par1.level 91
+expect kids_loaded 3
+expect kids_pixel.0.2.3 4
+expect kids_pixel.1.0.0 4
+expect kids_pixel.11.2.3 0
+wait 1900
+shot kids-pixel-shelf.png
+press EDIT
+wait 420
+release EDIT
+tap SEL
+expect kids_pixel.1.0.0 0
+tap HOME
+spin K3 -2
+tap EDIT
+expect kids_loaded 1
+expect par1.level 85
+expect note 1 1 1 1
 press HOME
 spin K1 -1
-expect kids_shelf_mask 3
-expect kids_redo 0
+expect kids_loaded 3
+expect kids_pixel.0.2.3 4
+spin K1 1
+expect kids_loaded 1
 release HOME

@@ -3,7 +3,7 @@
 Project: a child-friendly M-VAVE FM1 groovebox UI based on Charles Vestal's LOOM-8.
 Upstream: https://github.com/charlesvestal/fm1-loom
 
-For the successor design in `docs/design/KIDS_INSTRUMENT.md`, use its newer Kids startup and song permissions. The PIN rules below describe the original UI milestone. The successor boots into playable child mode and uses a PIN only for protected slot overwrite or delete. Five quick GLO presses enter adult mode without a PIN. The emulator-only and hardware safety rules still apply.
+The current Kids song workflow is in docs/design/KIDS_INSTRUMENT.md. The emulator has a single user mode, with explicit SAVE and confirmed deletion. The emulator-only and hardware safety rules apply.
 
 ## Non-negotiable safety
 
@@ -12,8 +12,8 @@ For the successor design in `docs/design/KIDS_INSTRUMENT.md`, use its newer Kids
 - Do not modify DSP, audio interrupts, synthesis, sequencer timing, or project/preset serialization in milestone one.
 - Preserve eight tracks, 64-step patterns, recording, effects, envelopes, LFO, mixer, scenes, song arrangement, presets, and Studio access. Hide complexity rather than deleting functionality.
 - Keep original LOOM-8 UI as a reachable fallback; isolate new UI in well-scoped code.
-- Kids mode must protect saved projects: edit an unsaved working copy, never silently autosave it into a saved slot, and retain that protection after unlocking until an adult explicitly saves.
-- Require an explicit adult unlock before leaving an active Kids session for Studio. Avoid secret gestures or a default PIN. Test wrong credentials, cancellation, held inputs, simulated reboot, and unchanged saved bytes. Document session boundaries honestly; do not claim OS-level parental control.
+- Kids edits work on a detached copy. Only explicit SAVE writes music to the loaded Kids slot. Pixel templates autosave separately. Keep Studio storage separate.
+- Studio is a separate developer entry. Test cancellation, held inputs, simulated reboot, and unchanged unrelated slot bytes.
 - Avoid added full-screen framebuffers, bitmap animations, animation frameworks, idle redraw loops, large allocations, and any allocations inside redraw paths. Prefer existing graphics primitives and event-driven partial rendering.
 - Do not assume that hiding screens saves significant RAM. Measure memory, firmware size, host regressions and (if testable) render performance.
 - Work only on an isolated feature branch. Never push to upstream or merge without review.

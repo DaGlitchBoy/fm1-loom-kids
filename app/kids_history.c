@@ -3,7 +3,7 @@
  * Each entry owns a compact set of changed byte runs and, for an engine-type
  * change, the inactive alternate bank. Each changed run keeps both values so
  * a later audition cannot replace the recorded redo value. */
-enum { KH_SMALL, KH_SOUND, KH_STEP, KH_RECORD, KH_SLOT, KH_LOAD };
+enum { KH_SMALL, KH_SOUND, KH_STEP, KH_RECORD, KH_NAME, KH_SLOT, KH_LOAD };
 #define KH_LIMIT 10
 #define KH_SWEEP_MS 350u
 #define KH_HOLD_MS 250u
@@ -28,7 +28,7 @@ typedef struct {
     size_t size;
     uint8_t *runs;
     ks_blob_t *song_before, *song_after;
-    uint8_t slot, was_dirty, after_dirty;
+    uint8_t slot, was_dirty, after_dirty, before_slot, after_slot;
 } kh_edit_t;
 
 static int ks_replay(const kh_edit_t *e, int redo);
@@ -49,7 +49,9 @@ static void kh_regions(const kh_edit_t *e, kh_region_t regions[32], int *count)
 {
     int t = e->track, n = 0;
 #define KH_REGION(obj) do { regions[n++] = (kh_region_t){(uint8_t *)&(obj), sizeof(obj)}; } while (0)
-    if (e->scope == KH_RECORD) {
+    if (e->scope == KH_NAME) {
+        KH_REGION(kpix_song);
+    } else if (e->scope == KH_RECORD) {
         for (int p = 0; p < NPATT; p++) KH_REGION(pats.pat[t][p].st);
     } else {
         KH_REGION(proj.trk[t]);
@@ -79,7 +81,7 @@ static void kh_regions(const kh_edit_t *e, kh_region_t regions[32], int *count)
             regions[n++] = (kh_region_t){&pats.pat[t][e->pattern].len, sizeof(tpat_t) - offsetof(tpat_t, len)};
         }
     }
-    if (e->scope != KH_SMALL) {
+    if (e->scope != KH_SMALL && e->scope != KH_NAME) {
         KH_REGION(pats.lane);
         KH_REGION(pats.hit);
     }

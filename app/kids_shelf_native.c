@@ -12,7 +12,8 @@ static int ks_file_path(char *dst, size_t size, int slot, const char *suffix)
 {
     const char *dir = getenv("LOOM_KIDS_SHELF");
     if (!dir || !*dir) return 0;
-    int n = snprintf(dst, size, "%s/song-%d%s", dir, slot + 1, suffix);
+    int n = slot == KS_PIXELS ? snprintf(dst, size, "%s/pixelmaps%s", dir, suffix)
+                     : snprintf(dst, size, "%s/song-%d%s", dir, slot + 1, suffix);
     return n < 0 || (size_t)n >= size ? -1 : 1;
 }
 

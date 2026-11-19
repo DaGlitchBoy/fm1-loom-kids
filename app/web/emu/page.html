@@ -4,7 +4,7 @@
 <!-- emu-page: name -->
 LOOM Kids
 <!-- emu-page: description -->
-LOOM Kids: eight colorful instruments, steps and sounds. A protected emulator playground built on LOOM-8.
+LOOM Kids: eight colorful instruments, steps and sounds. A music-making emulator built on LOOM-8.
 <!-- emu-page: head -->
 <style>
 /* LOOM-8's gold: the lights (fm1panel.js draws them; tools/make_pages.py gives the mirror page the same), a held
@@ -61,18 +61,12 @@ LOOM Kids: eight colorful instruments, steps and sounds. A protected emulator pl
       Metronom aus.</p>
     <p><b>HOME halten</b> öffnet den Verlauf. K1 nach links macht je einen Schritt rückgängig,
       K1 nach rechts stellt ihn wieder her.</p>
-    <p><b>GLO</b> zeigt drei Songplätze. K3 wählt einen Platz, <b>EDIT</b> öffnet ihn, <b>SAVE</b> speichert.
-      K4 nach rechts fragt vor dem Löschen. Fünf schnelle GLO-Tastendrücke wechseln zwischen Kinder- und Erwachsenenmodus.</p>
-    <details>
-      <summary>PIN für Überschreiben und Löschen</summary>
-      <form id="kids-pin-settings">
-        <label for="kids-pin">Vier Ziffern</label>
-        <input id="kids-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password" required>
-        <button type="submit">PIN speichern</button>
-        <button type="button" id="kids-pin-clear">PIN entfernen</button>
-        <span id="kids-pin-status" role="status"></span>
-      </form>
-    </details>
+    <p><b>GLO</b> zeigt drei Songplätze. K3 wählt die Vorschau, <b>EDIT</b> öffnet den Platz.
+      <b>SAVE</b> speichert den geöffneten Song. K4 fragt, ob du den Platz in der Vorschau löschen
+      möchtest. <b>EDIT</b> bestätigt, <b>HOME</b> bricht ab.</p>
+    <p>Halte <b>EDIT</b> in GLO für die Pixelnamen. K1 wählt ein Bild, K2 und K3 bewegen den Cursor.
+      K4 wählt und malt die Farbe. <b>PLAY</b> malt mit der aktuellen Farbe, <b>SEL</b> setzt das Bild zurück.
+      <b>EDIT</b> übernimmt das Bild als Songnamen, <b>HOME</b> schließt den Editor.</p>
   </div>
   <div>
     <h2>Studio (separater Host-Entwicklermodus)</h2>

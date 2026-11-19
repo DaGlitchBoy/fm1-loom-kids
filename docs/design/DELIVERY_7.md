@@ -1,5 +1,7 @@
 # Delivery 7 · Three songs and ten undo steps
 
+> This page documents the original Delivery 7 branch. See the [updated shelf guide](KIDS_PIXEL_SHELF.md) for the current controls.
+
 ## Effect buttons and history
 
 While adjusting an effect, a quick double-press on a different effect button switches that effect off and returns to the original panel. The two presses must be within 300 ms. A later press while adjusting the effect switches it off and returns to HOME.

@@ -146,11 +146,11 @@ static void glfo_defaults(uint8_t *p)
     p[TP_LX] = p[TP_LX2] = 0;
     p[TP_P1] = 0;                                         /* (on a kit: every sound) */
 }
-static void aux_defaults(void)
+static void aux_defaults(settings_t *settings)
 {
     int t, k;
     for (t = NTRK; t < NALLTRK; t++) {
-        uint8_t *p = proj.trk[t].par;
+        uint8_t *p = settings->trk[t].par;
         sound_default(p, EG_KNIT);                       /* mix and sends at their defaults */
         for (k = TP_ENGINE; k <= TP_E4; k++)
             p[k] = 0;
@@ -160,24 +160,24 @@ static void aux_defaults(void)
         p[TP_CHAN] = 0;
         p[TP_BRAIN] = 0;
     }
-    glfo_defaults(proj.trk[AUX_BRAIN].par);
-    set_name(&proj.trk[AUX_BRAIN], "conductor");
-    set_name(&proj.trk[AUX_PUNCH], "throws");
-    set_name(&proj.trk[AUX_FX1], "delay");
-    set_name(&proj.trk[AUX_FX2], "reverb");
+    glfo_defaults(settings->trk[AUX_BRAIN].par);
+    set_name(&settings->trk[AUX_BRAIN], "conductor");
+    set_name(&settings->trk[AUX_PUNCH], "throws");
+    set_name(&settings->trk[AUX_FX1], "delay");
+    set_name(&settings->trk[AUX_FX2], "reverb");
     /* the notebook's default project: FX I a delay, FX II the lush reverb, each with its printed defaults
      * (fx.h FXT_DEFAULT, RV_LUSH_DEFAULT); the FX I track's second send feeds its return into FX II */
-    proj.trk[AUX_FX1].par[TP_ENGINE] = FXT_DELAY;
-    proj.trk[AUX_FX2].par[TP_ENGINE] = FXT_REVERB + RV_LUSH;
+    settings->trk[AUX_FX1].par[TP_ENGINE] = FXT_DELAY;
+    settings->trk[AUX_FX2].par[TP_ENGINE] = FXT_REVERB + RV_LUSH;
     for (k = 0; k < 4; k++) {
-        proj.trk[AUX_FX1].par[TP_E1 + k] = FXT_DEFAULT[FXT_DELAY][k];
-        proj.trk[AUX_FX2].par[TP_E1 + k] = RV_LUSH_DEFAULT[k];
+        settings->trk[AUX_FX1].par[TP_E1 + k] = FXT_DEFAULT[FXT_DELAY][k];
+        settings->trk[AUX_FX2].par[TP_E1 + k] = RV_LUSH_DEFAULT[k];
     }
-    proj.trk[AUX_FX1].par[TP_CUT] = 127;                 /* low-pass open */
-    proj.trk[AUX_FX1].par[TP_FENV] = 40;                 /* the high-pass: the echoes from 130 Hz (no mud) */
-    proj.trk[AUX_FX2].par[TP_CUT] = 127;
-    proj.trk[AUX_FX2].par[TP_FENV] = 52;                 /* the reverb from 230 Hz: the kick and the bass stay dry */
-    proj.trk[AUX_FX1].par[TP_FX_WIDTH] = proj.trk[AUX_FX2].par[TP_FX_WIDTH] = 127;   /* the delay's bounce: full */
+    settings->trk[AUX_FX1].par[TP_CUT] = 127;                 /* low-pass open */
+    settings->trk[AUX_FX1].par[TP_FENV] = 40;                 /* the high-pass: the echoes from 130 Hz (no mud) */
+    settings->trk[AUX_FX2].par[TP_CUT] = 127;
+    settings->trk[AUX_FX2].par[TP_FENV] = 52;                 /* the reverb from 230 Hz: the kick and the bass stay dry */
+    settings->trk[AUX_FX1].par[TP_FX_WIDTH] = settings->trk[AUX_FX2].par[TP_FX_WIDTH] = 127;   /* the delay's bounce: full */
 }
 
 /* a new band: T2-T8 each a random factory preset of a part, so a project starts as one: a bass, a polyphonic synth,
@@ -241,38 +241,33 @@ void project_device_put(void)
     proj.usb_full = dev.usb;
 }
 
-void project_defaults(void)
+static void project_defaults_into(settings_t *settings, patterns_t *patterns)
 {
     static const uint8_t ORDER[NTRK] = {EG_DRUMLINE, EG_KNIT, EG_RAYON, EG_JACQUARD, EG_KNIT, EG_BELLOWS, EG_CANE,
                                         EG_VOILE};
     int t, k;
-    uint8_t *z = (uint8_t *)&proj, keep = proj.magic == PROJ_MAGIC;   /* (a project before it: the FM-1's settings
-                                                                     * carried over; at the first start, none) */
-    if (keep)
-        project_device_get();
-    for (k = 0; k < (int)sizeof proj; k++)
+    uint8_t *z = (uint8_t *)settings;
+    for (k = 0; k < (int)sizeof *settings; k++)
         z[k] = 0;
-    proj.magic = PROJ_MAGIC;
-    proj.format = PROJ_FORMAT;
-    proj.name[0] = 'N';
-    proj.name[1] = 'E';
-    proj.name[2] = 'W';
-    proj.name[3] = 0;
-    proj.tempo_x10 = 1200;
-    proj.swing = 0;                                       /* unused (a reserved byte) */
-    proj.groove = GR_SWING;                               /* the project's groove type; each track's amount is 0 */
-    proj.metronome = 1;                                   /* while recording */
-    proj.lights = 1;
-    proj.clock = SEQ_CLK_RECEIVE;                         /* follows a MIDI clock in (0.7: sent clock, followed one) */
-    proj.send_notes = 1;                                  /* MIDI notes out (each track on its channel: below) */
-    proj.one_core = 0;
-    proj.usb_full = 0;
-    if (keep)
-        project_device_put();
-    proj.scene = 0;
-    proj.trk_sel = 0;
+    settings->magic = PROJ_MAGIC;
+    settings->format = PROJ_FORMAT;
+    settings->name[0] = 'N';
+    settings->name[1] = 'E';
+    settings->name[2] = 'W';
+    settings->name[3] = 0;
+    settings->tempo_x10 = 1200;
+    settings->swing = 0;                                       /* unused (a reserved byte) */
+    settings->groove = GR_SWING;                               /* the project's groove type; each track's amount is 0 */
+    settings->metronome = 1;                                   /* while recording */
+    settings->lights = 1;
+    settings->clock = SEQ_CLK_RECEIVE;                         /* follows a MIDI clock in (0.7: sent clock, followed one) */
+    settings->send_notes = 1;                                  /* MIDI notes out (each track on its channel: below) */
+    settings->one_core = 0;
+    settings->usb_full = 0;
+    settings->scene = 0;
+    settings->trk_sel = 0;
     for (t = 0; t < NTRK; t++) {
-        trk_t *tr = &proj.trk[t];
+        trk_t *tr = &settings->trk[t];
         sound_default(tr->par, ORDER[t]);
         if (ORDER[t] == EG_DRUMLINE) {
             for (k = 0; k < DL_NSOUND; k++) {
@@ -298,24 +293,32 @@ void project_defaults(void)
         tr->par[TP_CHAN] = 1;                             /* MIDI OUT on: track N's notes on channel N
                                                            * (with Setup's NOTES) */
     }
-    aux_defaults();
+    aux_defaults(settings);
     /* the master: the EQ flat, the color off (tape when on: amount 40, tone 64, all wet), the groups at unity, a touch
      * of compression */
     for (k = 0; k < NMS; k++)
-        proj.master[k] = 64;
-    proj.master[MS_RSV3] = 0;
-    proj.master[MS_CTYPE] = MC_OFF;
-    proj.master[MS_CAMT] = 40;
-    proj.master[MS_CMIX] = 127;
-    proj.master[MS_PERC] = 100;
-    proj.master[MS_MEL] = 100;
-    proj.master[MS_COMP] = 30;
-    proj.master[MS_PUMP] = 0;                             /* the pump off; when on: by the kick, X0X's release, */
-    proj.master[MS_PUMP_BY] = PB_KICK;                    /* accented hits deeper */
-    proj.master[MS_PUMP_REL] = MS_PUMP_REL_DEF;
-    proj.master[MS_PUMP_ACC] = 1;
-    proj.master[MS_LEVEL] = 100;
-    patterns_init(&pats);
+        settings->master[k] = 64;
+    settings->master[MS_RSV3] = 0;
+    settings->master[MS_CTYPE] = MC_OFF;
+    settings->master[MS_CAMT] = 40;
+    settings->master[MS_CMIX] = 127;
+    settings->master[MS_PERC] = 100;
+    settings->master[MS_MEL] = 100;
+    settings->master[MS_COMP] = 30;
+    settings->master[MS_PUMP] = 0;                             /* the pump off; when on: by the kick, X0X's release, */
+    settings->master[MS_PUMP_BY] = PB_KICK;                    /* accented hits deeper */
+    settings->master[MS_PUMP_REL] = MS_PUMP_REL_DEF;
+    settings->master[MS_PUMP_ACC] = 1;
+    settings->master[MS_LEVEL] = 100;
+    patterns_init(patterns);
+}
+
+void project_defaults(void)
+{
+    int keep = proj.magic == PROJ_MAGIC;
+    if (keep) project_device_get();
+    project_defaults_into(&proj, &pats);
+    if (keep) project_device_put();
 }
 
 /* ---- validation ----------------------------------------------------------------------------- */

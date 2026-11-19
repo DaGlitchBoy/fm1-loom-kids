@@ -27,8 +27,6 @@ globalThis.fm1App = {
         ex.web_kids_seed(+slot, record.rev >>> 0, bytes && !invalid ? bytes.length : 0, +invalid);
       }
       ex.web_kids_ready(+msg.ok);
-    } else if (msg.shelf === "pin") {
-      ex.web_kids_pin(msg.token >>> 0);
     } else if (msg.shelf === "complete") {
       ex.web_kids_complete(msg.id, msg.status);
     }

@@ -65,7 +65,7 @@ function keyboard() {
 }
 
 export function attach(context) {
-  shelfSettings(context);
+  shelfNode = context?.node;
   const entry = document.getElementById("kids-entry");
   if (entry) {
     entry.disabled = false;
@@ -82,8 +82,8 @@ export function attach(context) {
 
 // A transaction compares the slot generation and commits one record. Keeping
 // a generation even for an empty slot makes deletion and stale undo detectable.
-const SHELF_DB = "loom-kids-song-shelf", PIN_KEY = "loom-kids-shelf-pin-v1";
-let shelfDb, shelfNode, shelfPin = 0;
+const SHELF_DB = "loom-kids-song-shelf";
+let shelfDb, shelfNode;
 
 function openShelf() {
   if (!shelfDb) shelfDb = new Promise((resolve, reject) => {
@@ -131,10 +131,9 @@ export async function message(msg) {
       const records = await readShelf();
       const slots = {};
       for (const record of records) {
-        if (Number.isInteger(record.slot) && record.slot >= 0 && record.slot < 3) slots[record.slot] = record;
+        if (Number.isInteger(record.slot) && record.slot >= 0 && record.slot < 4) slots[record.slot] = record;
       }
       const transfer = Object.values(slots).map((record) => record.bytes).filter((bytes) => bytes instanceof ArrayBuffer);
-      shelfNode.port.postMessage({ type: "app", shelf: "pin", token: shelfPin });
       shelfNode.port.postMessage({ type: "app", shelf: "seed", ok: true, slots }, transfer);
     } catch {
       shelfNode.port.postMessage({ type: "app", shelf: "seed", ok: false, slots: {} });
@@ -142,41 +141,8 @@ export async function message(msg) {
   } else if (msg.shelf === "write") {
     let status = -1;
     try {
-      if (Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < 3) status = await writeShelf(msg);
+      if (Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < 4) status = await writeShelf(msg);
     } catch { /* send a failed acknowledgement so the working song and history stay put */ }
     shelfNode.port.postMessage({ type: "app", shelf: "complete", id: msg.id, status });
   }
-}
-
-function shelfSettings(context) {
-  shelfNode = context?.node;
-  const form = document.getElementById("kids-pin-settings");
-  if (!shelfNode || !form) return;
-  const input = document.getElementById("kids-pin");
-  const status = document.getElementById("kids-pin-status");
-  const update = (token) => {
-    shelfPin = token;
-    shelfNode.port.postMessage({ type: "app", shelf: "pin", token });
-  };
-  const set = (token) => {
-    try {
-      if (token) localStorage.setItem(PIN_KEY, String(token));
-      else localStorage.removeItem(PIN_KEY);
-      update(token);
-      status.textContent = token ? "PIN eingerichtet" : "Kein PIN eingerichtet";
-      input.value = "";
-    } catch {
-      status.textContent = "PIN konnte nicht gespeichert werden";
-    }
-  };
-  try {
-    const stored = Number(localStorage.getItem(PIN_KEY)) >>> 0;
-    update(stored);
-    status.textContent = stored ? "PIN eingerichtet" : "Kein PIN eingerichtet";
-  } catch { status.textContent = "PIN-Speicher nicht verfügbar"; }
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (/^\d{4}$/.test(input.value)) set(Math.imul(Number(input.value) ^ 0x4c4f4f4d, 2654435761) >>> 0);
-  });
-  document.getElementById("kids-pin-clear").addEventListener("click", () => set(0));
 }
