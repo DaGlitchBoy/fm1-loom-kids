@@ -16,3 +16,6 @@ pixelmaps.tmp.*
 startup.ks
 startup.lock
 startup.tmp.*
+
+# The shared builder regenerates the upstream device manifest during local builds.
+/firmware.json

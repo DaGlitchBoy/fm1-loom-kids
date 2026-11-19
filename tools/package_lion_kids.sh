@@ -21,12 +21,16 @@ tar -xf "$tmp/base.tar" -C "$tmp/lion-kids-source/base"
 tar -xf "$tmp/bsp.tar" -C "$tmp/lion-kids-source/base/bsp"
 tar -czf "$out/lion-kids-source.tar.gz" -C "$tmp" lion-kids-source
 
-cp -R app/build/emu/. "$tmp/lion-kids-web/"
+cp app/build/emu/index.html app/build/emu/app.wasm app/build/emu/*.js "$tmp/lion-kids-web/"
+for assets in parts reader; do
+    if [ -d "app/build/emu/$assets" ]; then
+        cp -R "app/build/emu/$assets" "$tmp/lion-kids-web/"
+    fi
+done
 cp COPYING LICENSE LICENSING.md docs/LION_KIDS_MANUAL.md "$tmp/lion-kids-web/"
 mkdir -p "$tmp/lion-kids-web/img"
 cp docs/img/lion-kids-steps.png docs/img/lion-kids-performance.png "$tmp/lion-kids-web/img/"
 git rev-parse HEAD > "$tmp/lion-kids-web/SOURCE-COMMIT.txt"
-for file in app/build/emu/index.html app/build/emu/app.wasm; do test -s "$file"; done
 (
     cd "$tmp"
     python3 -m zipfile -c "$out/lion-kids-web.zip" lion-kids-web
