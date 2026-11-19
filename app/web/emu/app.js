@@ -18,16 +18,14 @@ function moveStore() {
 }
 
 // what each control does, on hover and for a screen reader (the Buttons list below the panel says the same)
-const TIP = { FX: "Kids: toggle reverb for this track. Studio: sends and effects",
-  SEL: "Kids: toggle delay for this track. Studio: page menu",
-  ENV: "Kids: envelope graph and switch. Studio: envelope and filter",
-  LFO: "Kids: modulation graph, signed depth and synced rate. Studio: LFO",
+const TIP = { FX: "Reverb for this track", SEL: "Delay for this track", ENV: "Envelope for this track",
+  LFO: "Modulation graph, signed depth and synced rate",
   EDIT: "Toggle the selected step in Steps, open songs in GLO, or open Quick FX",
-  GLO: "Tempo, metronome, swing and song slots. Hold for five seconds to clear a slot.", HOME: "Kids: Stage; hold and turn K1 to undo or redo. Studio: Arrange; held, shift", SAVE: "Kids: save song. Studio: save",
-  ARP: "Kids: toggle the arpeggiator for this track. Studio: players", SEQ: "Open the last sequencer view or alternate between Performance and Steps", PLAY: "Start / stop",
-  REC: "Kids: overdub. Studio: recording", "OCT-": "Kids: octave down. Studio: octave / bar down",
-  "OCT+": "Kids: octave up. Studio: octave / bar up", SELECT: "Kids: track. Studio: page",
-  ALGORITHM: "Kids: sound preset. Studio: track", PRESETS: "Kids: sound group. Studio: page-specific selection", MASTER: "Volume" };
+  GLO: "Tempo, metronome, swing and song slots. Hold for five seconds to clear a slot.",
+  HOME: "Stage. Hold and turn K1 to undo or redo", SAVE: "Save the loaded song", ARP: "Arpeggiator for this track",
+  SEQ: "Open the last sequencer view or alternate between Performance and Steps", PLAY: "Start or stop playback",
+  REC: "Record live notes on the selected track", "OCT-": "Octave down", "OCT+": "Octave up",
+  SELECT: "Kids: track", ALGORITHM: "Sound preset", PRESETS: "Sound category", MASTER: "Master volume" };
 function tips() {
   for (const [n, b] of Object.entries(buttons)) if (TIP[n]) { b.hit.title = TIP[n]; b.hit.setAttribute("aria-description", TIP[n]); }
   for (const [n, k] of Object.entries(knobs)) {

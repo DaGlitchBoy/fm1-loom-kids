@@ -2,6 +2,10 @@
 
 The `Build LION KIDS emulator` GitHub Actions workflow builds and tests the pinned source. Its `lion-kids-release` artifact contains the browser ZIP, complete corresponding source with submodules, and SHA-256 checksums. Download the artifact from the run for the exact release commit. GitHub's automatic source archives omit submodule contents. Attach the corresponding-source archive with the browser ZIP.
 
+## Public repository description
+
+LION KIDS is an eight-track browser groovebox with live recording, step editing and pixel-art song names. Based on LOOM-8 by Charles Vestal.
+
 ## GitHub draft
 
 1. Choose a public version and tag the reviewed commit. A tag such as `v1.0.0-rc1` builds the browser candidate. The workflow produces artifacts without publishing a release.
@@ -39,7 +43,7 @@ Before posting, check the community's rules for project announcements and self-p
 
 ## The Firmware Hub
 
-The current deliverable is a browser emulator. The inherited device target builds LOOM-8 Studio. A LION KIDS listing for installation needs a separate device port, its own package identity and manifest, an applicable Hub-compatible build/provenance path, and hardware validation. The inherited firmware manifest and installer refer to upstream LOOM-8. See the [platform's Firmware Hub metadata documentation](../base/docs/FIRMWARE-JSON.md).
+The current deliverable is a browser emulator. The inherited device target builds LOOM-8 Studio. A LION KIDS listing for installation needs a separate device port, its own package identity and manifest, an applicable Hub-compatible build/provenance path, and hardware validation. The generated device manifest and installer refer to upstream LOOM-8. The browser release has no firmware manifest. See the [platform's Firmware Hub metadata documentation](../base/docs/FIRMWARE-JSON.md).
 
 ## Rename and privacy checklist
 
