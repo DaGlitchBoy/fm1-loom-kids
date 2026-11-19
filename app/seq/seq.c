@@ -2397,6 +2397,12 @@ static void arp_fire(seq_t *s, int t, const seq_sink_t *o)
         }
     total = n * range;
     style = s->par[t][TP_AP2] > 5 ? 0 : s->par[t][TP_AP2];
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (s->kids_mode && pat == 3) {
+        cyc = arp_cycle(2, total);
+        idx = total - 1 - arp_base(2, (int)(pl->arp_i++ % (uint32_t)cyc), total);
+    } else
+#endif
     if (pat == 5)                     /* random: the style has nothing to reorder */
         idx = (int)(rng_next(&s->rng) % (uint32_t)total);
     else {
@@ -2985,6 +2991,13 @@ static void keys_all_off(seq_t *s, int t, const seq_sink_t *o)
     pl->nsroll = 0;
     pl->sroll_to_next = NEVER;
 }
+
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+void seq_kids_player_reset(seq_t *s, int trk, const seq_sink_t *out)
+{
+    keys_all_off(s, trk, out);
+}
+#endif
 
 /* a key on the BRAIN track: the keys held are the chord (the lowest its root); the link track plays the key as
  * pressed */

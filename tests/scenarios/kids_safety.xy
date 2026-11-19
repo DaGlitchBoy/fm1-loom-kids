@@ -13,7 +13,7 @@ expect note 1 1 5 1
 spin PRESET 1
 tap SAVE
 tap SEL
-expect kids 2
+expect kids 1
 wait 7000
 storesave app/build/scenarios/kids_safety/after_kids.store
 reboot

@@ -373,6 +373,7 @@ uint32_t seq_punch_mask(const seq_t *s, int trk);   /* the 12 PX_* bits in force
  * live recording); count_in (bars) stays as an option on top */
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
 void seq_rec_finish_keys(seq_t *s);
+void seq_kids_player_reset(seq_t *s, int trk, const seq_sink_t *out);
 #endif
 void seq_rec(seq_t *s, int on);
 void seq_rec_knob(seq_t *s, int trk, int param, int val);   /* REC held + a knob: a lock on the step playing */

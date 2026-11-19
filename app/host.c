@@ -448,7 +448,12 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "kids_draws"))
         *got = (int)kids_draws;
     else if (!strcmp(what, "kids_perf_page"))
-        *got = kids_perf_page + 1;
+        *got = kids_perf_page[sel_trk()] + 1;
+    else if (!strncmp(what, "kids_perf_page.", 15)) {
+        int t = atoi(what + 15) - 1;
+        if (t < 0 || t >= NTRK) return 0;
+        *got = kids_perf_page[t] + 1;
+    }
     else if (!strcmp(what, "kids_velocity"))
         *got = kids_step_velocity();
     else if (!strcmp(what, "kids_swing"))
@@ -458,6 +463,22 @@ int app_expect(const char *what, int *got)
         if (sscanf(what + 10, "%d.%d", &track, &cell) != 2 ||
             track < 1 || track > NTRK || cell < 1 || cell > 16) return 0;
         *got = kids_performance_cell(track - 1, cell - 1);
+    }
+    else if (!strcmp(what, "kids_lights"))
+        *got = (int)kids_button_lights();
+    else if (!strcmp(what, "kids_panel"))
+        *got = kids_panel;
+    else if (!strcmp(what, "kids_delay"))
+        *got = kids_delay_actual;
+    else if (!strcmp(what, "kids_delay_halves"))
+        *got = fx_delay_halves(epar[AUX_FX1][TP_E1], epar[AUX_FX1][TP_E2], seq_tempo(&seq));
+    else if (!strcmp(what, "kids_metro"))
+        *got = kids_metro_gain;
+    else if (!strncmp(what, "kids_send.", 10)) {
+        int track, bus;
+        if (sscanf(what + 10, "%d.%d", &track, &bus) != 2 ||
+            track < 1 || track > NTRK || bus < 1 || bus > 2) return 0;
+        *got = kids_send_gain[track - 1][bus - 1];
     }
     else if (!strcmp(what, "kids_bar"))
         *got = ui.bar + 1;

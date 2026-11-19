@@ -235,6 +235,10 @@ struct synth {
 };
 uint32_t synth_load_steals;           /* new notes that took a sounding voice to stay inside LOAD_ADMIT (synth.h) */
 _Static_assert(sizeof(struct synth) <= SYNTH_BYTES, "synth_t outgrew SYNTH_BYTES");
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+volatile uint8_t kids_send_override;
+volatile uint8_t kids_send_gain[NTRK][2];
+#endif
 #ifdef PLAT_HOST
 uint16_t synth_host_solo = 0xFFFFu;           /* the host's stems: bits 0-7 the tracks, 8 / 9 the FX returns */
 int synth_sizeof(void) { return (int)sizeof(struct synth); }
@@ -2594,6 +2598,12 @@ static void voice_chunk(synth_t *s, voice_t *v)
     c->gr = v->pan_r * vg;
     c->g1 = fm_clampf((float)(P(s, trk, TP_SEND1) + t->perf.send1) + (gd == GD_SEND1 ? g : 0.0f), 0.0f, 127.0f) * (1.0f / 127.0f);
     c->g2 = fm_clampf((float)(P(s, trk, TP_SEND2) + t->perf.send2) + (gd == GD_SEND2 ? g : 0.0f), 0.0f, 127.0f) * (1.0f / 127.0f);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    if (kids_send_override) {
+        c->g1 = kids_send_gain[trk][0] * (1.0f / 127.0f);
+        c->g2 = kids_send_gain[trk][1] * (1.0f / 127.0f);
+    }
+#endif
     /* pitch: the glide, bend, performance pitch, vibrato, an LFO on the pitch (+-12 semitones at 100 %) */
     v->pitch_cur += (v->pitch - v->pitch_cur) * v->glide_k;
     c->pitch_off = (float)t->bend_c + t->pb_base + t->pb_step * (float)(k + 1) + t->lpitch[k] * lenv;

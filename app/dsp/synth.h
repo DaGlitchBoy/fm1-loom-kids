@@ -192,6 +192,11 @@ enum { GD_CUT, GD_RES, GD_PITCH, GD_PAN, GD_VOL, GD_SEND1, GD_SEND2, GD_CHAR, NG
 enum { LD_SYNTH, LD_ENV, LD_FILTER, LD_AMP, LD_FREE = 4, NLD = 8 };   /* TP_LDEST: module (LD_AMP: "voice"), + LD_FREE = free-running */
 #define LS_SYNC_N 8                                /* TP_LSPEED values below this are synced divisions */
 enum { PL_OFF, PL_ARP, PL_STRUM, PL_HOLD, PL_RAND, NPL };
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+extern volatile uint8_t kids_send_override;
+extern volatile uint8_t kids_send_gain[NTRK][2];
+#endif
+
 #define NARPSPD 11
 #define ARP_1_16 6                                 /* the arp's speed 1/16 (its default) */
 /* arp: P1 speed (1/4 1/8D 1/4T 1/8 1/16D 1/8T 1/16 1/16T 1/32 1/32T 1/64; before project

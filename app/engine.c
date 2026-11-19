@@ -100,6 +100,9 @@ static uint8_t eng_drum[NTRK];                     /* the track's engine is the 
 static uint8_t fx_type[2];                        /* each slot's effect, as set */
 static uint32_t metro_left;                       /* the metronome's click: samples left, phase, rate */
 static float metro_ph, metro_inc;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+static uint8_t kids_metro_gain = 100;
+#endif
 static int16_t bend_c[NTRK];                      /* the bend component's cents, per track */
 /* MIDI for the main loop (midicc.c): every CC, Program Change and the master channel's note-ons, and every track's
  * notes for the track on the screen (midicc.c key_midi), raw USB-MIDI
@@ -237,7 +240,7 @@ static void guard_apply(void)
 /* uint32 commands, single producer (main loop) / single consumer (audio ISR): type:4 | a:8 | b:8 | c:12 (C_PARAM: b
  * the parameter's low eight bits, c its value and, at bit 8, its ninth: synth.h NTP) */
 enum { C_PARAM, C_ALL, C_KEY, C_KEYS_OFF, C_PUNCH, C_BRAIN_KEY, C_MASTER, C_FX, C_PANIC,
-       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP };     /* at most sixteen: the type is four bits */
+       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP, C_KIDS_PLAYER };     /* at most sixteen: the type is four bits */
 #define CQ 512u
 static uint32_t cq[CQ];
 static volatile uint32_t cq_w, cq_r;
@@ -309,6 +312,10 @@ void engine_fx(int slot, int type, const uint8_t knob[4], int hp, int lp, int wi
 }
 void engine_panic(void) { cq_put(C_PANIC, 0, 0, 0); }
 void engine_metronome(int mode) { cq_put(C_METRO, (uint32_t)mode, 0, 0); }
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+static void engine_kids_metro(int gain) { cq_put(C_METRO, gain ? 2u : 0u, (uint32_t)gain + 1u, 0); }
+static void engine_kids_player(int track, int mode) { cq_put(C_KIDS_PLAYER, (uint32_t)track, (uint32_t)mode, 0); }
+#endif
 void engine_tempo(int bpm_x10)                  /* 400..3000 fits the command's twelve-bit value */
 {
     if (bpm_x10 < 400)
@@ -1000,7 +1007,19 @@ static void drain(void)
             seq_midi_notes_off(&seq);                /* (after the keys' offs: whatever is still on out there) */
             break;
         }
-        case C_METRO: seq.metronome = (uint8_t)a; break;
+        case C_METRO:
+            seq.metronome = (uint8_t)a;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+            kids_metro_gain = b ? (uint8_t)(b - 1) : 100;
+            if (!kids_metro_gain) metro_left = 0;
+#endif
+            break;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        case C_KIDS_PLAYER:
+            seq_kids_player_reset(&seq, (int)a, &SINK);
+            ppar[a][TP_PLAYER] = epar[a][TP_PLAYER] = (uint8_t)b;
+            break;
+#endif
         case C_TEMPO: seq.bpm = (float)v * 0.1f; break;
         case C_GROOVE: seq.groove_type = (uint8_t)a; break;
         case C_SCENE:
@@ -1292,8 +1311,12 @@ __attribute__((noinline)) static void add_in(float *dst, const float *src, uint3
 static void metro_tick(uint32_t n)
 {
     uint32_t i;
+    float gain = 0.5f;
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+    gain *= kids_metro_gain * 0.01f;
+#endif
     for (i = 0; i < n && metro_left; i++, metro_left--) {
-        float env = (float)metro_left * (1.0f / 1800.0f), v = fm_sin_turns(metro_ph) * env * env * 0.5f;
+        float env = (float)metro_left * (1.0f / 1800.0f), v = fm_sin_turns(metro_ph) * env * env * gain;
         metro_ph += metro_inc;
         if (metro_ph >= 1.0f)
             metro_ph -= 1.0f;
@@ -1336,6 +1359,25 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
         glide_set(&trk_glide[t][GL_SEND], g);
         add_glide(perc_l, tl, &trk_glide[t][GL_L], n);
         add_glide(perc_r, tr, &trk_glide[t][GL_R], n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB)
+        if (kids_send_override) {
+            float *source[] = {ts1, ts2};
+            for (int k = 0; k < 2; k++) {
+                int peak = 0;
+                for (int key = 0; key < NDRUM; key++) {
+                    int weight = epar[t][TP_DRUM(key, k ? DP_SEND2 : DP_SEND1)];
+                    if (weight > peak) peak = weight;
+                }
+                if (peak) {
+                    float gain = (float)kids_send_gain[t][k] / (float)peak;
+                    for (uint32_t i = 0; i < n; i++) source[k][i] *= gain;
+                } else {
+                    float gain = kids_send_gain[t][k] * (0.5f / 127.0f);
+                    for (uint32_t i = 0; i < n; i++) source[k][i] = (tl[i] + tr[i]) * gain;
+                }
+            }
+        }
+#endif
         add_glide(s1, ts1, &trk_glide[t][GL_SEND], n);
         add_glide(s2, ts2, &trk_glide[t][GL_SEND], n);
         meter(t, tl, tr, g * gl, g * gr, n);

@@ -57,8 +57,8 @@ tapkey b0
 wait 130
 expect peak_db_min -46
 expect note 3 1 1 0
-# Pattern content for each page and each row. Playback advances the overview
-# with the selected 64-step track; the Steps editor stays on manual page 4.
+# Pattern content for each page and each row. Each row follows its own loop;
+# the header follows the selected 64-step track and the Steps editor stays on manual page 4.
 step 1 1 1 1 100
 step 2 1 17 65 100
 step 2 1 21 67 100
@@ -72,7 +72,9 @@ expect kids_perf_page 1
 expect kids_cell.1.1 2
 wait 2000
 expect kids_perf_page 2
-expect kids_cell.1.1 0
+expect kids_cell.1.1 2
+expect kids_perf_page.1 1
+expect kids_perf_page.2 2
 expect kids_cell.2.1 2
 expect kids_cell.3.3 2
 expect step 1 <16
@@ -81,13 +83,18 @@ expect step 3 >15
 shot kids-performance.png
 wait 2000
 expect kids_perf_page 3
-expect kids_cell.2.1 0
+expect kids_cell.2.1 1
+expect kids_perf_page.2 1
+expect kids_perf_page.3 3
 expect kids_cell.3.1 2
 expect step 1 <16
 expect step 2 <16
 expect step 3 >31
 wait 2000
 expect kids_perf_page 4
+expect kids_perf_page.1 1
+expect kids_perf_page.2 2
+expect kids_cell.2.1 2
 expect kids_cell.3.16 2
 wait 2000
 expect kids_perf_page 1
