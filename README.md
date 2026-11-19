@@ -1,5 +1,9 @@
 # LOOM-8 for the M-VAVE FM-1
 
+**This branch includes LOOM Kids:** the browser emulator opens directly into adult setup, then the colorful
+Kids Stage, Steps and Sounds screens. [Start, controls, screenshots and safety boundaries](docs/LOOM_KIDS_MILESTONE_1.md).
+Kids is emulator-only; no firmware installation is required.
+
 LOOM-8 turns the M-VAVE FM-1 into a pocket groovebox: eight instrument tracks, each in its own colour, on
 eleven engines (seven synths: knit, rayon, jacquard, bellows, cane, voile and acid, a TB-303; a sample player, a break slicer, a drum kit, and MIDI out to drive another synth), 93 factory presets; a 64-step sequencer with step tricks and parameter locks; players (arp,
 strum, hold); weave, which crosses two patterns (bar by bar, step by step, or one's rhythm with the other's

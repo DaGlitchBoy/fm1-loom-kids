@@ -37,6 +37,9 @@ expect dirty 1
 # SAVE, system/page buttons, holds and keyboard combos cannot escape or write.
 tap SAVE
 tap EDIT
+expect kids 3
+spin PRESET 1
+tap SEQ
 tap GLO
 tap ENV
 tap FX

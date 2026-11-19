@@ -1,153 +1,138 @@
-# LOOM Kids milestone 1
+# LOOM Kids — visual UI redesign
 
-Source branch: `setup/loom-kids-codex`, commit
-`475e3f5a5f03b76cb325ff09ef927afae13996e0`.
-Feature branch: `feat/loom-kids-ui`.
-Submodules initialized recursively, unchanged: `base` at `c8e05997ce970875038156d2bbd69e712eac1543`,
-`base/bsp` at `18eadadb8c364abd026accd2b1ea1c14ca347f06`.
+Feature branch: `feat/loom-kids-ui`. Original source: `setup/loom-kids-codex` at
+`475e3f5a5f03b76cb325ff09ef927afae13996e0`. This redesign starts from the protected vertical slice
+`decb768bda305886c778a8758842d52ea198bade` and supersedes its Debug-menu entry and text-heavy screens.
+The user explicitly expanded scope to include the real instrument/preset browser.
 
-## Try it
+## Start on a Mac
 
-Build with `./build.sh --host`. The default remains Studio. In the emulator:
+From the existing checkout, with the working Pillow/RAQM environment and Emscripten installed:
 
-1. Tap GLO, turn SELECT six clicks to Debug. The footer says **HOME Kids Stage**.
-2. Tap HOME to enter Stage. Recording and active modal editing must finish first.
-3. On first entry, an adult uses K1–K4 to choose four PIN digits, presses SEL, enters the same digits again,
-   and presses SEL to start Kids. Set all four digits; there is no default PIN. HOME cancels setup.
-4. SEQ opens Steps; HOME returns to Stage. SEL opens the adult PIN prompt, not Studio directly.
-   Enter the PIN with K1–K4 and SEL to unlock; HOME cancels. Incorrect entries impose a three-second retry delay.
-5. Kids edits an **unsaved working copy**. Unlocking preserves that copy without saving it. In Studio,
-   SAVE chooses a slot; replacing existing work requires the normal explicit confirmation. HOME cancels.
+```sh
+git switch feat/loom-kids-ui
+git pull --ff-only
+source .venv/bin/activate
+PYTHON="$PWD/.venv/bin/python" ./build.sh --web &&
+python -m http.server 8000 --bind 127.0.0.1 --directory app/build/emu
+```
 
-Both Kids screens use the same four knobs, with persistent labels and current values:
+Open <http://localhost:8000>, hard-reload an old tab (Command–Shift–R), and start the emulator.
+The page now says **LOOM Kids**. It opens directly into adult PIN setup; there is no Debug-menu detour.
+Use K1–K4 to choose a four-digit session PIN, press SEL, enter it again and press SEL. The colorful Stage
+appears. The page's **Kids-Modus öffnen** button also returns from Studio directly to Kids after startup.
 
-| Control | Action |
-| --- | --- |
-| K1 / ALGORITHM | Select track 1–8, clamped at the ends |
-| K2 / OCT− / OCT+ | Select bar 1–4, including steps beyond the current pattern length |
-| K3 | Select drum hit 1–11, or the single MIDI note to insert |
-| K4 | Tempo, 1 BPM per detent, through the existing tempo helper |
-| PRESETS | Pattern, through the original queued-pattern helper |
-| PLAY | Existing transport start/stop; recording stays in Studio |
-| White keys on Steps | Toggle the corresponding step in the selected bar |
-| Black keys on drum Steps | Select the drum hit |
-| SEL | Adult PIN unlock for Studio: complex notes, recording, sounds, save, FX, envelopes, LFO, mixer, scenes and song |
+The native host remains Studio by default for the original regression scenarios. Run `LOOM_KIDS=1`
+with the host executable to exercise the same direct Kids entry as the browser. Debug → HOME remains
+only a compatibility fallback for native scripts, not the browser's primary entry.
 
-The two rows retain all eight colored, numbered track marks; the first four have stronger underlines.
-Selected track, mute marks, transport, current and queued patterns, bar, notes and playhead come directly
-from the application model. A drum cell shows the selected hit, so other hits survive removing it.
-A melodic insertion uses the one note shown by K3; existing chords remain editable in Studio.
-Dim cells lie beyond the current pattern length; adding a step extends it through the existing helper.
-No screen or encoder enters auxiliary tracks accidentally; Studio retains them all.
-Other buttons and SELECT rotation have no Kids action. There are no hold gestures or hidden alternate modes.
+## What changed visually and musically
 
-## Implementation
+- **Stage / HOME:** eight large color-coded instrument cards, each with a distinct procedural pixel-style
+  icon and a stable number. The first four have stronger accent bars. White keys 1–8 select tracks directly.
+  The selected sound's actual name is shown. Grid, note and lock symbols explain SEQ, EDIT and SEL.
+- **Steps / SEQ:** a spacious 4×4 step grid, with full colored cells for active steps and a bright moving
+  playhead outline. Four visible bar tabs cover all 64 steps; disabled-length cells are dimmed. Drum cells
+  show the selected hit, without deleting other hits. Musical editing still calls the original step helper.
+- **Sounds / EDIT:** a large instrument/category icon, category and position/count, the real preset name,
+  and a preview keyboard. K2 selects Bass, Keys, Pads, Leads, Plucks, Textures or All. K3/PRESETS selects
+  a matching factory preset or, under All, a nonempty saved user preset. Presets can span melodic engines.
+  Drum tracks browse factory and saved drum kits instead of being silently converted into melodic tracks.
+  The piano keys really audition the current sound. Track, page and preset changes release held notes.
+- **Motion:** Stage icons rise/light when their track has a trigger at the actual playhead; the header
+  indicates the actual step/transport. The sound icon responds to pressed keys. These are state-driven
+  changes, with no timer animation, idle redraw, extra framebuffer or bitmap assets.
+- **Panel feedback:** HOME/SEQ/EDIT light for the actual Kids page; Stage highlights track keys, Steps
+  shows the selected hit/playhead, and Sounds shows played keys. SAVE does not misleadingly light in Kids.
 
-- `app/kids.c`: isolated emulator input, adult session PIN setup/unlock and unsaved working-copy detachment;
-  eight signature-cached drawing bands, at most 36 pixels high.
-  Uses existing canvas, fonts and procedural rectangles; no new framebuffer, assets, heap allocation,
-  sequencer state, or idle redraw loop.
-- `app/ui.c`: guarded entry, input/render dispatch, initialization and redraw invalidation.
-- `app/pages.c`: emulator-only entry label on Debug; hardware footer unchanged.
-- `app/host.c`: assertions for Kids mode, selected bar, band-draw count, PIN gate, lock and saved-slot association.
-- `app/web/emu/page.html`: visible emulator entry/control instructions.
-- `tests/scenarios/kids.xy`: real button/encoder scenario, automatically discovered by the existing runner.
-- `tests/scenarios/kids_safety.xy`, `tests/host/kids_safety_test.py`, `tests/run_tests.sh`: saved-object
-  byte comparisons, adult PIN/overwrite flows, and lock retention over simulated reboot.
-- `AGENTS.md` and this report: child-safety requirements and session boundaries.
+Screenshots from the executable, not mockups:
 
-All new behavior is guarded by `PLAT_HOST` / `PLAT_WEB`. No changes to DSP, audio interrupts, sequencer
-timing, serialization, bootloader, flash layout, install package, or submodules. No firmware build,
-physical-device communication, installation, flashing, or recovery command was performed.
+![Stage](img/kids-stage.png)
+![Steps](img/kids-steps.png)
+![Sounds](img/kids-sounds.png)
 
-## Verification
+## Consistent controls
 
-Baseline `./build.sh --host` and `tests/run_tests.sh` passed. Node is available. The runner skipped:
+| Control | Stage | Steps | Sounds |
+| --- | --- | --- | --- |
+| HOME / SEQ / EDIT | Stage / Steps / Sounds | Stage / Steps / Sounds | Stage / Steps / Sounds |
+| SEL | Adult PIN gate | Adult PIN gate | Adult PIN gate |
+| ALGORITHM or K1 | Track 1–8 | Track 1–8 | Track 1–8 |
+| PRESETS | Sound | Sound | Sound |
+| SELECT | Pattern | Pattern | Pattern |
+| K2 | Pattern | Bar 1–4 | Sound group (unused for drum kits) |
+| K3 | Sound | Drum hit or inserted MIDI note | Sound |
+| K4 | Tempo | Tempo | Tempo |
+| OCT−/+ | Viewed bar | Viewed bar | Viewed bar |
+| White keys | Track 1–8 | Toggle the 16 steps of the viewed bar | Play the selected sound |
+| Black keys | No action | Select a drum hit | Play the selected sound |
+| PLAY | Start/stop | Start/stop | Start/stop |
 
-- Web/WASM build and emulator tests: Emscripten (`emcc`) unavailable.
-- Update-package tests: no `app/build/loom.fwsc`; no firmware package built for this task.
-- DSP fingerprint comparison: no pre-existing reference. DSP sources were unchanged; synth/Braids/drum/FX
-  and sequencer regression tests ran.
+The four live knob labels remain visible; button names match the actual panel. PRESETS no longer means
+pattern in Kids. A pattern change during playback uses the original queued-pattern mechanism. The header
+shows both current and pending patterns. Notes played on Sounds become the next melodic note inserted.
+Changing a sound applies immediately to the working copy; it does not erase that track's pattern.
+Studio retains full recording, chords, FX, envelopes, LFO, mixer, arrangement, presets and save access.
 
-The new scenario verifies Stage → Steps → Stage → Studio, all eight tracks, drum hit preservation,
-melodic add/remove, step 64 add/remove, bar limits, pattern switching and queued-pattern playback,
-transport, unlocking with a key held, reboot after adult unlock, and no additional Kids drawing during one
-second idle (32 band draws after PIN setup, still 32 afterwards).
+## Saved-work and adult-access protection
 
-The safety scenario snapshots the entire simulated store. Byte-for-byte comparisons require it to remain
-identical after Kids editing and ignored buttons/holds, adult unlock followed by an idle wait, and a
-cancelled overwrite. Only an explicit adult-confirmed save may change it. A locked simulated reboot
-must restore saved notes, remain locked, and leave the stored objects identical to the adult's save.
-The gate tests reject an unset default PIN, a wrong PIN and a rapid retry after cancelling/reopening.
+An adult chooses a private PIN twice before starting Kids. SEL opens the adult gate, never Studio directly.
+Wrong PINs have a three-second delay; cancelling/reopening does not bypass it. HOME cancels a PIN prompt.
 
-Repeat with:
+Kids detaches the loaded model from its saved slot (`proj_slot = NPROJ`) and blocks autosave. No extra
+project snapshot or save-format change is needed. The work remains unsaved even after adult unlock.
+Studio's SAVE flow requires confirmation before overwriting an existing slot. Cancelling writes nothing.
+A simulated reboot reloads saved music, detaches it again and stays locked within the current session.
+
+This is a **session UI guard**, not OS/browser parental control. Closing/reloading the emulator ends the
+session and discards unsaved edits. A fresh browser start asks for adult setup again. PINs are not stored
+in project files or browser storage. Developer tools and host scripts are outside this UI boundary.
+
+## Code and tests
+
+- `app/kids.c`: procedural drawing, per-band signatures, preset/kit browsing through existing helpers,
+  audition input, page-specific panel feedback, detached working copy and PIN gate.
+- `app/ui.c`: emulator-only startup and explicitly labelled browser entry, dispatch and autosave guard.
+- `app/host.c`: assertions and a simulated press of the same browser entry control.
+- `app/web/emu/page.html`, `app/web/emu/app.js`: Kids branding, clear controls, direct-entry button.
+- `tests/host/kids_redesign.xy`: direct startup, all eight tracks, kit/preset/category changes, measured
+  audition audio, held-note release, per-track preset retention, patterns, step 64, PIN and direct re-entry.
+- `tests/host/kids_web_controls.mjs`: actual browser module's entry binding, reconnect and inactive-emulator cases.
+- `tests/host/kids_page_test.py`: real page-template composition, branding, entry and control documentation.
+- `tests/host/emu_test.mjs`, `emu_page_test.mjs`: updated WASM/page tests for default Kids setup and new title.
+- Existing Kids interaction/safety scenarios and saved-object byte comparisons remain in the full runner.
+
+Verification commands:
 
 ```sh
 ./build.sh --host
-mkdir -p app/build/scenarios/kids
-app/build/host/loom_host tests/scenarios/kids.xy app/build/scenarios/kids
+mkdir -p app/build/scenarios/kids_redesign
+LOOM_KIDS=1 app/build/host/loom_host tests/host/kids_redesign.xy app/build/scenarios/kids_redesign
 tests/run_tests.sh
 ```
 
-Screenshots are generated in `app/build/scenarios/kids/`: `kids_stage.png`, `kids_bar4.png`,
-`kids_playing.png`, `kids_home.png`, `kids_studio.png`, `kids_queued.png`, and `kids_large_setting.png`.
-Stage and playback captures were visually inspected at 240×240; the host layout audit also checks them.
-The safety scenario adds `app/build/scenarios/kids_safety/protected_stage.png` and `adult_wrong_pin.png`,
-both visually inspected. Full-suite output is retained in `app/build/tests/milestone1-safety.log`.
+The direct-entry scenario asserts no extra redraws over one idle second, real audible drum preview,
+zero held voices after switching tracks, and that sound selection does not clear drum steps. Safety tests
+compare every saved byte after Kids edits (now including kit selection), unlock and cancelled overwrite;
+only the explicit adult save may change them. Screenshots are also checked by the host layout audit.
 
-The first post-change run exposed clipping when Studio had large type enabled. Kids now explicitly uses
-its fixed small font; the expanded Kids scenario and the original large-type layout sweep both pass.
-The initial milestone passed 91 checks (baseline: 90). The final child-safety extension passed all
-93 checks in `tests/run_tests.sh`, including both scenarios, byte-for-byte store comparisons, and the
-normal/large-type layout sweeps. `./build.sh --host` and `git diff --check` passed. The same three
-dependency/artifact skips apply.
+The full available suite passed 96 checks. After the final keyboard display and tooltip changes,
+the direct-entry scenario, browser entry JavaScript and page composition passed again. The host
+executable grew by 13,080 bytes of text and 64 bytes of data compared with `decb768`. BSS was unchanged.
 
-GNU `size` on the native host executable (bytes; includes the entire simulator):
+Web limitation: this environment has no Emscripten. Installing SDK 4.0.20 was attempted, but its Google
+Storage download returned proxy HTTP 403; the package-manager mirror was also blocked. Therefore the
+WASM build and WASM execution tests cannot be claimed as passed here. Native C behavior, actual page
+composition and browser entry JavaScript are tested separately. The Mac build remains `./build.sh --web`.
+Other existing skips: no firmware package for update tests, and no pre-existing DSP fingerprint reference.
 
-| Section | Baseline | Milestone 1 | Difference |
-| --- | ---: | ---: | ---: |
-| text | 1,119,709 | 1,129,725 | +10,016 |
-| data | 26,620 | 26,652 | +32 |
-| bss | 3,431,992 | 3,432,088 | +96 |
-| total | 4,578,321 | 4,588,465 | +10,144 |
+## Scope and next step
 
-The targeted safety scenario simulated 23,465 ms with 289 blits and reported render time of 0.3% of real
-time on the host CPU. The idle assertion measures Kids band draws, not elapsed wall-clock performance.
-There are no new heap allocations or framebuffer. PIN state is a few session bytes, not a copied project.
+No physical hardware communication, firmware build/flash, install/recovery command, bootloader/flash-layout
+change, submodule modification, DSP/timing change or project/preset serialization change. All Kids code
+is guarded for host/web emulation. Original licenses and notices remain.
 
-## Limits and next milestone
-
-This is an opt-in emulator preview. Web source is integrated but its WASM build has not been validated
-without Emscripten. Kids uses fixed small type and does not yet implement Studio's large-type or full
-spoken-page navigation. It inserts single melodic notes; use Studio for chords and advanced editing.
-Hardware SRAM/stack usage, firmware size and on-device render speed were not measured. Host measurements
-are not estimates of device performance. Hiding screens does not remove their code or memory.
-
-Next: instrument categories plus a small set of clearly named sound macros, reusing existing preset and
-parameter APIs. Afterwards address envelopes/LFO/FX/mixer, then recording and scene interactions.
-
-## Child-safety extension
-
-Follow-up to `19d49fe` on the same feature branch, explicitly requested by the user:
-
-- Kids must not overwrite saved work: `kids_detach()` uses the existing no-slot state (`proj_slot = NPROJ`)
-  without changing the model or save format. Autosave also explicitly refuses all Kids/PIN screens.
-- Detachment remains after adult unlock. Studio's existing SAVE flow asks before replacing any existing
-  slot because the copy has no saved-slot association. Choosing cancel writes nothing.
-- Adult setup requires two matching four-digit entries. SEL in Kids opens a credential gate; wrong PINs,
-  holding buttons, or cancelling do not unlock. Cancel/reopen does not bypass the retry delay.
-- Session PIN/lock state is separate from projects and survives a simulated reboot in the running emulator.
-  A reboot reloads saved music, detaches it again, and returns to locked Stage.
-- The original Studio remains available after adult unlock; no advanced musical feature is removed.
-
-Boundary: this protects the active emulator UI session, not against a person who can close/reload the
-application, use developer tools or execute host scripts. Ending the host/browser instance ends the PIN
-session and discards unsaved edits; a fresh launch starts in Studio for adult setup. PINs are not written
-to project files or browser storage. An adult should set up each new session before handing it over.
-Web/WASM execution remains unverified without Emscripten; native-host gate and persistence checks run.
-A durable parental-control boundary across browser restarts would require a separate design.
-
-Further child-focused improvements, beyond these two protections: visible undo/redo and an adult-approved
-restore-to-start action, then instrument categories and simple macros. The UI does not claim that a child
-can never disrupt playback or change the temporary music; those experiments cannot overwrite saved work
-without leaving the session boundary or an adult explicitly approving a save.
+Still deferred: dedicated child-friendly recording, arrangement, mixer, FX/envelope/LFO controls, visible
+undo/redo and complete spoken/large-type Kids navigation. These capabilities remain in adult Studio.
+Next narrow step: a few clearly named sound macros and an obvious undo action, followed by recording and
+scene workflows. Actual hardware RAM/stack/render performance is not inferred from host measurements.

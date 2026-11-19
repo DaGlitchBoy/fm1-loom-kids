@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-// The browser build in Node: boot it, go to the Engine page (EDIT) and play T1's kit on the black keys (a kit's white keys
-// there write its steps), expect sound and screen frames.
+// The browser build in Node: boot into Kids, complete adult setup, then audition T1's kit on the Sounds page (EDIT), expect sound and screen frames.
 import fs from "fs";
 const wasm = fs.readFileSync(process.argv[2]);
 let mem;
@@ -12,7 +11,13 @@ if (ex._initialize) ex._initialize();
 ex.web_master(2800); ex.web_boot();
 let peak = 0;
 const BLACK = [1,3,5,8,10,13,15,17,20,22,25];
-const B_EDIT = 4;                                   // plat.h: the Engine page, where the keys play
+// Web boots directly into adult setup, then the icon-based Kids Stage.
+function tap(b) { ex.web_buttons(1 << b); ex.web_render(4096); ex.web_buttons(0); ex.web_render(4096); }
+for (let pass = 0; pass < 2; pass++) {
+  for (let k = 0; k < 4; k++) ex.web_enc(3 + k, k + 1);
+  ex.web_render(4096); tap(1);
+}
+const B_EDIT = 4;                                   // plat.h: Kids Sounds, where the keys play
 ex.web_render(4096); ex.web_buttons(1 << B_EDIT); ex.web_render(4096); ex.web_buttons(0); ex.web_render(4096);
 for (let i = 0; i < 400; i++) {
   if (i % 20 === 0 && i < 340) ex.web_keys(1 << BLACK[(i / 20) % 11]);

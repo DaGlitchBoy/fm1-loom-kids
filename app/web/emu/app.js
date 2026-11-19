@@ -18,11 +18,13 @@ function moveStore() {
 }
 
 // what each control does, on hover and for a screen reader (the Buttons list below the panel says the same)
-const TIP = { FX: "Sends and effects", SEL: "The page's list: copy, paste, weave, presets", ENV: "Envelope and filter",
-  LFO: "LFO", EDIT: "The sound", GLO: "Mix, master and setup", HOME: "Arrange; held, the shift key", SAVE: "Save",
-  ARP: "Players: arp, strum, hold", SEQ: "Steps; held, play the notes a step takes", PLAY: "Start / stop",
-  REC: "Held: record; stopped, a tap: step record", "OCT-": "An octave down", "OCT+": "An octave up", SELECT: "Page",
-  ALGORITHM: "Track", PRESETS: "Next sound", MASTER: "Volume" };
+const TIP = { FX: "Studio: sends and effects", SEL: "Kids: adult PIN unlock. Studio: page menu",
+  ENV: "Studio: envelope and filter", LFO: "Studio: LFO", EDIT: "Kids: Sounds and presets. Studio: sound editor",
+  GLO: "Studio: mix, master and setup", HOME: "Kids: Stage. Studio: Arrange; held, shift", SAVE: "Studio: save",
+  ARP: "Studio: players", SEQ: "Kids: Steps. Studio: Steps; held, play notes", PLAY: "Start / stop",
+  REC: "Studio: recording", "OCT-": "Kids: previous bar. Studio: octave / bar down",
+  "OCT+": "Kids: next bar. Studio: octave / bar up", SELECT: "Kids: pattern. Studio: page",
+  ALGORITHM: "Track", PRESETS: "Kids: sound preset. Studio: page-specific selection", MASTER: "Volume" };
 function tips() {
   for (const [n, b] of Object.entries(buttons)) if (TIP[n]) { b.hit.title = TIP[n]; b.hit.setAttribute("aria-description", TIP[n]); }
   for (const [n, k] of Object.entries(knobs)) {
@@ -60,6 +62,15 @@ function keyboard() {
 }
 
 export function attach() {
+  const entry = document.getElementById("kids-entry");
+  if (entry) {
+    entry.disabled = false;
+    entry.onclick = () => {
+      if (!node) return;
+      holdDown("kids-entry", "btn", 30);
+      letGo("kids-entry");
+    };
+  }
   moveStore();
   tips();
   keyboard();

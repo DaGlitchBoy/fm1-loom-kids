@@ -419,6 +419,14 @@ int app_expect(const char *what, int *got)
 {
     if (!strcmp(what, "kids"))
         *got = kids_mode;
+    else if (!strcmp(what, "kids_buttons"))
+        *got = (int)lit_btn;
+    else if (!strcmp(what, "kids_sound")) {
+        int pos; kids_sound_count(&pos); *got = pos;
+    } else if (!strcmp(what, "kids_sounds")) {
+        int pos; *got = kids_sound_count(&pos);
+    } else if (!strcmp(what, "kids_category"))
+        *got = kids_category;
     else if (!strcmp(what, "kids_gate"))
         *got = kids_gate;
     else if (!strcmp(what, "kids_locked"))
@@ -1067,7 +1075,13 @@ static int song_cmd(const char *cmd)
     char buf[512], *w[80];
     int n = words(buf, w, 80), t, k;
     host_env();
-    if (!strcmp(cmd, "knob")) {                     /* knob T PARAM VALUE */
+    if (!strcmp(cmd, "kids-entry")) {             /* browser's labelled entry button, through real input */
+        uint32_t held = held_btn;
+        held_btn |= 1u << 30;
+        run_ms(32);
+        held_btn = held;
+        run_ms(32);
+    } else if (!strcmp(cmd, "knob")) {                     /* knob T PARAM VALUE */
         if (n < 4)
             host_die("knob T PARAM VALUE", "");
         t = atoi(w[1]) - 1;

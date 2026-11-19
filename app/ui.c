@@ -3835,6 +3835,8 @@ static void save_key(int k)
 static void input(void)
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
+    /* Bit 30 is a browser-only, explicitly labelled Kids entry control. */
+    if (!kids_mode && (plat_buttons() & (1u << 30)) && !(ui.btn & (1u << 30))) kids_set(1);
     if (kids_input()) return;
 #endif
     uint32_t btn = plat_buttons(), keys = plat_keys(), ch, i;
@@ -4749,7 +4751,13 @@ void ui_init(void)
     if (kids_locked) {
         if (sel_trk() >= NTRK) track_select(0);
         kids_detach();
+        kids_category_sync();
     }
+#ifdef PLAT_WEB
+    else kids_set(1);                            /* browser opens Kids directly */
+#else
+    else if (getenv("LOOM_KIDS")) kids_set(1);    /* same entry in a native scenario */
+#endif
 #endif
     lcd_fill(0, 0, 240, 240, K_BG);
 }
@@ -4814,7 +4822,7 @@ void ui_frame(void)
 #if defined(PLAT_HOST) || defined(PLAT_WEB)
     if (kids_mode) {
         kids_draw();
-        leds();
+        kids_leds();
         ann_tick(plat_ms());
         ui.frame++;
         return;

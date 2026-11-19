@@ -19,9 +19,9 @@ spin K4 4
 tap SEL
 expect kids_gate 0
 expect kids_locked 1
-expect kids_draws 32
+expect kids_draws 30
 wait 1000
-expect kids_draws 32
+expect kids_draws 30
 shot kids_stage.png
 tap SEQ
 expect kids 2
@@ -88,11 +88,11 @@ spin K2 99
 expect kids_bar 4
 spin K2 -99
 expect kids_bar 1
-spin PRESET 1
+spin SELECT 1
 tapkey w0
 expect note 2 2 1 62
 tap PLAY
-spin PRESET 1
+spin SELECT 1
 shot kids_queued.png
 wait 2200
 tapkey w1

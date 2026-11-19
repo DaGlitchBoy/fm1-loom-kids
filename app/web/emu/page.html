@@ -2,9 +2,9 @@
      LOOM-8's bits of the emulator's page: fm1-base's page (base/web/emu/index.html) with these put in by
      tools/emu_page.py (./build.sh --web). What runs on it is app.js beside this file. -->
 <!-- emu-page: name -->
-LOOM-8
+LOOM Kids
 <!-- emu-page: description -->
-Play LOOM-8, a pocket groovebox firmware for the M-VAVE FM-1, in your browser: the same code the FM-1 runs.
+LOOM Kids: eight colorful instruments, steps and sounds. A protected emulator playground built on LOOM-8.
 <!-- emu-page: head -->
 <style>
 /* LOOM-8's gold: the lights (fm1panel.js draws them; tools/make_pages.py gives the mirror page the same), a held
@@ -19,35 +19,40 @@ Play LOOM-8, a pocket groovebox firmware for the M-VAVE FM-1, in your browser: t
 .start button { background: #e6b432; color: #18120e; }
 .hit:focus-visible { outline-color: #e6b432; }
 .help p, .help ul { color: var(--muted); }
+#kids-entry { background: #28ccc0; color: #0c121e; border: 0; border-radius: 12px; padding: 12px 22px; font: inherit; font-weight: 700; cursor: pointer; }
+#kids-entry:focus-visible { outline: 3px solid #f4c83c; outline-offset: 3px; }
 </style>
 <!-- emu-page: header -->
 <!-- emu-page: top -->
 <!-- (in the main part: the site's own header is the page's banner, tools/make_pages.py dress) -->
 <header>
-  <h1>LOOM-8</h1>
-  <p>a pocket groovebox for the FM-1, in the browser: the same code the FM-1 runs</p>
+  <h1>LOOM Kids</h1>
+  <p>Acht Instrumente. Deine Sounds. Dein Beat.</p>
+  <button type="button" id="kids-entry" disabled>Kids-Modus öffnen</button>
+  <p>Start → Erwachsenen-PIN einrichten → Bühne. Kein Debug-Menü nötig.</p>
 </header>
 <!-- emu-page: end -->
 <section class="help">
   <div>
-    <h2>Try Kids Stage (emulator preview)</h2>
-    <p>In Studio, tap GLO and turn SELECT six clicks to Debug. Its footer labels HOME as Kids Stage:
-      tap HOME to enter. Finish recording or modal editing first. An adult chooses a private four-digit
-      session PIN with K1–K4 and confirms it twice using SEL before handing over the emulator.
-      SEQ opens Steps; HOME returns to Stage; SEL asks for the adult PIN before opening Studio.</p>
-    <p>Kids uses an unsaved working copy. Saved projects stay untouched, including after unlocking Studio:
-      SAVE explicitly chooses a slot and asks before replacing existing work. HOME cancels a PIN prompt or
-      save confirmation. Incorrect PINs have a three-second retry delay. A simulated reboot stays locked
-      and restores saved work. Closing or reloading the emulator ends the PIN session and discards unsaved
-      edits; this is a session UI guard, not a browser or operating-system parental control.</p>
-    <p>Both Kids screens: K1 or ALGORITHM selects any of eight tracks, K2 or OCT−/+ selects one of four bars,
-      K3 selects a drum hit or MIDI note, K4 sets tempo, and PRESETS selects a pattern.
-      On Steps, white keys toggle steps and black keys select drum hits. PLAY starts/stops.
-      Use Studio for chords, sound design, recording, saving, effects, mixing and arrangement.
-      Studio remains the default. This preview is excluded from hardware builds.</p>
+    <h2>Direkt losspielen</h2>
+    <p>Der Emulator startet direkt im Kids-Einstieg. Ein Erwachsener wählt mit K1–K4 vier PIN-Ziffern und
+      bestätigt sie zweimal mit SEL. Danach erscheint die Bühne mit acht farbigen Instrument-Symbolen.
+      Aus Studio führt der Button „Kids-Modus öffnen“ direkt zurück.</p>
+    <p><b>HOME</b> Bühne · <b>SEQ</b> Steps · <b>EDIT</b> Sounds · <b>SEL</b> Erwachsenen-PIN für Studio.
+      <b>ALGORITHM / K1</b> Track · <b>PRESETS</b> immer Klang · <b>SELECT</b> immer Pattern · <b>PLAY</b> Start/Stopp.</p>
+    <p>Auf der Bühne wählen die weißen Tasten 1–8 direkt ein Instrument. Auf Steps schalten die 16 weißen
+      Tasten die Schritte; OCT−/+ blättert durch vier Takte. Auf Sounds wählt K2 eine Klanggruppe,
+      K3 oder PRESETS einen Sound. Die Klaviertasten spielen den Klang zum Vorhören. Bei Drum-Tracks
+      werden komplette Kits ausgewählt, damit vorhandene Drum-Patterns erhalten bleiben.</p>
+    <p>Die vier Regler sind unten auf jedem Bildschirm beschriftet. Die Symbole bewegen sich nur mit
+      echten Sequencer-Schritten oder gespielten Tasten, nicht im Leerlauf.</p>
+    <p>Kids arbeitet mit einer ungespeicherten Kopie. Auch nach der PIN-Freigabe überschreibt Studio nichts
+      automatisch: SAVE verlangt eine ausdrückliche Bestätigung. Die PIN schützt diese Sitzung;
+      Schließen oder Neuladen beendet sie und verwirft ungespeicherte Änderungen. Dies ist keine
+      Betriebssystem-Kindersicherung. Es wird keine Hardware verbunden oder Firmware installiert.</p>
   </div>
   <div>
-    <h2>Buttons</h2>
+    <h2>Studio: vollständige Bedienung nach PIN-Freigabe</h2>
     <ul>
       <li><b>SEQ</b> the steps: on a drum track, a black key picks the sound and the white keys are steps 1–16.</li>
       <li><b>SEQ</b> held, play notes, let go, then press steps: the notes go on them.</li>
