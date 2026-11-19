@@ -3,6 +3,8 @@
 Project: a child-friendly M-VAVE FM1 groovebox UI based on Charles Vestal's LOOM-8.
 Upstream: https://github.com/charlesvestal/fm1-loom
 
+For the successor design in `docs/design/KIDS_INSTRUMENT.md`, use its newer Kids startup and song permissions. The PIN rules below describe the original UI milestone. The successor boots into playable child mode and uses a PIN only for protected slot overwrite or delete. Five quick GLO presses enter adult mode without a PIN. The emulator-only and hardware safety rules still apply.
+
 ## Non-negotiable safety
 
 - Never flash, erase, install on, or communicate with a physical FM1. Do not invoke `fm1_install.py`, `fm1_resources.py`, USB/MIDI device-writing utilities, or recovery tools.
