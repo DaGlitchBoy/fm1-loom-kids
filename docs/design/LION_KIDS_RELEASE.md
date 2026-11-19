@@ -17,6 +17,8 @@ The software release candidate is the browser emulator. The GitHub Actions workf
 
 Each track icon follows its category. PRESETS changes categories and ALGORITHM moves through that category. The counter beside the sound name shows the current position and total, such as **5/17**. Entering Plucks turns on delay and reverb. You can adjust both while playing. Leaving Plucks switches both off on that track. Your saved songs retain their sounds, switches and pixel names. The new smiley is the starter image for slot 2.
 
+![LION KIDS home screen with the eight starter sounds and preset counter](../img/lion-kids-home.png)
+
 ## Hardware review
 
 The inherited platform recognizes two 1 MiB flash parts. The stock Puya P25Q80 reports JEDEC ID `856014`. Later units use the UC25HQ80, ID `B36014`. The host test accepts both and rejects unknown parts, for which the platform uses RAM-only operation. The bootloader, flash map, package identity and platform submodule revisions are unchanged.
