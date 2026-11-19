@@ -1,4 +1,4 @@
-# LOOM Kids development guidance
+# LION KIDS development guidance
 
 Project: a child-friendly M-VAVE FM1 groovebox UI based on Charles Vestal's LOOM-8.
 Upstream: https://github.com/charlesvestal/fm1-loom

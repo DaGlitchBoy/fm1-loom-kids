@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Build LION KIDS emulator
+
+on:
+  push:
+    branches: [main, 'feat/lion-kids-release']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y emscripten python3-pil
+          /usr/bin/python3 -c 'from PIL import features; assert features.check_feature("raqm")'
+      - name: Build and test the emulators
+        env:
+          PYTHON: /usr/bin/python3
+        run: sh tests/run_tests.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lion-kids-emulator
+          path: app/build/emu/
+          if-no-files-found: error

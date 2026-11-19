@@ -3629,7 +3629,7 @@ static void draw_steps_as(void)
         return;
     }
     {
-    int trk = sel_trk(), drum = is_drum(trk), pt = cur_pat(trk), ph = eng_step[trk];
+    int trk = sel_trk(), drum = is_drum(trk), pt = cur_pat(trk), ph = is_seqt(trk) ? eng_step[trk] : -1;
     const tpat_t *tp = tpat(trk);
     uint32_t h = hash_u(hash_u(2166136261u, 0x57u), (uint32_t)trk | (uint32_t)pt << 4 | (uint32_t)ui.bar << 8 |
                                           (uint32_t)ui.held << 10 | (uint32_t)ui.dsound << 26);

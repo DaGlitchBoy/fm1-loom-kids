@@ -4,8 +4,8 @@ import vm from "node:vm";
 import assert from "node:assert/strict";
 
 const page = readFileSync("app/web/emu/page.html", "utf8");
-assert.match(page, /<!-- emu-page: start -->\s*LOOM Kids starten/);
-assert.match(page, /<h1>LOOM Kids<\/h1>/);
+assert.match(page, /<!-- emu-page: start -->\s*LION KIDS starten/);
+assert.match(page, /<h1>LION KIDS<\/h1>/);
 assert.doesNotMatch(page, /id="kids-entry"/);
 
 const body = { closest: () => null }, calls = [], keydown = [];

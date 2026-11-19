@@ -237,17 +237,27 @@ static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
     ks_song_t *song = calloc(1, len);
     if (!song) return NULL;
     project_defaults_into(&song->settings, &song->patterns);
-    trk_t kit = song->settings.trk[0];
-    for (int t = 0; t < 4; t++) {
+    static const char *const names[NTRK] = {
+        "acid line", "marimba", "Twill", "bellows", "dusty pad", "breath lead", "flute", "whisper pad"
+    };
+    static const uint8_t engines[NTRK] = {
+        EG_ACID, EG_RAYON, EG_DRUMLINE, EG_BELLOWS, EG_KNIT, EG_CANE, EG_SAMPLE, EG_VOILE
+    };
+    for (int t = 0; t < NTRK; t++) {
         trk_t *track = &song->settings.trk[t];
-        static const uint8_t engine[] = {EG_KNIT, EG_KNIT, EG_DRUMLINE, EG_RAYON};
-        if (t == 2) {
-            *track = kit;
-            set_name(track, "Loom kit");
+        sound_default(track->par, engines[t]);
+        if (engines[t] == EG_DRUMLINE) {
+            uint8_t kit[KIT_LEN];
+            int k = 0;
+            for (int i = 1; i < NFKITS; i++)
+                if (name_is(kit_name(i), names[t])) { k = i; break; }
+            kit_factory(k, kit);
+            kit_unpack_sound(track, kit, 0);
         } else {
-            static const char *const names[] = {"reese", "knit", "", "mellow ep"};
-            sound_default(track->par, engine[t]);
-            apply_preset(track, preset_named(engine[t], names[t]));
+            int preset = preset_named(engines[t], names[t]);
+            apply_preset(track, preset);
+            if (preset >= 0 && kids_role(PRESETS[preset].role) == KC_PLUCKS)
+                song->kids.fx_on[t][0] = song->kids.fx_on[t][1] = 1;
         }
         track->par[TP_CHAN] = 1;
     }

@@ -1,4 +1,4 @@
-# Codex task — LOOM Kids milestone 1: functional child-friendly emulator UI
+# Codex task — LION KIDS milestone 1: functional child-friendly emulator UI
 
 **Repository:** https://github.com/vmphilemon-glitch/fm1-loom-kids
 **Upstream reference:** https://github.com/charlesvestal/fm1-loom

@@ -3176,16 +3176,20 @@ static void kit_factory(int k, uint8_t *img)
         }
     kit_pack(par, kit_name(k), img);
 }
-static void kit_apply(int trk, const uint8_t *img, int dev)
+static void kit_unpack_sound(trk_t *track, const uint8_t *img, int dev)
 {
-    uint8_t *par = proj.trk[trk].par;
-    undo_sound(trk);
+    uint8_t *par = track->par;
     memcpy(par, img + NAME_LEN, NTP_SOUND);
     par[TP_ENGINE] = EG_DRUMLINE;
     memcpy(par + TP_DRUM0, img + NAME_LEN + NTP_SOUND, KIT_KEYS);
-    keys_fix(par, dev);                          /* (dev: a user kit saved by a development build) */
-    memcpy(proj.trk[trk].name, img, NAME_LEN);
-    proj.trk[trk].name[NAME_LEN - 1] = 0;
+    keys_fix(par, dev);
+    memcpy(track->name, img, NAME_LEN);
+    track->name[NAME_LEN - 1] = 0;
+}
+static void kit_apply(int trk, const uint8_t *img, int dev)
+{
+    undo_sound(trk);
+    kit_unpack_sound(&proj.trk[trk], img, dev);
     engine_set_all(trk);
     mark_dirty();
 }

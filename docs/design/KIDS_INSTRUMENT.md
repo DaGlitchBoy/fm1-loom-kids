@@ -1,4 +1,4 @@
-# LOOM Kids • playable instrument design and implementation brief
+# LION KIDS • playable instrument design and implementation brief
 
 Design only. Baseline: feature branch `feat/loom-kids-ui`, commit `4fe6e52`. The controls below supersede the milestone-one Kids mappings. Implement one numbered delivery at a time on a new feature branch. Start with the emulator. Never flash, install, connect to or test against physical hardware.
 

@@ -427,6 +427,11 @@ int app_expect(const char *what, int *got)
         int pos; *got = kids_sound_count(&pos);
     } else if (!strcmp(what, "kids_category"))
         *got = kids_category;
+    else if (!strncmp(what, "kids_icon_category.", 19)) {
+        int track = atoi(what + 19) - 1;
+        *got = track >= 0 && track < NTRK ? kids_categories[track] : -1;
+    } else if (!strncmp(what, "kids_preset.", 12))
+        *got = ieq(proj.trk[sel_trk()].name, what + 12);
     else if (!strcmp(what, "kids_octave"))
         *got = ui.oct;
     else if (!strcmp(what, "kids_note"))
@@ -1539,6 +1544,7 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
          * the Kids starter bank, including their specific kit and preset order. */
         project_defaults();
         project_apply();
+        kids_init_panels();
         kids_category_sync();
         return 1;
     }

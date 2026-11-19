@@ -1,14 +1,14 @@
 # Delivery 8 · Browser release candidate
 
-One click on **LOOM Kids starten** switches on the instrument. On first use, slot 1 opens on HOME with all patterns empty. The first four tracks are Reese bass, a classic Knit saw synth, a drum kit with kick, hats and clap, and Mellow EP. Tracks 5–8 use the previous defaults. On later starts, the emulator opens the last loaded slot. [Song slots and pixel names](KIDS_PIXEL_SHELF.md)
+One click on **LION KIDS starten** switches on the instrument. On first use, slot 1 opens on HOME with all patterns empty. On later starts, the emulator opens the last loaded slot. [Starter sounds, categories and release review](LION_KIDS_RELEASE.md) · [Song slots and pixel names](KIDS_PIXEL_SHELF.md)
 
 ## Try it on a Mac
 
-From your existing repository checkout, with Emscripten on your PATH and Python with Pillow and libraqm installed:
+Download the web emulator artifact from the [LION KIDS GitHub Actions workflow](https://github.com/vmphilemon-glitch/fm1-loom-kids/actions/workflows/lion-kids.yml) when a run is available. To build from source, open your existing repository checkout with Emscripten and Python with Pillow and libraqm installed.
 
 ```sh
-git fetch origin feat/kids-browser-release:refs/remotes/origin/feat/kids-browser-release
-git switch --track origin/feat/kids-browser-release
+git fetch origin feat/lion-kids-release:refs/remotes/origin/feat/lion-kids-release
+git switch --track origin/feat/lion-kids-release
 git submodule update --init --recursive
 export PYTHON="$PWD/.venv/bin/python"
 "$PYTHON" -c 'from PIL import features; assert features.check_feature("raqm"), "Pillow needs libraqm"' &&
@@ -38,7 +38,7 @@ Previously Kids live recording used the Studio pattern's default 100% quantizati
 
 ## Browser verification
 
-Chromium played a live note, recorded from HOME using keyboard shortcuts, and saved into slot 2. After reloading, it reopened the same slot and picture name and played the recorded loop. The screenshots below are from the WebAssembly build at the instrument's 240×240 resolution. [Short browser capture of recording and saving](../img/kids-browser-record-save.gif)
+Chromium played a live note, recorded from HOME using keyboard shortcuts, and saved into slot 2. After reloading, it reopened the same slot and picture name and played the recorded loop. These Delivery 8 screenshots predate the final name and preset changes. They are from the WebAssembly build at the instrument's 240×240 resolution. [Short browser capture of recording and saving](../img/kids-browser-record-save.gif)
 
 ![The twelve Kids views and dialogs in Chromium](../img/kids-browser-views.png)
 

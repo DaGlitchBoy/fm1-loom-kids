@@ -1,8 +1,14 @@
-# LOOM-8 for the M-VAVE FM-1
+# LION KIDS
 
-**This branch includes LOOM Kids:** the browser emulator opens directly into adult setup, then the colorful
-Kids Stage, Steps and Sounds screens. [Start, controls, screenshots and safety boundaries](docs/LOOM_KIDS_MILESTONE_1.md).
-Kids is emulator-only; no firmware installation is required.
+LION KIDS is an eight-track music-making instrument with a browser emulator, based on LOOM-8 for the M‑VAVE FM-1. It opens on a playable stage and includes live recording, a step sequencer, three song slots and pixel-art song names.
+
+- [Run the emulator and learn the controls](docs/design/DELIVERY_8.md)
+- [Song slots and pixel names](docs/design/KIDS_PIXEL_SHELF.md)
+- [Release readiness and hardware review](docs/design/LION_KIDS_RELEASE.md)
+
+LION KIDS runs in the browser or host emulator. The device build in the inherited source runs LOOM-8 Studio.
+
+## Upstream LOOM-8
 
 LOOM-8 turns the M-VAVE FM-1 into a pocket groovebox: eight instrument tracks, each in its own colour, on
 eleven engines (seven synths: knit, rayon, jacquard, bellows, cane, voile and acid, a TB-303; a sample player, a break slicer, a drum kit, and MIDI out to drive another synth), 93 factory presets; a 64-step sequencer with step tricks and parameter locks; players (arp,
@@ -15,13 +21,7 @@ for a keyboard or synth (through a powered hub). Built on
 from [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments), with X0X's sequencer
 discipline and Polly's menu paradigm.
 
-- **Read the manual**: [docs/MANUAL.md](docs/MANUAL.md), with a ten-minute quick start, every page and gesture, and screenshots
-- **Try it in your browser** (no FM-1 needed): <https://charlesvestal.github.io/fm1-loom/emu/>
-- **Install it** (Chrome or Edge, with the FM-1 plugged in): <https://charlesvestal.github.io/fm1-loom/install/>
-- **Download the firmware file**: [releases](https://github.com/charlesvestal/fm1-loom/releases)
-
-Installing is at your own risk, though it's hard to get stuck: the web installer can put M-VAVE's
-firmware back, and an FM-1 that keeps crashing starts in a safe mode.
+[Upstream LOOM-8 manual](docs/MANUAL.md) · [Upstream LOOM-8 project](https://github.com/charlesvestal/fm1-loom)
 
 The design is in `docs/superpowers/specs/2026-10-15-xy1-design.md`.
 

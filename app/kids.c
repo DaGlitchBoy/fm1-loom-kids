@@ -75,7 +75,7 @@ static void kids_enter(int startup)
     ui_redraw();
 }
 enum { KC_KEYS, KC_BASS, KC_DRUMS, KC_PADS, KC_LEADS, KC_PLUCKS, KC_TEXTURES, KC_USER, KC_COUNT };
-static uint8_t kids_category;
+static uint8_t kids_category, kids_categories[NTRK];
 static const char *kids_sound_error;
 static uint16_t kids_picks[NTRK][KC_COUNT];   /* index + 1, zero = no prior selection */
 static const char *const KIDS_CATEGORY[] = {"KEYS", "BASS", "DRUMS", "PADS", "LEADS", "PLUCKS", "TEXTURES", "USER"};
@@ -521,9 +521,8 @@ static int kids_catalog_size(int category)
     return category == KC_DRUMS ? NKITS : presets_all();
 }
 
-static int kids_sound_current(int category, int i)
+static int kids_sound_current(int category, int i, int track)
 {
-    int track = sel_trk();
     if (category == KC_DRUMS)
         return is_drum(track) && ((i == 0 && name_is("kit", proj.trk[track].name)) ||
             name_is(i < NFKITS ? kit_name(i) : user_kit_name[i - NFKITS], proj.trk[track].name));
@@ -531,23 +530,26 @@ static int kids_sound_current(int category, int i)
         name_is(i < NPRESETS ? PRESETS[i].name : user_presets[i - NPRESETS].name, proj.trk[track].name);
 }
 
-static void kids_category_sync(void)
+static int kids_find_category(int track)
 {
     for (int category = 0; category < KC_COUNT; category++) {
-        int previous = (int)kids_picks[sel_trk()][category] - 1;
-        if (previous >= 0 && kids_sound_current(category, previous)) {
-            kids_category = (uint8_t)category;
-            return;
-        }
+        int previous = (int)kids_picks[track][category] - 1;
+        if (previous >= 0 && kids_sound_current(category, previous, track))
+            return category;
     }
-    kids_category = is_drum(sel_trk()) ? KC_DRUMS : KC_KEYS;
     for (int category = 0; category < KC_COUNT; category++)
         for (int i = 0; i < kids_catalog_size(category); i++)
-            if (kids_sound_valid(category, i) && kids_sound_current(category, i)) {
-                kids_category = (uint8_t)category;
-                kids_picks[sel_trk()][category] = (uint16_t)(i + 1);
-                return;
+            if (kids_sound_valid(category, i) && kids_sound_current(category, i, track)) {
+                kids_picks[track][category] = (uint16_t)(i + 1);
+                return category;
             }
+    return is_drum(track) ? KC_DRUMS : KC_KEYS;
+}
+
+static void kids_category_sync(void)
+{
+    for (int track = 0; track < NTRK; track++) kids_categories[track] = (uint8_t)kids_find_category(track);
+    kids_category = kids_categories[sel_trk()];
 }
 
 static int kids_sound_count(int *position)
@@ -557,7 +559,7 @@ static int kids_sound_count(int *position)
     int choice = (int)kids_picks[sel_trk()][kids_category] - 1;
     for (int i = 0; i < kids_catalog_size(kids_category); i++) if (kids_sound_valid(kids_category, i)) {
         n++;
-        if (i == choice && kids_sound_current(kids_category, i)) *position = n;
+        if (i == choice && kids_sound_current(kids_category, i, sel_trk())) *position = n;
     }
     return n;
 }
@@ -607,7 +609,13 @@ static int kids_apply_sound(int category, int index)
         kids_cell.track = -1;
     }
     kids_remember_chord(track);
-    kids_category = (uint8_t)category;
+    if ((category == KC_PLUCKS) != (kids_category == KC_PLUCKS)) {
+        for (int bus = 0; bus < 2; bus++) {
+            kids_fx_on[track][bus] = category == KC_PLUCKS;
+            kids_send_gain[track][bus] = kids_fx_on[track][bus] ? kids_fx_amount[track][bus] : 0;
+        }
+    }
+    kids_category = kids_categories[track] = (uint8_t)category;
     kids_picks[track][category] = (uint16_t)(index + 1);
     kh_end(&kh_edit);
     return 1;
@@ -1007,6 +1015,7 @@ static void kids_number(int x, int y, int n)
 }
 /* Small procedural instruments, drawn on a 24-unit grid. No bitmap assets. */
 #define KIDS_BG RGB(12, 18, 30)
+#define KIDS_BRAND "LION KIDS"
 #define KIDS_PANEL RGB(26, 36, 54)
 #define KIDS_WHITE RGB(242, 246, 252)
 static void kids_pixel(int x, int y, int size, int px, int py, int w, int h, uint16_t ink)
@@ -1017,7 +1026,8 @@ static void kids_pixel(int x, int y, int size, int px, int py, int w, int h, uin
 static void kids_icon(int kind, int x, int y, int size, uint16_t ink)
 {
 #define KP(a,b,w,h) kids_pixel(x,y,size,a,b,w,h,ink)
-    switch (kind % 8) {
+    static const uint8_t glyphs[KC_COUNT] = {2, 1, 0, 3, 6, 5, 4, 7};
+    switch (glyphs[kind]) {
     case 0: /* drum and two sticks */
         KP(3,8,18,3); KP(3,17,18,3); KP(3,10,3,9); KP(18,10,3,9);
         KP(8,11,2,6); KP(14,11,2,6); KP(5,2,3,4); KP(8,5,3,3); KP(17,1,3,5); break;
@@ -1041,7 +1051,7 @@ static void kids_icon(int kind, int x, int y, int size, uint16_t ink)
     }
 #undef KP
 }
-static void kids_label(int x, int y, const loom_font_t *font, const char *s, uint16_t ink, int width)
+static int kids_label(int x, int y, const loom_font_t *font, const char *s, uint16_t ink, int width)
 {
     char out[40];
     int n = 0;
@@ -1049,14 +1059,30 @@ static void kids_label(int x, int y, const loom_font_t *font, const char *s, uin
     out[n] = 0;
     while (n && text_w(font, out) > width) out[--n] = 0;
     cv_text(x, y, font, out, ink);
+    return x + text_w(font, out);
 }
 static void kids_sound_name(char *name)
 {
     memcpy(name, proj.trk[sel_trk()].name, NAME_LEN);
     name[NAME_LEN] = 0;
     if (!name[0]) s_cat(name, is_drum(sel_trk()) ? "Loom" : "Sound");
-    if (is_drum(sel_trk()) && name_is("kit", name)) s_cat(name, "Loom kit");
+    if (is_drum(sel_trk()) && name_is("kit", name)) s_cat(name, "Loom");
 }
+static void kids_preset_label(int x, int y, int width, const loom_font_t *font, const char *name, uint16_t ink)
+{
+    int position;
+    int count = kids_sound_count(&position);
+    if (!position) {
+        kids_label(x, y, font, name, ink, width);
+        return;
+    }
+    char tally[16];
+    num_s((unsigned)count, s_cat(num_s((unsigned)position, tally), "/"));
+    int tally_width = text_w(font, tally);
+    int end = kids_label(x, y, font, name, ink, width - tally_width - 6);
+    cv_text(end + 6, y, font, tally, KIDS_WHITE);
+}
+
 static int kids_lit(int t)
 {
     if (t == sel_trk() && kids_mode != KIDS_STEPS && ui.keys) return 1;
@@ -1319,7 +1345,8 @@ static int kids_shelf_dialog(void)
         cv_begin(240, height, KIDS_BG);
         if (kpix_open) {
             if (!band) {
-                kids_label(9, 7, &LFONT_B, "Pixel song names", ink, 120);
+                kids_label(9, 3, &LFONT_B, KIDS_BRAND, KIDS_WHITE, 83);
+                kids_label(9, 17, &LFONT_XS, "Pixel song names", ink, 110);
                 kids_draw_pixels(kpix_song, 114, 7, 2);
                 kids_number(204, 9, kpix_slot + 1);
                 if (owner >= 0) {
@@ -1350,7 +1377,8 @@ static int kids_shelf_dialog(void)
         } else if (!band) {
             char title[24];
             if (ks_modal != KS_DELETE) num_s(ks_target + 1u, s_cat(title, "Open song "));
-            kids_label(12, 20, &LFONT_B, ks_modal == KS_DELETE ? "Empty slot?" : title, ink, 170);
+            kids_label(12, 5, &LFONT_B, KIDS_BRAND, KIDS_WHITE, 83);
+            kids_label(12, 25, &LFONT_B, ks_modal == KS_DELETE ? "Empty slot?" : title, ink, 170);
             uint8_t name[KPIX_BYTES];
             ks_preview_name(ks_target, name);
             kids_draw_pixels(name, 199, 18, 2);
@@ -1416,7 +1444,10 @@ static void kids_draw(void)
             for (int i = 0; i < KPIX_BYTES; i++) h = hash_u(h, kpix_song[i]);
         } else if (kids_mode == KIDS_HOME && (b == 1 || b == 2)) {
             h = hash_u(h, seq.mute);
-            for (int t = (b - 1) * 4; t < b * 4; t++) h = hash_u(h, kids_lit(t));
+            for (int t = (b - 1) * 4; t < b * 4; t++) {
+                h = hash_u(h, kids_lit(t));
+                h = hash_u(h, kids_categories[t]);
+            }
         } else if (performance && b >= 2 && b <= 5) {
             for (int t = (b - 2) * 2; t < (b - 2) * 2 + 2; t++) {
                 h = hash_u(h, kids_perf_page[t]);
@@ -1435,6 +1466,7 @@ static void kids_draw(void)
             h = hash_s(h, name);
             if (kids_sound_error) h = hash_s(h, kids_sound_error);
             h = hash_u(h, kids_category);
+            h = hash_u(h, kids_picks[trk][kids_category]);
             if (graph || (kids_mode == KIDS_HOME && kids_panel == KP_QUICK))
                 for (int p = 0; p < KD_COUNT; p++) h = hash_u(h, kids_shaping[trk][p]);
             if (kids_mode == KIDS_LFO && b == 2 && kids_shaping[trk][KD_LFO_ON] && (playing() || ui.keys))
@@ -1476,7 +1508,10 @@ static void kids_draw(void)
         kids_sig[b] = h; kids_draws++;
         cv_begin(240, heights[b], KIDS_BG);
         if (b == 0) {
-            kids_label(6, 5, &LFONT_B, performance ? "PERFORMANCE" : kids_mode == KIDS_HOME ? "LOOM KIDS" : kids_mode == KIDS_STEPS ? "STEPS" : kids_mode == KIDS_ENV ? "ENVELOPE" : "LFO", KIDS_WHITE, 104);
+            kids_label(6, 5, &LFONT_B, KIDS_BRAND, KIDS_WHITE, 76);
+            if (kids_mode != KIDS_HOME)
+                kids_label(77, 7, &LFONT_XS, performance ? "Perform" : kids_mode == KIDS_STEPS ? "Steps" :
+                    kids_mode == KIDS_ENV ? "Env" : "LFO", ink, 39);
             if (kids_has_pixels(kpix_song)) kids_draw_pixels(kpix_song, 116, 5, 2);
             else kids_number(118, 7, ks_loaded + 1);
             if (cued_pat(trk) != cur_pat(trk)) { kids_text(140, 7, ">"); kids_number(149, 7, cued_pat(trk) + 1); }
@@ -1524,7 +1559,7 @@ static void kids_draw(void)
                 char page[24];
                 num_s((uint32_t)kids_page_count(trk), s_cat(num_s((uint32_t)kids_perf_page[trk] + 1, s_cat(page, "Page ")), "/"));
                 kids_text(6, 4, page);
-                kids_label(76, 4, &LFONT_XS, name, ink, 100);
+                kids_preset_label(76, 4, 101, &LFONT_XS, name, ink);
                 kids_text(186, 4, "Play keys");
             } else if (b >= 2 && b <= 5) {
                 for (int row = 0; row < 2; row++) {
@@ -1556,13 +1591,14 @@ static void kids_draw(void)
                 cv_rect(x + 2, 6, 51, 52, col_mix(KIDS_BG, c, t == trk ? 4 : 1));
                 cv_rect(x + 2, 6, 51, t < 4 ? 3 : 1, c);
                 kids_number(x + 5, 10, t + 1);
-                kids_icon(t, x + 16, 20 - (lit ? 2 : 0), 27, c);
+                kids_icon(kids_categories[t], x + 16, 20 - (lit ? 2 : 0), 27, c);
                 if (lit) cv_rect(x + 15, 51, 27, 3, c);
                 if (seq.mute & (1u << t)) { cv_line(x + 15, 47, x + 43, 20, c); }
             } else if (b == 3) {
                 cv_rect(6, 3, 3, 14, ink);
                 kids_number(14, 2, trk + 1);
-                kids_label(29, 1, &LFONT_B, kids_sound_error ? kids_sound_error : name, ink, 204);
+                if (kids_sound_error) kids_label(29, 1, &LFONT_B, kids_sound_error, ink, 204);
+                else kids_preset_label(29, 1, 204, &LFONT_B, name, ink);
             } else if (shelf_notice && b == notice_band) kids_shelf_notice(ink);
             else if (kids_panel != KP_HOME) kids_panel_title();
             else {
@@ -1574,8 +1610,8 @@ static void kids_draw(void)
             }
         } else if (kids_mode == KIDS_STEPS) {
             if (b == 1) {
-                kids_icon(trk, 6, 2, 20, ink);
-                kids_label(31, 4, &LFONT_XS, name, ink, 130);
+                kids_icon(kids_category, 6, 2, 20, ink);
+                kids_preset_label(31, 4, 131, &LFONT_XS, name, ink);
                 kids_label(170, 4, &LFONT_XS, is_drum(trk) ? DL_SOUND_NAME[ui.dsound] : "WHITE keys", KIDS_WHITE, 65);
             } else if (b <= 5) for (int i = 0; i < 4; i++) {
                 int st = ui.bar * 16 + (b - 2) * 4 + i, x = 5 + 59 * i;
@@ -1595,9 +1631,10 @@ static void kids_draw(void)
                 kids_text(182, 10, "K3 Page");
             }
         } else if (b == 1) {
-            kids_icon(trk, 6, 1, 21, ink);
+            kids_icon(kids_category, 6, 1, 21, ink);
             kids_number(32, 5, trk + 1);
-            kids_label(47, 3, &LFONT_B, kids_sound_error ? kids_sound_error : name, ink, 127);
+            if (kids_sound_error) kids_label(47, 3, &LFONT_B, kids_sound_error, ink, 127);
+            else kids_preset_label(47, 3, 127, &LFONT_B, name, ink);
             kids_text(182, 5, "Play keys");
         } else if (b == 2) {
             kids_graph(trk, ink);

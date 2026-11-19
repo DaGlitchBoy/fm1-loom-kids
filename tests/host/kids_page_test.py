@@ -15,8 +15,8 @@ with TemporaryDirectory() as directory:
     module.PAGE.write_text(base.replace("{{NAME}}", "loom").replace("{{ID}}", "loom").replace("{{PANEL_JS}}", panel))
     module.main()
     page = module.PAGE.read_text()
-    assert "<title>LOOM Kids in the browser</title>" in page
-    assert page.count('id="go">LOOM Kids starten</button>') == 1
+    assert "<title>LION KIDS in the browser</title>" in page
+    assert page.count('id="go">LION KIDS starten</button>') == 1
     assert 'id="kids-entry"' not in page
     assert "{{" not in page
     assert "PRESETS</b> die Klanggruppe" in page
