@@ -696,6 +696,7 @@ static int kids_page_count(int track)
 
 static int kids_selected_step(int track)
 {
+    if ((unsigned)track >= NTRK) return 0;
     return clampi(kids_cursor[track], 0, clampi(tpat(track)->len, 1, NSTEP) - 1);
 }
 
