@@ -1,9 +1,14 @@
 /* SPDX-License-Identifier: MPL-2.0 */
 #ifndef PLAT_WEB
+/* The host unity build masks device section attributes. libc headers need
+ * their own inline attributes when fortification is enabled. */
+#pragma push_macro("__attribute__")
+#undef __attribute__
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/file.h>
 #include <unistd.h>
+#pragma pop_macro("__attribute__")
 
 #define KS_FILE_MAGIC 0x31464b4cu /* LKF1 */
 static int ks_fail_next; /* host fault injection */
