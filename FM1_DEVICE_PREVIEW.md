@@ -4,13 +4,17 @@ This candidate uses the normal M‑VAVE firmware update path and keeps the stock
 
 The device has one 64-step pattern per track, with the same 16, 32 and 64-step lengths in the Kids controls. Ordinary edits have Undo and Redo. Save, open and clear are outside the device edit history. Each saved song can use up to 16,364 bytes in flash. There is a second flash copy for an interrupted save. Device songs and browser songs are kept separately.
 
-## Open the installer on a Mac
+Preview 0.0.1 includes the factory recorded instruments and break loops in the firmware image. It also speeds up continuous controls on the panel and repaints the full screen when returning from a graph view. Preset and step selectors still move one item per detent.
 
-1. Download the **LION KIDS FM-1 preview** artifact from the successful [Build LION KIDS FM‑1 preview workflow](https://github.com/vmphilemon-glitch/fm1-loom-kids/actions/workflows/lion-device.yml). Unzip it. Use the folder containing `index.html`, `lion-kids.fwsc` and `lion-kids-res.bin`.
-2. Open Terminal in that folder and run `python3 -m http.server 8010 --bind 127.0.0.1`.
-3. Open [http://127.0.0.1:8010](http://127.0.0.1:8010) in Chrome or Edge. Check that the page says **LION KIDS device preview**.
-4. Back up anything you want to keep using your current firmware's backup tool. Connect the FM‑1 directly to the Mac with a USB data cable. Allow MIDI access when the page asks.
-5. Click **Install**, then confirm and follow the page's instructions. If the device needs to enter update mode, hold OCT− and OCT+ together for five seconds as directed by the installer. Leave it connected until the installer reports completion and the FM‑1 has restarted.
-6. Verify HOME, the keyboard, playback and SAVE. Use an empty slot to check that a small saved pattern reopens after a power cycle. The older Puya revision still needs that first physical test.
+## Install from Chrome or Edge
 
-The installer has **Back to the stock firmware** for recovery. Keep the device connected while a firmware update is in progress.
+1. Open the [LION KIDS installer](https://vmphilemon-glitch.github.io/fm1-loom-kids/). Check that it says **LION KIDS device preview**.
+2. Back up anything you want to keep using your current firmware's backup tool. Connect the FM‑1 directly with a USB data cable.
+3. Click **Install**, allow MIDI access when asked, and follow the page. If the installer asks for update mode, hold OCT− and OCT+ together for five seconds. Keep the FM‑1 connected until the installer reports completion and it has restarted.
+4. Verify HOME, the keyboard, playback and SAVE. Use an empty slot to check that a small saved pattern reopens after a power cycle. The older Puya revision still needs that first physical test.
+
+The installer also has **Back to the stock firmware**.
+
+## Download the installer bundle
+
+The **LION KIDS FM-1 preview** artifact contains the firmware, installer and corresponding source. To serve it locally, unzip it and run `python3 -m http.server 8010 --bind 127.0.0.1` from the folder with `index.html`. Open [http://127.0.0.1:8010](http://127.0.0.1:8010) in Chrome or Edge. [Preview build workflow](https://github.com/vmphilemon-glitch/fm1-loom-kids/actions/workflows/lion-device.yml)
