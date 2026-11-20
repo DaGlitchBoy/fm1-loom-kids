@@ -164,7 +164,7 @@ with tempfile.TemporaryDirectory(prefix="loom-kids-shelf-") as tmp:
                     checks.append(f"expect noteat {track} 1 {step} {index} {note}")
                 checks.append(f"expect stepvel {track} 1 {step} {velocity}")
         checks += [f"expect kids_send.{track}.1 72", f"expect kids_send.{track}.2 70"]
-    run("\n".join(actions + ["tap SAVE", "expect kids_shelf_mask 2"]))
+    run("\n".join(actions + ["kids-flash-check", "tap SAVE", "expect kids_shelf_mask 2"]))
     record = dense / "song-2.ks"
     before = record.read_bytes()
     run("\n".join(checks + ["tap PLAY", "wait 10000", "tap PLAY"]))

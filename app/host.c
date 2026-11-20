@@ -1540,6 +1540,25 @@ static int song_cmd(const char *cmd)
     return 1;
 }
 
+#ifndef PLAT_WEB
+#include "kids_flash_platform.c"
+
+static void host_check_kids_flash(void)
+{
+    unsigned slot = ks_loaded;
+    kfs_record_t before;
+    if (kfs_read(&kfs_plat_io, slot, &before) || ks_flash_save(slot, before.revision))
+        host_die("could not stream song to simulated flash", "");
+    kfs_record_t written;
+    if (kfs_read(&kfs_plat_io, slot, &written) || written.revision != before.revision + 1)
+        host_die("could not read streamed song from simulated flash", "");
+    ks_blob_t *expected = ks_pack();
+    if (!expected || expected->len != written.size || memcmp(expected->data, written.data, written.size))
+        host_die("streamed song differs from the standard save", "");
+    ks_drop(expected);
+}
+#endif
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
 #if !defined(PLAT_WEB)
@@ -1552,6 +1571,7 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         kids_category_sync();
         return 1;
     }
+    if (!strcmp(cmd, "kids-flash-check")) { host_check_kids_flash(); return 1; }
     if (!strcmp(cmd, "kids-shelf-fail")) { ks_fail_next = 1; return 1; }
     if (!strcmp(cmd, "kids-shelf-conflict")) {
         int slot = clampi(atoi(a), 1, KS_SLOTS) - 1;

@@ -92,12 +92,12 @@ static uint8_t ks_read_name(const ks_blob_t *blob, int slot, uint8_t *pixels)
     return name;
 }
 
-static void ks_set_name(ks_blob_t *blob, uint8_t name, const uint8_t *pixels)
+static void ks_set_name(uint8_t *header, uint8_t name, const uint8_t *pixels)
 {
-    uint8_t *stored = blob->data + KS_HEADER_V1 + 4;
+    uint8_t *stored = header + KS_HEADER_V1 + 4;
     stored[0] = name;
     memcpy(stored + 1, pixels, KPIX_BYTES);
-    put32(blob->data + KS_HEADER_V1, crc32_of(stored, 1 + KPIX_BYTES));
+    put32(header + KS_HEADER_V1, crc32_of(stored, 1 + KPIX_BYTES));
 }
 
 /* A header without a music payload reserves the picture on an empty slot. */
@@ -115,7 +115,7 @@ static ks_blob_t *ks_name_only(uint8_t name, const uint8_t *pixels)
     memset(blob->data, 0, KS_HEADER_V1);
     put32(blob->data, KS_MAGIC);
     put32(blob->data + 4, KS_VERSION);
-    ks_set_name(blob, name, pixels);
+    ks_set_name(blob->data, name, pixels);
     return blob;
 }
 
@@ -127,7 +127,7 @@ static ks_blob_t *ks_rename(const ks_blob_t *old, uint8_t name, const uint8_t *p
     if (!blob) return NULL;
     memcpy(blob->data, old->data, KS_HEADER_V1);
     put32(blob->data + 4, KS_VERSION);
-    ks_set_name(blob, name, pixels);
+    ks_set_name(blob->data, name, pixels);
     memcpy(blob->data + KS_HEADER, old->data + header, old->len - header);
     return blob;
 }
@@ -199,7 +199,7 @@ static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, uint8_t name, c
         put32(blob->data + 12, stored);
         put32(blob->data + 16, crc32_of((const uint8_t *)song, (uint32_t)len));
         put32(blob->data + 20, (uint32_t)packed);
-        ks_set_name(blob, name, pixels);
+        ks_set_name(blob->data, name, pixels);
         memcpy(blob->data + KS_HEADER, packed ? compressed : (const uint8_t *)song, stored);
     }
     free(compressed);
@@ -229,7 +229,9 @@ static int ks_write_parts(const ks_part_t *parts, int count, lz_sink_t *sink, in
     return 0;
 }
 
-static ks_blob_t *ks_pack(void)
+/* The caller keeps song state stable until both passes finish. No output
+ * begins until its final size is known. */
+static int ks_stream_song(lz_sink_t *target, int (*begin)(void *, uint32_t))
 {
     _Static_assert(sizeof(ks_song_t) == sizeof(settings_t) + sizeof(patterns_t) + sizeof(ks_meta_t),
                    "streaming requires a packed sequence of the three song members");
@@ -274,27 +276,53 @@ static ks_blob_t *ks_pack(void)
         len += parts[i].size;
         crc = crc32_add(crc, parts[i].data, parts[i].size);
     }
-    if (len > KS_RAW_MAX) return NULL;
+    if (len > KS_RAW_MAX) return -1;
     ks_sink_t measure = {.limit = len};
     lz_sink_t sink = {ks_write_bytes, &measure};
     int packed = !ks_write_parts(parts, count, &sink, 1) && measure.used < len;
     uint32_t stored = packed ? measure.used : len;
-    ks_blob_t *blob = ks_blob(KS_HEADER + stored);
-    if (!blob) return NULL;
-    ks_sink_t out = {blob->data + KS_HEADER, 0, stored};
-    sink.ctx = &out;
-    if (ks_write_parts(parts, count, &sink, packed) || out.used != stored) {
-        ks_drop(blob);
+    uint8_t header[KS_HEADER];
+    put32(header, KS_MAGIC);
+    put32(header + 4, KS_VERSION);
+    put32(header + 8, len);
+    put32(header + 12, stored);
+    put32(header + 16, crc);
+    put32(header + 20, (uint32_t)packed);
+    ks_set_name(header, kpix_song_id, kpix_song);
+    if (begin(target->ctx, KS_HEADER + stored) || target->put(target->ctx, header, KS_HEADER))
+        return -1;
+    return ks_write_parts(parts, count, target, packed);
+}
+
+typedef struct {
+    ks_blob_t *blob;
+    ks_sink_t sink;
+} ks_blob_output_t;
+
+static int ks_blob_begin(void *ctx, uint32_t size)
+{
+    ks_blob_output_t *out = ctx;
+    out->blob = ks_blob(size);
+    if (!out->blob) return -1;
+    out->sink = (ks_sink_t){.data = out->blob->data, .limit = size};
+    return 0;
+}
+
+static int ks_blob_put(void *ctx, const uint8_t *p, uint32_t n)
+{
+    ks_blob_output_t *out = ctx;
+    return ks_write_bytes(&out->sink, p, n);
+}
+
+static ks_blob_t *ks_pack(void)
+{
+    ks_blob_output_t out = {0};
+    lz_sink_t sink = {ks_blob_put, &out};
+    if (ks_stream_song(&sink, ks_blob_begin) || out.sink.used != out.sink.limit) {
+        ks_drop(out.blob);
         return NULL;
     }
-    put32(blob->data, KS_MAGIC);
-    put32(blob->data + 4, KS_VERSION);
-    put32(blob->data + 8, len);
-    put32(blob->data + 12, stored);
-    put32(blob->data + 16, crc);
-    put32(blob->data + 20, (uint32_t)packed);
-    ks_set_name(blob, kpix_song_id, kpix_song);
-    return blob;
+    return out.blob;
 }
 
 static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)

@@ -37,6 +37,7 @@ run sample-bank sh -c "'$PY' tools/loom_samples.py build build/gen/user_bank.bin
     'piano two=build/gen/wav/piano.wav:60%16k' 'sweep two=build/gen/wav/sweep.wav:57'"
 run bank-tool "$PY" tests/host/bank_test.py
 run kids-music-map sh -c '"$0" -std=c99 -Wall -Wextra -Werror -Iapp tests/host/kids_music_test.c -o "$1/kids_music_test" && "$1/kids_music_test"' "$CC" "$OUT"
+run kids-flash-store sh -c '"$0" -std=c11 -Wall -Wextra -Werror -Iapp tests/host/kids_flash_store_test.c app/kids_flash_store.c -o "$1/kids_flash_store_test" && "$1/kids_flash_store_test"' "$CC" "$OUT"
 run kids-page "$PY" tests/host/kids_page_test.py
 # the units' own tests, written beside them (their WAVs in build/host/)
 for t in synth braids drumline fx seq factory; do
