@@ -1,0 +1,59 @@
+# Run using the dedicated device profile's host build.
+wait 300
+expect kids_loaded 1
+expect kids_shelf_mask 0
+expect kids_preset.acid_line 1
+tap SEQ
+tap SEQ
+tapkey w0
+expect note 1 1 1 60
+press HOME
+spin K1 -1
+expect note 1 1 1 0
+spin K1 1
+expect note 1 1 1 60
+release HOME
+tap HOME
+tap SAVE
+expect kids_shelf_mask 1
+# SAVE is deliberately outside the device edit history.
+expect kids_undo 1
+tap GLO
+spin K4 1
+tap EDIT
+expect kids_loaded 2
+expect kids_undo 0
+expect note 1 1 1 0
+tap HOME
+tap SEQ
+tapkey w0
+tapkey w1
+expect note 1 1 2 60
+tap HOME
+tap SAVE
+expect kids_shelf_mask 3
+reboot
+wait 300
+expect kids_loaded 2
+expect kids_shelf_mask 3
+expect note 1 1 2 60
+tap GLO
+spin K4 -1
+tap EDIT
+expect kids_loaded 1
+expect note 1 1 1 60
+expect note 1 1 2 0
+spin K4 1
+press GLO
+wait 5050
+release GLO
+expect kids_dialog 2
+tap EDIT
+expect kids_shelf_mask 1
+expect kids_loaded 1
+expect note 1 1 1 60
+expect kids_slot 2
+tap EDIT
+expect kids_loaded 2
+expect note 1 1 1 0
+tap HOME

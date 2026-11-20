@@ -15,7 +15,7 @@
  *   SAVE   save (held + white key: a slot, or a user preset on the sound pages)
  *   SELECT the button's pages     ALGORITHM the track      PRESETS the page's item     K1-K4 the page's four */
 
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 static void kids_enter(int startup);
 #endif
 static void speak(void);
@@ -1865,7 +1865,7 @@ static void button_down(int b)
 }
 static void button_up(int b)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (b == B_HOME && ui.page == P_STATUS && !ui.ask && !lst.open) {
         kids_enter(0);
         return;
@@ -3838,7 +3838,10 @@ static void save_key(int k)
 #include "kids.c"
 static void input(void)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#ifdef LION_KIDS_DEVICE
+    kids_input();
+    return;
+#elif defined(PLAT_HOST) || defined(PLAT_WEB)
     /* Bit 30 lets emulator scenarios enter Kids from Studio. */
     if (!kids_mode && (plat_buttons() & (1u << 30)) && !(ui.btn & (1u << 30))) kids_enter(0);
     if (kids_input()) return;
@@ -4711,7 +4714,7 @@ static void speak_dump(void)
 
 void ui_init(void)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     kids_mode = 0;
     kids_reset_banks();
     kids_draws = 0;
@@ -4750,8 +4753,8 @@ void ui_init(void)
         proj.rsv[1] = (uint8_t)(THEME_SET | (uint32_t)atoi(getenv("LOOM_THEME")) % NTHEMES);
     theme = THEME_OF_PROJ();
 #endif
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
-#ifdef PLAT_WEB
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+#if defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     kids_enter(1);
 #else
     if (getenv("LOOM_KIDS")) kids_enter(1);
@@ -4767,7 +4770,7 @@ void ui_init(void)
 #define AUTOSAVE_QUIET 90u                       /* blocks of quiet (256 samples: about 0.5 s) */
 static void autosave(void)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mode) return;
 #endif
     if (!ui.dirty || (proj.rsv[2] & AUTOSAVE_OFF) || proj_slot >= NPROJ || playing() || seq.rec || seq.rec_wait || ui.ask || lst.open ||
@@ -4810,7 +4813,7 @@ void ui_frame(void)
         mark_dirty();
     }
     seq.rec_target = (uint8_t)(sel_trk() == AUX_BRAIN ? AUX_BRAIN : inst_trk());   /* where live recording writes */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mode) seq.rec_replace = 0;
     else
 #endif
@@ -4821,8 +4824,12 @@ void ui_frame(void)
         seq.wv_live = ui.wv_held;
     }
     autosave();
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+#ifdef LION_KIDS_DEVICE
+    {
+#else
     if (kids_mode) {
+#endif
         kids_draw();
         kids_leds();
         ann_tick(plat_ms());
@@ -4847,7 +4854,7 @@ void ui_frame(void)
 void ui_input_only(void) { input(); }
 void ui_redraw(void)                             /* every band drawn again at the next frame (their signatures forgotten) */
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     memset(kids_sig, 0, sizeof kids_sig);
 #endif
     for (uint32_t i = 0; i < sizeof ui.sig / sizeof ui.sig[0]; i++)

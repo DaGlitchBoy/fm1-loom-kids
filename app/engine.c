@@ -98,7 +98,7 @@ static uint8_t eng_drum[NTRK];                     /* the track's engine is the 
 static uint8_t fx_type[2];                        /* each slot's effect, as set */
 static uint32_t metro_left;                       /* the metronome's click: samples left, phase, rate */
 static float metro_ph, metro_inc;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 static uint8_t kids_metro_gain = 100;
 #endif
 static int16_t bend_c[NTRK];                      /* the bend component's cents, per track */
@@ -310,7 +310,7 @@ void engine_fx(int slot, int type, const uint8_t knob[4], int hp, int lp, int wi
 }
 void engine_panic(void) { cq_put(C_PANIC, 0, 0, 0); }
 void engine_metronome(int mode) { cq_put(C_METRO, (uint32_t)mode, 0, 0); }
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 static void engine_kids_metro(int gain) { cq_put(C_METRO, gain ? 2u : 0u, (uint32_t)gain + 1u, 0); }
 static void engine_kids_player(int track, int mode) { cq_put(C_KIDS_PLAYER, (uint32_t)track, (uint32_t)mode, 0); }
 static void kids_insert_reset(int track);
@@ -585,7 +585,7 @@ static void s_drum(void *x, int trk, int sound, int vel, int pitch_semi, int sho
     PROF_T(pn);
     if (trk < 0 || trk >= NTRK || !eng_drum[trk] || sound < 0 || sound >= NDRUM)
         return;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     drumline_kids_env(DL(trk), &kids_dsp_tracks[trk]);
 #endif
     drumline_hit(DL(trk), sound, vel, pitch_semi + glfo_kit_semis(trk, sound), short_gate, long_tail || perf_tail[trk]);
@@ -1015,12 +1015,12 @@ static void drain(void)
         }
         case C_METRO:
             seq.metronome = (uint8_t)a;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
             kids_metro_gain = b ? (uint8_t)(b - 1) : 100;
             if (!kids_metro_gain) metro_left = 0;
 #endif
             break;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         case C_KIDS_PLAYER:
             /* The UI publishes the new knob immediately. Release any voices owned
              * by the previous player before routing queued keys to the new one. */
@@ -1331,7 +1331,7 @@ static void metro_tick(uint32_t n)
 {
     uint32_t i;
     float gain = 0.5f;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     gain *= kids_metro_gain * 0.01f;
 #endif
     for (i = 0; i < n && metro_left; i++, metro_left--) {
@@ -1351,12 +1351,12 @@ static void metro_tick(uint32_t n)
 #endif
 /* one stretch: the upper half of the voices and the drumlines here while the second core renders the
  * lower half; then the halves are summed in the order one core always used, the FX tracks, the master */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 #include "kids_insert.c"
 #endif
 static inline void render_primary_voice(int vi, uint32_t n)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mix_mask) {
         int t = synth_kids_track(SY, vi);
         if (kids_mix_mask >> t & 1u) {
@@ -1378,7 +1378,7 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
         uint32_t pt1;
         if (!eng_drum[t]) continue;
         int sounding = drumline_sounding(DL(t));
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         if (seq.kids_mode && kids_dsp_tracks[t].value[KD_EDIT_ON] && kids_dsp_tracks[t].value[KD_CHORUS]) {
             if (sounding) kids_insert[t].tail = 600;
             else if (kids_insert[t].tail) {
@@ -1404,7 +1404,7 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
             tap_drum(t, tl, tr, trk_glide[t][GL_SEND].cur < 0.0f ? g : trk_glide[t][GL_SEND].cur, g, n);
 #endif
         glide_set(&trk_glide[t][GL_SEND], g);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         if (kids_send_override) {
             float *source[] = {ts1, ts2};
             for (int k = 0; k < 2; k++) {
@@ -1491,7 +1491,7 @@ static void render_sub(uint32_t n, uint32_t at)
     zerof(s1, n);
     zerof(s2, n);
     perf_tick(n);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     kids_mix_begin(n);
 #endif
 #if TRK_TAP
@@ -1506,7 +1506,7 @@ static void render_sub(uint32_t n, uint32_t at)
     late = late_at0 = fx_c2 && plat_cpu2_busy();          /* the second core still at the effects' job (begun with the
                                                            * block): it takes the voices straight after it (c2_chain),
                                                            * or, past it already, the first starts it (c2_late) */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mix_mask) {   /* each per-track insert has one owner */
         fx_done();
         late = late_at0 = 0;
@@ -1569,7 +1569,7 @@ static void render_sub(uint32_t n, uint32_t at)
     add_in(mel_r, c2_r, n);
     add_in(s1, c2_s1, n);
     add_in(s2, c2_s2, n);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     kids_mix_finish(n);
 #endif
     for (t = 0; t < NTRK; t++)                            /* the synth's meters, into the common ones */
@@ -1698,7 +1698,7 @@ void engine_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12)
         drain();
         PROF_ADD(PR_DRAIN, pt);
         bpm = seq_tempo(&seq);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         kids_phase_step = bpm * (1.0f / (240.0f * SY_SR));
 #endif
         synth_tempo(SY, bpm);
@@ -1895,7 +1895,7 @@ void engine_init(patterns_t *P, uint8_t (*par)[NTP])
         seq_prof = &eng_prof[PR_SIX];
     }
     synth_init(SY, par);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     kids_chorus_phase = 0.0f;
     kids_phase_playing = 0;
     for (t = 0; t < NTRK; t++) {

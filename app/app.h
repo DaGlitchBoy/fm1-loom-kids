@@ -9,13 +9,21 @@
 #include "dsp/synth.h"
 #include "dsp/fx.h"
 
+#ifdef LION_KIDS_DEVICE
+#define APP_NAME "LION KIDS"
+#else
 #define APP_NAME "LOOM-8"
+#endif
 #define APP_BLOCK 256u                  /* frames a render (5.8 ms): fm1-base's USB audio input takes 256-frame halves
                                          * at most (felucca-bsp usb.c); LOOM-8's own platform had 512-frame halves,
                                          * each rendered as two 256-frame calls, which is what the simulator always did */
 #define FM1B_UAC_DEEP 1                 /* the USB audio input a half deeper: a song's busy blocks take most of their
                                          * time, which ran fm1-base's ring dry (holds in a recording; base/device/unity.c) */
+#ifdef LION_KIDS_DEVICE
+#define APP_CANVAS_PX (240u * 64u)
+#else
 #define APP_CANVAS_PX (240u * 120u)     /* the tallest band, the main one, is 240 x 120 */
+#endif
 #define APP_SYS_TEXT                    /* fm1-base's own screens (crash, update, restore, calibration) in LOOM-8's faces:
                                          * gfx_loom.c app_sys_*; fm1-base's are then not linked (18 KB) */
 
@@ -63,6 +71,12 @@ enum { OBJ_PANEL, OBJ_PRESETS, OBJ_PROJ0, OBJ_BLE = OBJ_PROJ0 + NPROJ * PROJ_NOB
 /* backup and restore over USB (fm1-base's backup.c; base/tools/fm1_backup.py, base/web/backup): the user presets
  * and the three project slots, all or nothing. Not the user sample bank (raw flash, not store objects: its source is
  * the player's own WAVs, tools/loom_samples.py); a restore writes only the objects listed here, never its windows */
+#ifdef LION_KIDS_DEVICE
+#define APP_BACKUP_OBJS {OBJ_PRESETS}
+#define APP_BACKUP_MAGIC 0x424B4C44u
+#define APP_BACKUP_VERSION 1u
+#define APP_BACKUP_WHAT "replaces the reserved preset area"
+#else
 #define APP_BACKUP_OBJS {OBJ_PRESETS, \
     OBJ_PROJ0 + 0, OBJ_PROJ0 + 1, OBJ_PROJ0 + 2, OBJ_PROJ0 + 3, OBJ_PROJ0 + 4, OBJ_PROJ0 + 5, OBJ_PROJ0 + 6, \
     OBJ_PROJ0 + 7, OBJ_PROJ0 + 8, OBJ_PROJ0 + 9, OBJ_PROJ0 + 10, OBJ_PROJ0 + 11, OBJ_PROJ0 + 12, OBJ_PROJ0 + 13, \
@@ -70,6 +84,7 @@ enum { OBJ_PANEL, OBJ_PRESETS, OBJ_PROJ0, OBJ_BLE = OBJ_PROJ0 + NPROJ * PROJ_NOB
 #define APP_BACKUP_MAGIC 0x42384D4Cu     /* "LM8B" */
 #define APP_BACKUP_VERSION 1u
 #define APP_BACKUP_WHAT "replaces projects, presets"
+#endif
 #define APP_BACKUP_BUF loom_io_buf      /* project.c's object buffer, lent to a restore (fm1-base's own: 3.8 KB of the pool) */
 extern uint8_t loom_io_buf[];
 int app_backup_playing(void);
@@ -86,13 +101,17 @@ void app_frame(void);
 void app_input_only(void);
 void app_say(const char *a, const char *b);
 #define APP_BTDEV                       /* Bluetooth MIDI devices (fm1-base lib/btdev.h): GLO's BT DEVICE list (bt.c) */
+#ifndef LION_KIDS_DEVICE
 #define APP_SPLASH                      /* the name over the eight tracks' inks woven as threads */
+#endif
 void app_splash(void);
 #define APP_REDRAW                      /* the screen mirror lost a part (or a viewer came): every band again */
 #define MRQ 2048u                       /* the mirror's frame ring (fm1-base's 4096: RAM), a rect frame 1.1 KB at most */
 #define MR_SEGW 80u                     /* what the viewer has, by 80-pixel segments of each row (30: 4.8 KB more pool) */
 void app_redraw(void);
+#ifndef LION_KIDS_DEVICE
 #define APP_SYSEX                       /* the user sample bank over USB-MIDI (samples.c: F0 7D 46 4C) */
+#endif
 int app_sysex(const uint8_t *p, uint32_t n);
 
 /* the host simulator's part (host.c): LOOM-8's checks and commands, the screen reader's dump */

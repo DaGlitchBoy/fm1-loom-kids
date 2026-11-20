@@ -2,7 +2,11 @@
 enum { KS_SLOTS = 3, KS_PIXELS = KS_SLOTS, KS_STARTUP, KS_RECORDS };
 
 #include "kids_song_codec.c"
+#ifdef LION_KIDS_DEVICE
+#include "kids_shelf_device.c"
+#else
 #include "kids_shelf_native.c"
+#endif
 enum { KS_CLOSED, KS_OPEN_DIRTY, KS_DELETE };
 enum { KS_SAVE_WRITE, KS_DELETE_WRITE, KS_RENAME_WRITE, KS_PIXELS_WRITE, KS_STARTUP_WRITE, KS_UNDO_WRITE, KS_REDO_WRITE };
 #define KS_PIXEL_MAGIC 0x58504b4cu /* LKPX */
@@ -94,12 +98,21 @@ static ks_blob_t *ks_empty_song(int slot)
 
 static int ks_decode_empty(const ks_blob_t *name, int slot, ks_decoded_t *decoded)
 {
+#ifdef LION_KIDS_DEVICE
+    (void)name;
+    (void)slot;
+    decoded->song = malloc(sizeof *decoded->song);
+    if (!decoded->song) return -2;
+    ks_defaults(&decoded->song->settings, &decoded->song->patterns, &decoded->song->kids);
+    return 0;
+#else
     uint8_t pixels[KPIX_BYTES];
     uint8_t id = ks_read_name(name, slot, pixels);
     ks_blob_t *empty = ks_new_song(id, pixels);
     int rc = empty ? ks_unpack(empty, decoded, 0) : -2;
     ks_drop(empty);
     return rc;
+#endif
 }
 
 static void ks_ready_start(int startup)
@@ -124,9 +137,7 @@ static void ks_ready_start(int startup)
     ks_unopened = rc != 0;
     if (used && !rc) ks_apply(&decoded, 0);
     else if (startup || saved) {
-        ks_blob_t *empty = ks_empty_song(slot);
-        if (empty && !ks_unpack(empty, &decoded, 0)) ks_apply(&decoded, 0);
-        ks_drop(empty);
+        if (!ks_decode_empty(saved, slot, &decoded)) ks_apply(&decoded, 0);
     }
     ks_selected = ks_loaded = (uint8_t)slot;
     kpix_song_id = ks_unopened ? ks_read_name(NULL, slot, kpix_song) : ks_preview_name(slot, kpix_song);
@@ -157,6 +168,12 @@ static void ks_init(int startup)
 #else
     ks_ready = 1;
     for (int slot = 0; slot < KS_RECORDS; slot++) {
+#ifdef LION_KIDS_DEVICE
+        ks_drop(ks_slots[slot].blob);
+        ks_slots[slot] = (ks_slot_t){0};
+        if (ks_device_read(slot, &ks_slots[slot].revision, &ks_slots[slot].blob))
+            ks_bad |= 1u << slot;
+#else
         char path[1024];
         int backend = ks_file_path(path, sizeof path, slot, ".ks");
         if (!backend) continue;
@@ -164,6 +181,7 @@ static void ks_init(int startup)
         ks_slots[slot] = (ks_slot_t){0};
         if (backend < 0 || ks_file_read(path, &ks_slots[slot].revision, &ks_slots[slot].blob))
             ks_bad |= 1u << slot;
+#endif
     }
     ks_ready_start(startup);
 #endif
@@ -176,6 +194,19 @@ static int ks_open(int slot)
         ks_note("Ready to save", slot);
         return 1;
     }
+#ifdef LION_KIDS_DEVICE
+    const ks_blob_t *target = ks_slots[slot].blob;
+    ks_decoded_t decoded = {0};
+    int rc = fresh ? ks_decode_empty(target, slot, &decoded) : ks_unpack(target, &decoded, 0);
+    if (rc) {
+        ks_note(rc == -2 ? "Memory full" : "Song unreadable", slot);
+        return 0;
+    }
+    kh_clear();
+    ks_apply(&decoded, 0);
+    ks_set_loaded(slot);
+    kpix_song_id = ks_preview_name(slot, kpix_song);
+#else
     ks_blob_t *before = ks_pack();
     if (!before) { ks_note("Memory full", -1); return 0; }
     ks_blob_t *target = fresh ? ks_empty_song(slot) : ks_keep(ks_slots[slot].blob);
@@ -194,6 +225,7 @@ static int ks_open(int slot)
     ks_apply(&decoded, dirty);
     ks_set_loaded(slot);
     kpix_song_id = ks_read_name(target, slot, kpix_song);
+#endif
     ks_note(fresh ? "Ready to save" : "Opened", slot);
     return 1;
 }
@@ -233,6 +265,7 @@ static int ks_finish_write(int status)
         ks_startup_dirty = ks_loaded != next->data[0];
     } else if (kind == KS_PIXELS_WRITE) {
         kpix_dirty = kpix_generation != ks_write.pixel_generation;
+#ifndef LION_KIDS_DEVICE
     } else if (kind == KS_UNDO_WRITE || kind == KS_REDO_WRITE) {
         int redo = kind == KS_REDO_WRITE;
         const kh_edit_t *e = kh_next(redo);
@@ -247,16 +280,22 @@ static int ks_finish_write(int status)
         kh_cursor = (uint8_t)(kh_cursor + (redo ? 1 : -1));
         kh_merge = 0;
         ks_note(redo ? "Redone" : "Undone", slot);
+#endif
     } else {
+#ifndef LION_KIDS_DEVICE
         kh_push((kh_edit_t){.scope = KH_SLOT, .track = (uint8_t)sel_trk(), .slot = (uint8_t)slot,
             .name = kind == KS_RENAME_WRITE ? "Rename song" : kind == KS_DELETE_WRITE ? "Delete song" :
                 ks_has_song(before) ? "Replace song" : "Save song",
             .song_before = ks_keep(before), .song_after = ks_keep(next),
             .working_before = ks_keep(ks_write.working_before),
             .was_dirty = ks_write.dirty, .was_unopened = ks_unopened});
+#endif
         if (kind == KS_SAVE_WRITE) ui.dirty = 0;
         if (kind == KS_RENAME_WRITE) kpix_song_id = ks_read_name(next, slot, kpix_song);
         if (ks_write.working.song) {
+#ifdef LION_KIDS_DEVICE
+            kh_clear();
+#endif
             ks_apply(&ks_write.working, 0);
             ks_unopened = 0;
             kpix_song_id = ks_read_name(next, slot, kpix_song);
@@ -291,6 +330,23 @@ static int ks_start_write(int slot, ks_blob_t *blob, int kind, int follow)
     if (!ks_background(kind)) ks_note("Writing", slot);
     return 0;
 #else
+#ifdef LION_KIDS_DEVICE
+    if (slot < KS_SLOTS) {
+        ks_blob_t *view = malloc(sizeof *view);
+        if (!view) return ks_finish_write(-1);
+        int rc = ks_file_write(slot, ks_slots[slot].revision, blob);
+        kfs_record_t record;
+        if (!rc && kfs_read(&kfs_plat_io, (unsigned)slot, &record)) rc = -1;
+        if (rc) {
+            free(view);
+            return ks_finish_write(rc);
+        }
+        ks_drop(blob);
+        *view = (ks_blob_t){.len = record.size, .refs = 1, .data = (uint8_t *)record.data};
+        ks_write.blob = view;
+        return ks_finish_write(0);
+    }
+#endif
     return ks_finish_write(ks_file_write(slot, ks_slots[slot].revision, blob));
 #endif
 }
@@ -307,8 +363,14 @@ static void ks_delete(int slot)
         memcpy(pixels, kpix_song, sizeof pixels);
     }
     ks_blob_t *marker = ks_name_only(name, pixels);
+#ifndef LION_KIDS_DEVICE
     if (loaded) ks_write.working_before = ks_pack();
-    if (!marker || (loaded && (!ks_write.working_before || ks_decode_empty(marker, slot, &ks_write.working)))) {
+#endif
+    if (!marker || (loaded &&
+#ifndef LION_KIDS_DEVICE
+        !ks_write.working_before) || (loaded &&
+#endif
+        ks_decode_empty(marker, slot, &ks_write.working))) {
         ks_drop(marker);
         ks_drop_pending_working();
         ks_note("Memory full", slot);
@@ -319,6 +381,11 @@ static void ks_delete(int slot)
 
 static int ks_replay(const kh_edit_t *e, int redo)
 {
+#ifdef LION_KIDS_DEVICE
+    (void)e;
+    (void)redo;
+    return 0;
+#else
     if (e->scope == KH_LOAD) {
         ks_decoded_t decoded = {0};
         if (ks_unpack(redo ? e->song_after : e->song_before, &decoded, 0)) {
@@ -346,6 +413,7 @@ static int ks_replay(const kh_edit_t *e, int redo)
     }
     return ks_start_write(slot, ks_keep(target),
         redo ? KS_REDO_WRITE : KS_UNDO_WRITE, 0);
+#endif
 }
 
 static void ks_replay_turn(int turn)
@@ -415,9 +483,31 @@ static void ks_save_to(int follow)
 {
     if (ks_unopened) { ks_note("Open saved song first", ks_loaded); return; }
     if (!ks_slot_available(ks_loaded)) return;
+#ifdef LION_KIDS_DEVICE
+    if (seq.rec || seq.rec_wait) { ks_note("End recording first", ks_loaded); return; }
+    /* Reserve the tiny descriptor before committing, then map the new record. */
+    ks_blob_t *view = malloc(sizeof *view);
+    if (!view) { ks_note("Memory full", ks_loaded); return; }
+    kfs_record_t record;
+    if (ks_flash_save(ks_loaded, ks_slots[ks_loaded].revision) ||
+        kfs_read(&kfs_plat_io, ks_loaded, &record) || !record.size) {
+        free(view);
+        ks_modal = KS_CLOSED;
+        ks_note("Save failed. Kept", ks_loaded);
+        return;
+    }
+    *view = (ks_blob_t){.len = record.size, .refs = 1, .data = (uint8_t *)record.data};
+    ks_write.slot = ks_loaded;
+    ks_write.kind = KS_SAVE_WRITE;
+    ks_write.close_open = (uint8_t)follow;
+    ks_write.blob = view;
+    ks_modal = KS_CLOSED;
+    ks_finish_write(0);
+#else
     ks_blob_t *song = ks_pack();
     if (!song) { ks_note("Memory full", -1); return; }
     ks_start_write(ks_loaded, song, KS_SAVE_WRITE, follow);
+#endif
 }
 
 static void ks_flush_pixels(int now)

@@ -13,7 +13,11 @@
 #define NTRK 8                        /* instrument tracks 1-8 */
 enum { AUX_BRAIN = NTRK, AUX_PUNCH, AUX_FX1, AUX_FX2, AUX_WEAVE, NALLTRK };   /* (WEAVE: its own steps, wvpat_t) */
 #define NSEQT (AUX_PUNCH + 1)         /* sequenced tracks: 1-8, brain, punch */
+#ifdef LION_KIDS_DEVICE
+#define NPATT 1                       /* one editable pattern per track on Kids */
+#else
 #define NPATT 8                       /* patterns per track */
+#endif
 #define NSTEP 64                      /* 4 bars of 16 */
 #define NBAR 4
 #define SN 4                          /* notes a step may hold */

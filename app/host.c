@@ -1541,7 +1541,9 @@ static int song_cmd(const char *cmd)
 }
 
 #ifndef PLAT_WEB
+#ifndef LION_KIDS_DEVICE
 #include "kids_flash_platform.c"
+#endif
 
 static int host_compare_flash_chunk(void *ctx, const uint8_t *p, uint32_t n)
 {
@@ -1595,12 +1597,14 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         return 1;
     }
     if (!strcmp(cmd, "kids-flash-check")) { host_check_kids_flash(); return 1; }
+#ifndef LION_KIDS_DEVICE
     if (!strcmp(cmd, "kids-shelf-fail")) { ks_fail_next = 1; return 1; }
     if (!strcmp(cmd, "kids-shelf-conflict")) {
         int slot = clampi(atoi(a), 1, KS_SLOTS) - 1;
         if (ks_file_write(slot, ks_slots[slot].revision, ks_slots[slot].blob)) host_die("shelf conflict fixture failed", a);
         return 1;
     }
+#endif
 #endif
 
     if (song_cmd(cmd))

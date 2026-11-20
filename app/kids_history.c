@@ -186,7 +186,7 @@ static void kh_push(kh_edit_t e)
     while (kh_count > kh_cursor) kh_discard(&kh_entries[--kh_count]);
     if (kh_count == KH_LIMIT) {
         kh_discard(&kh_entries[0]);
-        memmove(kh_entries, kh_entries + 1, (KH_LIMIT - 1) * sizeof kh_entries[0]);
+        for (int i = 1; i < KH_LIMIT; i++) kh_entries[i - 1] = kh_entries[i];
         kh_count--;
     }
     kh_entries[kh_count++] = e;
@@ -299,7 +299,7 @@ static int kh_replay(int redo)
         return 1;
     }
     int t = e->track;
-    if (t == sel_trk() && (e->scope == KH_SOUND || !strcmp(e->name, "Arp switch")))
+    if (t == sel_trk() && (e->scope == KH_SOUND || name_is(e->name, "Arp switch")))
         kids_notes_off();
     const trk_t old = proj.trk[t];
     uint8_t shape[KD_COUNT], fx[2][4];

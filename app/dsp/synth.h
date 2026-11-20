@@ -192,7 +192,7 @@ enum { GD_CUT, GD_RES, GD_PITCH, GD_PAN, GD_VOL, GD_SEND1, GD_SEND2, GD_CHAR, NG
 enum { LD_SYNTH, LD_ENV, LD_FILTER, LD_AMP, LD_FREE = 4, NLD = 8 };   /* TP_LDEST: module (LD_AMP: "voice"), + LD_FREE = free-running */
 #define LS_SYNC_N 8                                /* TP_LSPEED values below this are synced divisions */
 enum { PL_OFF, PL_ARP, PL_STRUM, PL_HOLD, PL_RAND, NPL };
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 extern volatile uint8_t kids_send_override;
 extern volatile uint8_t kids_send_gain[NTRK][2];
 #endif
@@ -288,7 +288,7 @@ typedef struct synth synth_t;         /* opaque: dsp/synth.c */
 void synth_glfo_restart(synth_t *s);              /* the shared LFO from its start (the transport started) */
 float synth_glfo_now(const synth_t *s);            /* its value now, -1..1 (the page's picture) */
 #define SYNTH_BYTES 12288             /* room for the struct (checked at compile time in synth.c) */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 #undef SYNTH_BYTES
 #define SYNTH_BYTES 12672
 #endif
@@ -343,7 +343,7 @@ extern uint32_t synth_load_steals;                            /* notes that took
 /* what voice vi costs to render, in rough units for the cores' split (engine.c split_at): 0 silent, 4 an
  * ordinary voice (bellows 5), knit 3 + its unison (+ 1 osc 2, + 1 sub or noise); the Braids engines by their model
  * (braids.h: 3 .. 8, cane's bell the most) */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 int synth_kids_track(const synth_t *s, int vi);
 #endif
 int synth_voice_cost(const synth_t *s, int vi);

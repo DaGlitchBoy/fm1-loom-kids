@@ -1385,7 +1385,7 @@ static int hit_same(const hit_t *a, const hit_t *b)
 static void hits_gc(void)
 {
     uint64_t used = 0;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     used = kids_stashed_hits();
 #endif
     for (int k = 0; k < NLANE; k++)
@@ -2248,7 +2248,7 @@ static void page_footer(char *t)
         s_cat(t, "SEL Bluetooth|KEYS play");
         break;
     case P_STATUS:
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         s_cat(t, "HOME Kids Stage|KEYS play");
         break;
 #endif

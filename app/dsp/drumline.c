@@ -39,7 +39,7 @@
 #include "fastmath.h"
 #include "digisophie.h"
 #include "d909.h"
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 #include "kids_dsp.h"
 #endif
 
@@ -183,7 +183,7 @@ typedef struct {
     uint8_t on, sound, model, line;   /* line: the string model's delay line, 0..NRESO-1 */
     uint8_t mode, held, hvel, hflags; /* the play mode; the key is still down; the hit, for a loop's restart */
     int8_t hpitch;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     uint8_t kids_released;
     kids_gate_t kids_gate;
 #endif
@@ -275,7 +275,7 @@ struct drumline {
     smp_cache_t sc[NDSC];             /* the sample model's decoded windows (dsp/sample.h) */
     int8_t sc_owner[NDSC];            /* the voice holding each, -1 */
     dynf_t f;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     const kids_dsp_track_t *kids;
 #endif
 };
@@ -485,7 +485,7 @@ void drumline_release(drumline_t *d, int sound)
         if (!v->on || v->sound != sound)
             continue;
         v->held = 0;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         v->kids_released = 1;
         if (d->kids && d->kids->value[KD_ENV_ON]) continue;
 #endif
@@ -1969,7 +1969,7 @@ static void dynf_run(dynf_t *f, float *l, float *r, int m)
  * five models taking turns forty times a block). Each sample's sum is the voices' in the same order as
  * before, the bus sees the same sub-blocks in the same order: the same output. The buffers start at 0 (the bus
  * filters l / r in place) */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 void drumline_kids_env(drumline_t *d, const kids_dsp_track_t *kids) { d->kids = kids; }
 #endif
 
@@ -2009,7 +2009,7 @@ void drumline_render(drumline_t *d, float *l, float *r, float *s1, float *s2, ui
                     key_post(d->par + TP_DRUM(v->sound, 0), v, t + from, mm - from);
                     DHC_ADD(v->sound, 0, t0);
                 }
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
                 if (d->kids && d->kids->value[KD_ENV_ON]) {
                     float gain = v->kids_gate.level;
                     float end = kids_gate_advance(&v->kids_gate, d->kids, v->kids_released, (float)(mm - from));
@@ -2040,11 +2040,11 @@ void drumline_render(drumline_t *d, float *l, float *r, float *s1, float *s2, ui
                 if (!v->on) {
                     slot_leave(d, v, vi);
                     if (v->held && v->mode == PM_LOOP) { /* loop: from the start again while held */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
                         kids_gate_t gate = v->kids_gate;
 #endif
                         start(d, v, v->sound, v->hvel, v->hpitch, v->hflags, 0);
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
                         v->kids_gate = gate;
 #endif
                     }

@@ -608,7 +608,7 @@ static int chord_deg(int note, uint32_t w, int key, int scale)   /* the scale's 
 /* a routed track's note through the brain (steps and live keys alike) */
 static int brain_note(const seq_t *s, int t, int note)
 {
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (s->kids_mode) return note;
 #endif
     int mode = brain_follows(s, t) ? s->par[t][TP_BRAIN] : 0;
@@ -2397,7 +2397,7 @@ static void arp_fire(seq_t *s, int t, const seq_sink_t *o)
         }
     total = n * range;
     style = s->par[t][TP_AP2] > 5 ? 0 : s->par[t][TP_AP2];
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (s->kids_mode && pat == 3) {
         cyc = arp_cycle(2, total);
         idx = total - 1 - arp_base(2, (int)(pl->arp_i++ % (uint32_t)cyc), total);
@@ -2681,7 +2681,7 @@ static void rec_key_on(seq_t *s, int t, int note, int vel)
     seq_trk_t *tr = &s->t[t];
     uint32_t L = tr->step_q8 ? tr->step_q8 : seq_step_q8(s, t);
     int p = tr->pos, i, q = tp->quant > 100 ? 100 : tp->quant;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (s->kids_mode && t < NTRK) q = 0;  /* keep the live key's sub-step onset in nudge */
 #endif
     int32_t age = (int32_t)(tr->age > L ? L : tr->age) - (int32_t)s->ahead, ticks;
@@ -2735,7 +2735,7 @@ static void rec_key_on(seq_t *s, int t, int note, int vel)
                     st->note[i] = (uint8_t)note;
                     break;
                 }
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         if (s->kids_mode && i == SN) {
             s->rec_overflow++;
             return;
@@ -2773,14 +2773,14 @@ static void rec_key_off(seq_t *s, int t, int note)
                         st->len = (uint8_t)len;
         }
         s->rec_note[i] = 0;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         if (s->kids_mode) continue;  /* aliased drum keys can retrigger a held hit */
 #endif
         return;
     }
 }
 
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 void seq_rec_finish_keys(seq_t *s)
 {
     for (int i = 0; i < 8; i++)
@@ -2888,7 +2888,7 @@ static void key_in(seq_t *s, int t, int note, int on, int vel, int raw, const se
     player = s->par[t][TP_PLAYER];
     had_phys = pl->nphys;
     int record_on = on;
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (s->kids_mode && t != s->rec_target) record_on = 0;
 #endif
     if (record_on && s->rec && s->playing && !s->count_in) {
@@ -2995,7 +2995,7 @@ static void keys_all_off(seq_t *s, int t, const seq_sink_t *o)
     pl->sroll_to_next = NEVER;
 }
 
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 void seq_kids_player_reset(seq_t *s, int trk, const seq_sink_t *out)
 {
     keys_all_off(s, trk, out);

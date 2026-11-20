@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0 */
 /* Emulator-only vertical slice. Included by ui.c after the original input helpers.
  * Musical state stays in proj/pats/seq; only presentation state lives here. */
-#if defined(PLAT_HOST) || defined(PLAT_WEB)
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 static uint8_t kids_mode;                       /* 0 Studio */
 enum { KIDS_HOME = 1, KIDS_STEPS, KIDS_ENV, KIDS_PERFORMANCE, KIDS_LFO };
 enum { KP_HOME, KP_REVERB, KP_DELAY, KP_ARP, KP_GLOBAL, KP_QUICK };
@@ -34,7 +34,11 @@ static uint32_t kids_sig[8], kids_draws;
 static uint32_t glo_overlay_down_at, glo_overlay_tap_at, glo_overlay_screen_at;
 static uint8_t glo_overlay_taps, glo_overlay_armed, glo_overlay_screen, glo_overlay_painted;
 #include <stddef.h>
+#ifdef LION_KIDS_DEVICE
+#include "kids_device_heap.c"
+#else
 #include <stdlib.h>
+#endif
 #include "kids_music.h"
 
 static uint8_t kids_scale[NTRK], kids_chord[NTRK], kids_root[NTRK];
@@ -1336,7 +1340,7 @@ static void kids_graph_knobs(int track, uint16_t ink)
         char value[12];
         char *digits = value;
         if (depth < 0) *digits++ = '-';
-        s_cat(num_s((uint32_t)((abs(depth) * 100 + 63) / KD_DEPTH_ZERO), digits), "%");
+        s_cat(num_s((uint32_t)(((depth < 0 ? -depth : depth) * 100 + 63) / KD_DEPTH_ZERO), digits), "%");
         kids_label(6, 20, &LFONT_XS, value, ink, 54);
         kids_label(66, 20, &LFONT_XS, kids_lfo_targets[p[KD_TARGET]], ink, 54);
         kids_label(126, 20, &LFONT_XS, kids_lfo_rates[p[KD_RATE]], ink, 54);
@@ -1408,6 +1412,17 @@ static void kids_history_strip(void)
     }
 }
 
+/* Reuse the platform canvas for slices of a display band. */
+static int kids_draw_strip(int row, int height, uint16_t bg)
+{
+    int capacity = CV_MAX / 240;
+    if (height > 120) height = 120; /* Match the original viewport's lower edge. */
+    if (row >= height) return 0;
+    cv_begin(240, (unsigned)(height - row < capacity ? height - row : capacity), bg);
+    cv_oy = -row;
+    return (int)cv_h;
+}
+
 static int kids_shelf_dialog(void)
 {
     static uint8_t visible;
@@ -1438,7 +1453,7 @@ static int kids_shelf_dialog(void)
         if (kids_sig[band] == h) { y += height; continue; }
         kids_sig[band] = h;
         kids_draws++;
-        cv_begin(240, height, KIDS_BG);
+        for (int row = 0, rows; (rows = kids_draw_strip(row, height, KIDS_BG)); row += rows) {
         if (kpix_open) {
             if (!band) {
                 kids_label(9, 3, &LFONT_B, KIDS_BRAND, KIDS_WHITE, 83);
@@ -1496,7 +1511,8 @@ static int kids_shelf_dialog(void)
             kids_text(12, 6, "HOME  Cancel");
             if (notice) kids_label(12, 29, &LFONT_XS, ks_message, ink, 210);
         }
-        cv_blit(0, y);
+        cv_blit(0, y + row);
+        }
         y += height;
     }
     return 1;
@@ -1548,7 +1564,7 @@ static int glo_overlay_panel_draw(void)
     const char *const message[] = {"ME AGAPI - O MPAMPAS", "GIA TO LIONTARAKI MOU"};
     const uint8_t heart[] = {0x36, 0x7f, 0x7f, 0x3e, 0x1c, 0x08};
     lcd_fill(0, 0, 240, 240, 0);
-    cv_begin(240, 83, 0);
+    for (int row = 0, rows; (rows = kids_draw_strip(row, 83, 0)); row += rows) {
     for (int i = 0; i < 2; i++) {
         const loom_font_t *font = &LFONT_M;
         if (text_w(font, message[i]) > 220) font = &LFONT_B;
@@ -1557,7 +1573,8 @@ static int glo_overlay_panel_draw(void)
     for (int y = 0; y < 6; y++)
         for (int x = 0; x < 7; x++)
             if ((heart[y] >> x) & 1u) cv_rect(106 + 4 * x, 52 + 4 * y, 4, 4, rose);
-    cv_blit(0, 80);
+    cv_blit(0, 80 + row);
+    }
     return 1;
 }
 
@@ -1660,7 +1677,7 @@ static void kids_draw(void)
         }
         if (kids_sig[b] == h) { y += heights[b]; continue; }
         kids_sig[b] = h; kids_draws++;
-        cv_begin(240, heights[b], KIDS_BG);
+        for (int row = 0, rows; (rows = kids_draw_strip(row, heights[b], KIDS_BG)); row += rows) {
         if (b == 0) {
             kids_label(6, 5, &LFONT_B, KIDS_BRAND, KIDS_WHITE, 76);
             if (kids_mode != KIDS_HOME)
@@ -1778,7 +1795,14 @@ static void kids_draw(void)
             kids_text(10, 0, kids_mode == KIDS_ENV ?
                 (is_drum(trk) ? "Kit hit envelope" : "Note envelope") : "Synced to song tempo");
         }
-        cv_blit(0, y); y += heights[b];
+        cv_blit(0, y + row);
+        }
+        y += heights[b];
     }
 }
+#ifdef LION_KIDS_DEVICE
+#undef malloc
+#undef calloc
+#undef free
+#endif
 #endif

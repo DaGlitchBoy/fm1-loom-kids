@@ -29,14 +29,14 @@ typedef struct {
 
 struct ks_blob {
     uint32_t len, refs;
-    uint8_t data[];
+    uint8_t *data;
 };
 
 static ks_blob_t *ks_blob(uint32_t len)
 {
     if (!len || len > KS_BLOB_MAX) return NULL;
     ks_blob_t *blob = malloc(sizeof *blob + len);
-    if (blob) *blob = (ks_blob_t){.len = len, .refs = 1};
+    if (blob) *blob = (ks_blob_t){.len = len, .refs = 1, .data = (uint8_t *)(blob + 1)};
     return blob;
 }
 
@@ -322,12 +322,10 @@ static ks_blob_t *ks_pack(void)
     return out.blob;
 }
 
-static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
+static void ks_defaults(settings_t *settings, patterns_t *patterns, ks_meta_t *metadata)
 {
-    uint32_t len = sizeof(ks_song_t) + NTRK * 4u;
-    ks_song_t *song = calloc(1, len);
-    if (!song) return NULL;
-    project_defaults_into(&song->settings, &song->patterns);
+    memset(metadata, 0, sizeof *metadata);
+    project_defaults_into(settings, patterns);
     static const char *const names[NTRK] = {
         "acid line", "marimba", "Twill", "bellows", "dusty pad", "breath lead", "flute", "whisper pad"
     };
@@ -335,7 +333,7 @@ static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
         EG_ACID, EG_RAYON, EG_DRUMLINE, EG_BELLOWS, EG_KNIT, EG_CANE, EG_SAMPLE, EG_VOILE
     };
     for (int t = 0; t < NTRK; t++) {
-        trk_t *track = &song->settings.trk[t];
+        trk_t *track = &settings->trk[t];
         sound_default(track->par, engines[t]);
         if (engines[t] == EG_DRUMLINE) {
             uint8_t kit[KIT_LEN];
@@ -348,19 +346,27 @@ static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
             int preset = preset_named(engines[t], names[t]);
             apply_preset(track, preset);
             if (preset >= 0 && kids_wet_category(kids_role(PRESETS[preset].role)))
-                song->kids.fx_on[t][0] = song->kids.fx_on[t][1] = 1;
+                metadata->fx_on[t][0] = metadata->fx_on[t][1] = 1;
         }
         track->par[TP_CHAN] = 1;
     }
-    song->settings.trk[AUX_FX1].par[TP_SEND2] = 0;
-    song->kids.delay = 2;
+    settings->trk[AUX_FX1].par[TP_SEND2] = 0;
+    metadata->delay = 2;
     for (int t = 0; t < NTRK; t++) {
-        song->kids.root[t] = 60;
-        song->kids.fx_amount[t][0] = 48;
-        song->kids.fx_amount[t][1] = 52;
-        song->kids.arp_rate[t] = 3;
-        memcpy(song->kids.shaping[t], kids_shape_defaults, KD_COUNT);
+        metadata->root[t] = 60;
+        metadata->fx_amount[t][0] = 48;
+        metadata->fx_amount[t][1] = 52;
+        metadata->arp_rate[t] = 3;
+        memcpy(metadata->shaping[t], kids_shape_defaults, KD_COUNT);
     }
+}
+
+static ks_blob_t *ks_new_song(uint8_t name, const uint8_t *pixels)
+{
+    uint32_t len = sizeof(ks_song_t) + NTRK * 4u;
+    ks_song_t *song = calloc(1, len);
+    if (!song) return NULL;
+    ks_defaults(&song->settings, &song->patterns, &song->kids);
     ks_blob_t *blob = ks_encode(song, len, name, pixels);
     free(song);
     return blob;
@@ -408,6 +414,19 @@ static int ks_meta_valid(const ks_meta_t *m)
     return 1;
 }
 
+#ifdef LION_KIDS_DEVICE
+#include "kids_flash_platform.c"
+static int ks_flash_unpack(const ks_blob_t *blob, uint8_t *out, uint32_t size)
+{
+    kfs_record_t view = {.data = blob->data, .size = blob->len};
+    ks_sink_t buffer = {.data = out, .limit = size};
+    lz_sink_t sink = {ks_write_bytes, &buffer};
+    _Static_assert(sizeof cv_px >= KS_FLASH_BLOCK, "bounded load uses the display scratch");
+    lcd_sync();
+    return ks_flash_read_song(&view, (uint8_t *)(void *)cv_px, &sink) || buffer.used != size;
+}
+#endif
+
 /* 0 success, -1 malformed/unsupported, -2 allocation, -3 unavailable asset. */
 static int ks_unpack(const ks_blob_t *blob, ks_decoded_t *d, int assets)
 {
@@ -421,6 +440,11 @@ static int ks_unpack(const ks_blob_t *blob, ks_decoded_t *d, int assets)
     if (!d->song) return -2;
     uint8_t *raw = (uint8_t *)d->song;
     int rc = -1;
+#ifdef LION_KIDS_DEVICE
+    if (blob->data != (const uint8_t *)(blob + 1)) {
+        if (ks_flash_unpack(blob, raw, len)) goto fail;
+    } else
+#endif
     if (packed) {
         set_in_t in = {src + header, stored};
         lz_src_t stream = {set_get, &in};
