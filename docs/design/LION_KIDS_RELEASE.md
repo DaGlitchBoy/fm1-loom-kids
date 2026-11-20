@@ -25,4 +25,10 @@ The inherited platform recognizes two 1 MiB flash parts. The stock Puya P25Q80 r
 
 The existing hardware target builds LOOM-8 Studio and requires the JieLi toolchain and SDK. The LION KIDS interface and its song storage are built for the host and web emulators. This release candidate has no LION KIDS firmware package or physical boot validation. The inherited firmware workflow runs on the upstream repository only.
 
+Before publishing an FM-1 install link:
+
+1. Port the Kids interface, audio changes and panel handling to the device target. Give Kids songs an atomic flash backend and verify that saving, clearing and Undo preserve calibration, Studio songs and unrelated slots. The current device map already allocates the data region.
+2. Build with the pinned JieLi toolchain and SDK. Record the device image size, SRAM headroom and worst-case audio load. Run the offline package and update tests for the stock Puya and later UC flash parts, including interrupted updates.
+3. Verify boot, save, clear, reboot and stock recovery on both hardware revisions before publishing. Give LION KIDS its own package identity and point the installer and Firmware Hub manifest to that verified package.
+
 [Mac emulator instructions](DELIVERY_8.md)

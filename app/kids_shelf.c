@@ -21,6 +21,8 @@ static uint32_t ks_edit_since, ks_glo_since, ks_delete_until, ks_message_until;
 static const char *ks_message;
 static struct {
     ks_blob_t *blob;
+    ks_blob_t *working_before;
+    ks_decoded_t working;
     uint8_t active, slot, kind, close_open, dirty;
     uint32_t id, pixel_generation;
 } ks_write;
@@ -90,6 +92,16 @@ static ks_blob_t *ks_empty_song(int slot)
     return ks_new_song(name, pixels);
 }
 
+static int ks_decode_empty(const ks_blob_t *name, int slot, ks_decoded_t *decoded)
+{
+    uint8_t pixels[KPIX_BYTES];
+    uint8_t id = ks_read_name(name, slot, pixels);
+    ks_blob_t *empty = ks_new_song(id, pixels);
+    int rc = empty ? ks_unpack(empty, decoded, 0) : -2;
+    ks_drop(empty);
+    return rc;
+}
+
 static void ks_ready_start(int startup)
 {
     const ks_blob_t *bank = ks_slots[KS_PIXELS].blob;
@@ -107,9 +119,10 @@ static void ks_ready_start(int startup)
     int slot = boot && boot->len == 1 && boot->data[0] < KS_SLOTS ? boot->data[0] : 0;
     const ks_blob_t *saved = ks_slots[slot].blob;
     ks_decoded_t decoded = {0};
-    int rc = saved ? ks_unpack(saved, &decoded, 1) : 0;
+    int used = ks_has_song(saved);
+    int rc = used ? ks_unpack(saved, &decoded, 1) : 0;
     ks_unopened = rc != 0;
-    if (saved && !rc) ks_apply(&decoded, 0);
+    if (used && !rc) ks_apply(&decoded, 0);
     else if (startup || saved) {
         ks_blob_t *empty = ks_empty_song(slot);
         if (empty && !ks_unpack(empty, &decoded, 0)) ks_apply(&decoded, 0);
@@ -123,6 +136,8 @@ static void ks_ready_start(int startup)
 static void ks_init(int startup)
 {
     ks_drop(ks_write.blob);
+    ks_drop(ks_write.working_before);
+    ks_unload(&ks_write.working);
     memset(&ks_write, 0, sizeof ks_write);
     ks_selected = ks_target = ks_modal = ks_bad = ks_edit_held = ks_glo_held = ks_deferred = 0;
     ks_loaded = ks_startup_dirty = ks_unopened = 0;
@@ -156,13 +171,13 @@ static void ks_init(int startup)
 
 static int ks_open(int slot)
 {
-    if (slot == ks_loaded && !ks_slots[slot].blob) {
+    int fresh = !ks_has_song(ks_slots[slot].blob);
+    if (slot == ks_loaded && fresh && !ks_unopened) {
         ks_note("Ready to save", slot);
         return 1;
     }
     ks_blob_t *before = ks_pack();
     if (!before) { ks_note("Memory full", -1); return 0; }
-    int fresh = !ks_slots[slot].blob;
     ks_blob_t *target = fresh ? ks_empty_song(slot) : ks_keep(ks_slots[slot].blob);
     ks_decoded_t decoded = {0};
     int rc = target ? ks_unpack(target, &decoded, 1) : -2;
@@ -185,6 +200,13 @@ static int ks_open(int slot)
 
 static int ks_background(int kind) { return kind == KS_PIXELS_WRITE || kind == KS_STARTUP_WRITE; }
 
+static void ks_drop_pending_working(void)
+{
+    ks_drop(ks_write.working_before);
+    ks_write.working_before = NULL;
+    ks_unload(&ks_write.working);
+}
+
 static int ks_finish_write(int status)
 {
     int slot = ks_write.slot, kind = ks_write.kind, open = ks_write.close_open;
@@ -193,6 +215,7 @@ static int ks_finish_write(int status)
     ks_write.active = 0;
     if (status) {
         ks_drop(next);
+        ks_drop_pending_working();
         ks_replay_left = 0;
         if (status == -2) ks_bad |= 1u << slot;
         if (kind == KS_PIXELS_WRITE) kpix_changed = plat_ms() + 1000u;
@@ -214,7 +237,11 @@ static int ks_finish_write(int status)
         int redo = kind == KS_REDO_WRITE;
         const kh_edit_t *e = kh_next(redo);
         if (e && slot == ks_loaded) {
-            if (!strcmp(e->name, "Rename song")) kpix_song_id = ks_read_name(next, slot, kpix_song);
+            if (ks_write.working.song) {
+                ks_apply(&ks_write.working, redo ? e->after_dirty : e->was_dirty);
+                ks_unopened = !redo && e->was_unopened;
+                kpix_song_id = ks_read_name(redo ? next : e->working_before, slot, kpix_song);
+            } else if (!strcmp(e->name, "Rename song")) kpix_song_id = ks_preview_name(slot, kpix_song);
             else if (strcmp(e->name, "Delete song")) ui.dirty = redo ? e->after_dirty : e->was_dirty;
         }
         kh_cursor = (uint8_t)(kh_cursor + (redo ? 1 : -1));
@@ -222,15 +249,22 @@ static int ks_finish_write(int status)
         ks_note(redo ? "Redone" : "Undone", slot);
     } else {
         kh_push((kh_edit_t){.scope = KH_SLOT, .track = (uint8_t)sel_trk(), .slot = (uint8_t)slot,
-            .name = kind == KS_RENAME_WRITE ? "Rename song" : kind == KS_DELETE_WRITE ? "Delete song" : before ? "Replace song" : "Save song",
+            .name = kind == KS_RENAME_WRITE ? "Rename song" : kind == KS_DELETE_WRITE ? "Delete song" :
+                ks_has_song(before) ? "Replace song" : "Save song",
             .song_before = ks_keep(before), .song_after = ks_keep(next),
-            .was_dirty = ks_write.dirty, .after_dirty = 0});
+            .working_before = ks_keep(ks_write.working_before),
+            .was_dirty = ks_write.dirty, .was_unopened = ks_unopened});
         if (kind == KS_SAVE_WRITE) ui.dirty = 0;
         if (kind == KS_RENAME_WRITE) kpix_song_id = ks_read_name(next, slot, kpix_song);
-        if (kind == KS_DELETE_WRITE && slot == ks_loaded) ks_unopened = 0;
+        if (ks_write.working.song) {
+            ks_apply(&ks_write.working, 0);
+            ks_unopened = 0;
+            kpix_song_id = ks_read_name(next, slot, kpix_song);
+        }
         ks_note(kind == KS_RENAME_WRITE ? "Named" : kind == KS_DELETE_WRITE ? "Deleted" : "Saved", slot);
         if (open) ks_open(open - 1);
     }
+    ks_drop_pending_working();
     ks_drop(before);
     return 1;
 }
@@ -240,6 +274,7 @@ static int ks_start_write(int slot, ks_blob_t *blob, int kind, int follow)
 {
     if (!ks_ready || ks_write.active || (ks_bad >> slot & 1u) || ks_slots[slot].revision == UINT32_MAX) {
         ks_drop(blob);
+        ks_drop_pending_working();
         ks_note("Slot unavailable", slot);
         return 0;
     }
@@ -260,6 +295,28 @@ static int ks_start_write(int slot, ks_blob_t *blob, int kind, int follow)
 #endif
 }
 
+static void ks_delete(int slot)
+{
+    int loaded = slot == ks_loaded;
+    if (!ks_has_song(ks_slots[slot].blob) && !(loaded && ui.dirty)) return;
+    if (loaded && (seq.rec || seq.rec_wait)) { ks_note("End recording first", slot); return; }
+    uint8_t pixels[KPIX_BYTES];
+    uint8_t name = ks_preview_name(slot, pixels);
+    if (loaded && !ks_unopened) {
+        name = kpix_song_id;
+        memcpy(pixels, kpix_song, sizeof pixels);
+    }
+    ks_blob_t *marker = ks_name_only(name, pixels);
+    if (loaded) ks_write.working_before = ks_pack();
+    if (!marker || (loaded && (!ks_write.working_before || ks_decode_empty(marker, slot, &ks_write.working)))) {
+        ks_drop(marker);
+        ks_drop_pending_working();
+        ks_note("Memory full", slot);
+        return;
+    }
+    ks_start_write(slot, marker, KS_DELETE_WRITE, 0);
+}
+
 static int ks_replay(const kh_edit_t *e, int redo)
 {
     if (e->scope == KH_LOAD) {
@@ -278,7 +335,16 @@ static int ks_replay(const kh_edit_t *e, int redo)
         ks_note("Slot changed. Reload", slot);
         return 0;
     }
-    return ks_start_write(slot, ks_keep(redo ? e->song_after : e->song_before),
+    ks_blob_t *target = redo ? e->song_after : e->song_before;
+    if (e->working_before && slot == ks_loaded) {
+        int rc = redo ? ks_decode_empty(target, slot, &ks_write.working) :
+            ks_unpack(e->working_before, &ks_write.working, 0);
+        if (rc) {
+            ks_note("Song history unreadable", slot);
+            return 0;
+        }
+    }
+    return ks_start_write(slot, ks_keep(target),
         redo ? KS_REDO_WRITE : KS_UNDO_WRITE, 0);
 }
 
@@ -416,7 +482,7 @@ static void ks_open_preview(void)
 {
     if (!ks_slot_available(ks_selected)) return;
     if (seq.rec || seq.rec_wait) { ks_note("End recording first", -1); return; }
-    if (ui.dirty && (ks_slots[ks_selected].blob ||
+    if (ui.dirty && (ks_has_song(ks_slots[ks_selected].blob) ||
         ks_selected != ks_loaded)) {
         ks_target = ks_selected;
         ks_modal = KS_OPEN_DIRTY;
@@ -432,7 +498,7 @@ static int ks_input(uint32_t down, const int32_t ev[NE])
         ks_deferred = KS_DEFER_NONE;
         if (action == KS_DEFER_SAVE) ks_save_to(0);
         else if (action == KS_DEFER_NAME) ks_assign_name(ks_deferred_id, ks_deferred_name);
-        else if (ks_slots[ks_deferred_slot].blob) ks_start_write(ks_deferred_slot, NULL, KS_DELETE_WRITE, 0);
+        else ks_delete(ks_deferred_slot);
         return 1;
     }
     if (ks_write.active && !ks_background(ks_write.kind)) {
@@ -454,12 +520,10 @@ static int ks_input(uint32_t down, const int32_t ev[NE])
         else if (down & edit) {
             if (ks_modal == KS_DELETE) {
                 ks_modal = KS_CLOSED;
-                if (ks_slots[ks_target].blob) {
-                    if (!ks_write.active) ks_start_write(ks_target, NULL, KS_DELETE_WRITE, 0);
-                    else {
-                        ks_deferred_slot = ks_target;
-                        ks_deferred = KS_DEFER_DELETE;
-                    }
+                if (!ks_write.active) ks_delete(ks_target);
+                else {
+                    ks_deferred_slot = ks_target;
+                    ks_deferred = KS_DEFER_DELETE;
                 }
             } else {
                 ks_modal = KS_CLOSED;

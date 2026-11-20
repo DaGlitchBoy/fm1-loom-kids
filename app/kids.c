@@ -1266,7 +1266,7 @@ static void kids_panel_labels(const tpat_t *pattern)
         if (!kids_metro) word[1] = "Off";
         s_cat(num_s((uint32_t)ks_selected + 1u, slot_text),
             !ks_ready || (ks_bad >> ks_selected & 1u) ? " Check" :
-            ks_slots[ks_selected].blob ? " Used" : " Empty");
+            ks_has_song(ks_slots[ks_selected].blob) ? " Used" : " Empty");
         value[2] = pattern->groove > 0 ? pattern->groove : 0;
         if (!value[2]) word[2] = "Straight";
         word[3] = slot_text;
@@ -1453,7 +1453,8 @@ static int kids_shelf_dialog(void)
             if (ks_modal == KS_DELETE) {
                 char *end = s_cat(message, "Slot ");
                 end = num_s(ks_target + 1u, end);
-                s_cat(end, ks_slots[ks_target].blob ? " will be cleared" : " is already empty");
+                s_cat(end, ks_has_song(ks_slots[ks_target].blob) || (ks_target == ks_loaded && ui.dirty) ?
+                    " will be cleared" : " is already empty");
             }
             kids_text(12, 10, ks_modal == KS_DELETE ? message : "Working song has unsaved edits");
         } else if (band == 2) {

@@ -100,6 +100,25 @@ static void ks_set_name(ks_blob_t *blob, uint8_t name, const uint8_t *pixels)
     put32(blob->data + KS_HEADER_V1, crc32_of(stored, 1 + KPIX_BYTES));
 }
 
+/* A header without a music payload reserves the picture on an empty slot. */
+static int ks_has_song(const ks_blob_t *blob)
+{
+    return blob && !(blob->len == KS_HEADER && ks_header(blob) == KS_HEADER &&
+        !get32(blob->data + 8) && !get32(blob->data + 12) &&
+        !get32(blob->data + 16) && !get32(blob->data + 20));
+}
+
+static ks_blob_t *ks_name_only(uint8_t name, const uint8_t *pixels)
+{
+    ks_blob_t *blob = ks_blob(KS_HEADER);
+    if (!blob) return NULL;
+    memset(blob->data, 0, KS_HEADER_V1);
+    put32(blob->data, KS_MAGIC);
+    put32(blob->data + 4, KS_VERSION);
+    ks_set_name(blob, name, pixels);
+    return blob;
+}
+
 static ks_blob_t *ks_rename(const ks_blob_t *old, uint8_t name, const uint8_t *pixels)
 {
     uint32_t header = ks_header(old);

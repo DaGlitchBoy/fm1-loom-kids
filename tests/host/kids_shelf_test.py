@@ -51,6 +51,22 @@ with tempfile.TemporaryDirectory(prefix="loom-kids-shelf-") as tmp:
     assert slot(1)[12:] == changed[12:]
     assert slot(2) == two and slot(3) == three
 
+    # Clearing the loaded song resets its live notes and sounds. Undo also
+    # restores unsaved changes, and the saved picture survives a restart.
+    clear = "press GLO\nwait 5050\nrelease GLO\ntap EDIT\n"
+    run(open_one + names + "spin K1 10\ntap EDIT\ntap HOME\ntap HOME\n" +
+        "tap SEQ\ntap SEQ\ntapkey w0\ntap HOME\ntap SAVE\nspin K1 -5\ntap GLO\n" +
+        "kids-shelf-fail\n" + clear + "expect kids_shelf_mask 7\nexpect par1.level 71\n" +
+        clear + "expect kids_shelf_mask 6\nexpect par1.level 100\n" +
+        "expect note 1 1 1 0\nexpect kids_name_id 11\nexpect dirty 0\n" +
+        "press HOME\nspin K1 -1\nexpect kids_shelf_mask 7\nexpect par1.level 71\n" +
+        "expect note 1 1 1 60\nexpect dirty 1\nspin K1 1\nexpect kids_shelf_mask 6\n" +
+        "expect par1.level 100\nexpect note 1 1 1 0\nexpect dirty 0\nrelease HOME")
+    run("expect kids_loaded 1\nexpect kids_shelf_mask 6\nexpect kids_name_id 11\n" +
+        "expect par1.level 100\nexpect note 1 1 1 0")
+    assert slot(2) == two and slot(3) == three
+    (root / "song-1.ks").write_bytes(changed)
+
     before = slot(1)
     run(open_one + "spin K1 -11\nkids-shelf-fail\ntap SAVE\nexpect kids_undo 2\nexpect dirty 1\n")
     assert slot(1) == before and slot(2) == two and slot(3) == three

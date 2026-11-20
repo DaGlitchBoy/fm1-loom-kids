@@ -28,7 +28,8 @@ typedef struct {
     size_t size;
     uint8_t *runs;
     ks_blob_t *song_before, *song_after;
-    uint8_t slot, was_dirty, after_dirty, before_slot, after_slot;
+    ks_blob_t *working_before;
+    uint8_t slot, was_dirty, after_dirty, before_slot, after_slot, was_unopened;
 } kh_edit_t;
 
 static int ks_replay(const kh_edit_t *e, int redo);
@@ -96,6 +97,7 @@ static void kh_discard(kh_edit_t *e)
     free(e->bank);
     ks_drop(e->song_before);
     ks_drop(e->song_after);
+    ks_drop(e->working_before);
     *e = (kh_edit_t){0};
 }
 

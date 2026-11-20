@@ -493,7 +493,7 @@ int app_expect(const char *what, int *got)
         *got = ks_modal;
     else if (!strcmp(what, "kids_shelf_mask")) {
         *got = 0;
-        for (int i = 0; i < KS_SLOTS; i++) if (ks_slots[i].blob) *got |= 1 << i;
+        for (int i = 0; i < KS_SLOTS; i++) if (ks_has_song(ks_slots[i].blob)) *got |= 1 << i;
     }
     else if (!strncmp(what, "kids_kit_live.", 14)) {
         int i = atoi(what + 14) - 1;
@@ -511,7 +511,7 @@ int app_expect(const char *what, int *got)
     else if (!strncmp(what, "kids_slot_size.", 15)) {
         int i = atoi(what + 15) - 1;
         if (i < 0 || i >= KS_SLOTS) return 0;
-        *got = ks_slots[i].blob ? (int)ks_slots[i].blob->len : 0;
+        *got = ks_has_song(ks_slots[i].blob) ? (int)ks_slots[i].blob->len : 0;
     }
     else if (!strcmp(what, "kids_undo"))
         *got = kh_cursor;
