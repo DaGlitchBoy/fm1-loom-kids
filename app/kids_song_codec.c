@@ -208,30 +208,27 @@ static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, uint8_t name, c
 
 typedef struct { const void *data; uint32_t size; } ks_part_t;
 
-static int ks_write_parts(const ks_part_t *parts, int count, lz_sink_t *sink, int packed)
+static int ks_write_parts(const ks_part_t *parts, int count, lz_sink_t *sink, int packed, uint32_t block)
 {
     for (int i = 0; i < count; i++) {
         const ks_part_t *part = &parts[i];
-        if (packed) {
-            /* Each segment uses local matches. Concatenated tokens still form
-             * one ordinary LZ stream that the existing reader can decode. */
-            if (lz_compress(part->data, part->size, sink)) return -1;
-        } else {
-            const uint8_t *p = part->data;
-            for (uint32_t offset = 0; offset < part->size;) {
-                uint32_t bytes = part->size - offset;
-                if (bytes > LZ_MAXLIT) bytes = LZ_MAXLIT;
-                if (sink->put(sink->ctx, p + offset, bytes)) return -1;
-                offset += bytes;
-            }
+        const uint8_t *p = part->data;
+        for (uint32_t offset = 0; offset < part->size;) {
+            uint32_t bytes = part->size - offset;
+            uint32_t limit = packed ? block : LZ_MAXLIT;
+            if (bytes > limit) bytes = limit;
+            /* Matches stay within a block. The concatenated tokens are still
+             * an ordinary LZ stream for the emulator's existing reader. */
+            if (packed ? lz_compress(p + offset, bytes, sink) :
+                         sink->put(sink->ctx, p + offset, bytes)) return -1;
+            offset += bytes;
         }
     }
     return 0;
 }
-
 /* The caller keeps song state stable until both passes finish. No output
  * begins until its final size is known. */
-static int ks_stream_song(lz_sink_t *target, int (*begin)(void *, uint32_t))
+static int ks_stream_song(lz_sink_t *target, int (*begin)(void *, uint32_t), uint32_t block)
 {
     _Static_assert(sizeof(ks_song_t) == sizeof(settings_t) + sizeof(patterns_t) + sizeof(ks_meta_t),
                    "streaming requires a packed sequence of the three song members");
@@ -279,7 +276,7 @@ static int ks_stream_song(lz_sink_t *target, int (*begin)(void *, uint32_t))
     if (len > KS_RAW_MAX) return -1;
     ks_sink_t measure = {.limit = len};
     lz_sink_t sink = {ks_write_bytes, &measure};
-    int packed = !ks_write_parts(parts, count, &sink, 1) && measure.used < len;
+    int packed = !ks_write_parts(parts, count, &sink, 1, block) && measure.used < len;
     uint32_t stored = packed ? measure.used : len;
     uint8_t header[KS_HEADER];
     put32(header, KS_MAGIC);
@@ -291,7 +288,7 @@ static int ks_stream_song(lz_sink_t *target, int (*begin)(void *, uint32_t))
     ks_set_name(header, kpix_song_id, kpix_song);
     if (begin(target->ctx, KS_HEADER + stored) || target->put(target->ctx, header, KS_HEADER))
         return -1;
-    return ks_write_parts(parts, count, target, packed);
+    return ks_write_parts(parts, count, target, packed, block);
 }
 
 typedef struct {
@@ -318,7 +315,7 @@ static ks_blob_t *ks_pack(void)
 {
     ks_blob_output_t out = {0};
     lz_sink_t sink = {ks_blob_put, &out};
-    if (ks_stream_song(&sink, ks_blob_begin) || out.sink.used != out.sink.limit) {
+    if (ks_stream_song(&sink, ks_blob_begin, KS_RAW_MAX) || out.sink.used != out.sink.limit) {
         ks_drop(out.blob);
         return NULL;
     }

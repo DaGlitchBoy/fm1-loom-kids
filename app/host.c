@@ -1543,6 +1543,15 @@ static int song_cmd(const char *cmd)
 #ifndef PLAT_WEB
 #include "kids_flash_platform.c"
 
+static int host_compare_flash_chunk(void *ctx, const uint8_t *p, uint32_t n)
+{
+    set_in_t *expected = ctx;
+    if (n > expected->left || memcmp(expected->p, p, n)) return -1;
+    expected->p += n;
+    expected->left -= n;
+    return 0;
+}
+
 static void host_check_kids_flash(void)
 {
     unsigned slot = ks_loaded;
@@ -1552,9 +1561,23 @@ static void host_check_kids_flash(void)
     kfs_record_t written;
     if (kfs_read(&kfs_plat_io, slot, &written) || written.revision != before.revision + 1)
         host_die("could not read streamed song from simulated flash", "");
+    _Static_assert(sizeof cv_px >= KS_FLASH_BLOCK, "reuse display scratch for flash validation");
+    lcd_sync();
+    if (ks_flash_read_song(&written, (uint8_t *)(void *)cv_px, NULL))
+        host_die("bounded flash reader could not validate streamed song", "");
+
     ks_blob_t *expected = ks_pack();
-    if (!expected || expected->len != written.size || memcmp(expected->data, written.data, written.size))
-        host_die("streamed song differs from the standard save", "");
+    if (!expected || get32(expected->data + 8) != get32(written.data + 8) ||
+        get32(expected->data + 16) != get32(written.data + 16) ||
+        memcmp(expected->data + KS_HEADER_V1, written.data + KS_HEADER_V1, KS_HEADER - KS_HEADER_V1))
+        host_die("decoded flash song differs from the standard save", "");
+    ks_decoded_t decoded = {0};
+    if (ks_unpack(expected, &decoded, 0)) host_die("standard song decode failed", "");
+    set_in_t bytes = {(const uint8_t *)decoded.song, get32(expected->data + 8)};
+    lz_sink_t compare = {host_compare_flash_chunk, &bytes};
+    if (ks_flash_read_song(&written, (uint8_t *)(void *)cv_px, &compare) || bytes.left)
+        host_die("streamed flash song differs byte-for-byte", "");
+    ks_unload(&decoded);
     ks_drop(expected);
 }
 #endif
