@@ -2,6 +2,7 @@
 """Exercise the native journal against fresh processes and separate slot files."""
 import os
 from pathlib import Path
+from random import Random
 import struct
 import subprocess
 import sys
@@ -135,4 +136,37 @@ with tempfile.TemporaryDirectory(prefix="loom-kids-shelf-") as tmp:
     env["LOOM_KIDS_SHELF"] = str(live)
     run("tap REC\ntap PLAY\ntapkey w0\ntap SAVE\nexpect kids_rec 2\nexpect kids_shelf_mask 1")
     run("expect note 1 1 2 53")
+
+    dense = root / "dense"
+    dense.mkdir()
+    env["LOOM_KIDS_SHELF"] = str(dense)
+    actions = ["tap GLO", "spin K4 1", "tap EDIT", "tap HOME", "expect kids_loaded 2"]
+    checks = ["expect kids_loaded 2", "expect kids_shelf_mask 2"]
+    rng = Random(12345)
+    for track in range(1, 7):
+        if track > 1:
+            actions.append("spin SELECT 1")
+        actions += ["tap FX", "spin K1 18", "tap SEL", "spin K1 24",
+                    "tap EDIT", "spin K1 26", "spin K2 15", "spin K3 10",
+                    "spin K4 16", "tap HOME", f"pat {track} 1 64"]
+        if track == 3:
+            for sound in (1, 3, 5):
+                hits = "".join(rng.choice("xogo") for _ in range(64))
+                actions.append(f"hits 3 1 {sound} {hits}")
+        else:
+            for step in range(1, 65):
+                notes = sorted(rng.sample(range(47, 83), 3))
+                length = rng.choice((0.5, 1, 1.5))
+                velocity = rng.randrange(48, 115)
+                pitches = " ".join(map(str, notes))
+                actions.append(f"notes {track} 1 {step} {length} {velocity} {pitches}")
+                for index, note in enumerate(notes, start=1):
+                    checks.append(f"expect noteat {track} 1 {step} {index} {note}")
+                checks.append(f"expect stepvel {track} 1 {step} {velocity}")
+        checks += [f"expect kids_send.{track}.1 72", f"expect kids_send.{track}.2 70"]
+    run("\n".join(actions + ["tap SAVE", "expect kids_shelf_mask 2"]))
+    record = dense / "song-2.ks"
+    before = record.read_bytes()
+    run("\n".join(checks + ["tap PLAY", "wait 10000", "tap PLAY"]))
+    assert record.read_bytes() == before
 print("Compared exact slot payloads, unaffected slot files, CRC rejection and atomic failure recovery")

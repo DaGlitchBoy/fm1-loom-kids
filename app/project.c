@@ -489,18 +489,23 @@ static void put32(uint8_t *p, uint32_t v)
     p[2] = (uint8_t)(v >> 16);
     p[3] = (uint8_t)(v >> 24);
 }
-static uint32_t crc32_of(const uint8_t *p, uint32_t n)       /* zlib CRC-32, 4 bits per step */
+static uint32_t crc32_add(uint32_t crc, const uint8_t *p, uint32_t n) /* zlib CRC-32, 4 bits per step */
 {
     static const uint32_t T[16] = {
         0x00000000u, 0x1DB71064u, 0x3B6E20C8u, 0x26D930ACu, 0x76DC4190u, 0x6B6B51F4u, 0x4DB26158u, 0x5005713Cu,
         0xEDB88320u, 0xF00F9344u, 0xD6D6A3E8u, 0xCB61B38Cu, 0x9B64C2B0u, 0x86D3D2D4u, 0xA00AE278u, 0xBDBDF21Cu};
-    uint32_t c = 0xFFFFFFFFu;
+    uint32_t c = ~crc;
     while (n--) {
         c ^= *p++;
         c = (c >> 4) ^ T[c & 15u];
         c = (c >> 4) ^ T[c & 15u];
     }
     return ~c;
+}
+
+static uint32_t crc32_of(const uint8_t *p, uint32_t n)
+{
+    return crc32_add(0, p, n);
 }
 
 /* the object is the n bytes of io_buf; written only if they changed. Not while a backup streams (app_backup_hold:

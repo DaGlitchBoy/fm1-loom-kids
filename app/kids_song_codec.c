@@ -178,7 +178,7 @@ static int ks_write_bytes(void *ctx, const uint8_t *p, uint32_t n)
 {
     ks_sink_t *s = ctx;
     if (n > s->limit - s->used) return -1;
-    memcpy(s->data + s->used, p, n);
+    if (s->data) memcpy(s->data + s->used, p, n);
     s->used += n;
     return 0;
 }
@@ -206,20 +206,35 @@ static ks_blob_t *ks_encode(const ks_song_t *song, uint32_t len, uint8_t name, c
     return blob;
 }
 
+typedef struct { const void *data; uint32_t size; } ks_part_t;
+
+static int ks_write_parts(const ks_part_t *parts, int count, lz_sink_t *sink, int packed)
+{
+    for (int i = 0; i < count; i++) {
+        const ks_part_t *part = &parts[i];
+        if (packed) {
+            /* Each segment uses local matches. Concatenated tokens still form
+             * one ordinary LZ stream that the existing reader can decode. */
+            if (lz_compress(part->data, part->size, sink)) return -1;
+        } else {
+            const uint8_t *p = part->data;
+            for (uint32_t offset = 0; offset < part->size;) {
+                uint32_t bytes = part->size - offset;
+                if (bytes > LZ_MAXLIT) bytes = LZ_MAXLIT;
+                if (sink->put(sink->ctx, p + offset, bytes)) return -1;
+                offset += bytes;
+            }
+        }
+    }
+    return 0;
+}
+
 static ks_blob_t *ks_pack(void)
 {
-    size_t len = sizeof(ks_song_t);
-    for (int t = 0; t < NTRK; t++) {
-        const kids_bank_t *b = kids_other[t];
-        len += 4 + (b ? sizeof b->patterns + (size_t)b->nlanes * sizeof(lane_t) : 0);
-    }
-    if (len > KS_RAW_MAX) return NULL;
-    ks_song_t *song = malloc(len);
-    if (!song) return NULL;
-    song->settings = proj;
-    song->settings.format = PROJ_FORMAT;
-    song->patterns = pats;
-    ks_meta_t *m = &song->kids;
+    _Static_assert(sizeof(ks_song_t) == sizeof(settings_t) + sizeof(patterns_t) + sizeof(ks_meta_t),
+                   "streaming requires a packed sequence of the three song members");
+    ks_meta_t metadata;
+    ks_meta_t *m = &metadata;
     memset(m, 0, sizeof *m);
 #define KS_STORE(field, source) memcpy(m->field, source, sizeof m->field)
     KS_STORE(scale, kids_scale); KS_STORE(chord, kids_chord); KS_STORE(root, kids_root);
@@ -231,22 +246,54 @@ static ks_blob_t *ks_pack(void)
     m->metro = kids_metro;
     m->delay = kids_delay_choice;
     int missing = 0;
-    m->user_samples = (uint8_t)ks_sample_refs(&song->settings, &song->patterns, &missing);
+    m->user_samples = (uint8_t)ks_sample_refs(&proj, &pats, &missing);
     if (m->user_samples) ks_bank_fingerprint(&m->sample_crc);
 
-    uint8_t *dst = (uint8_t *)song + sizeof *song;
+    uint32_t settings_prefix[] = {proj.magic, PROJ_FORMAT};
+    _Static_assert(offsetof(settings_t, name) == sizeof settings_prefix,
+                   "settings prefix contains only magic and format");
+    ks_part_t parts[4 + 3 * NTRK] = {
+        {settings_prefix, sizeof settings_prefix},
+        {(const uint8_t *)&proj + sizeof settings_prefix, sizeof proj - sizeof settings_prefix},
+        {&pats, sizeof pats}, {m, sizeof *m}
+    };
+    uint8_t banks[NTRK][4];
+    int count = 4;
     for (int t = 0; t < NTRK; t++) {
         const kids_bank_t *b = kids_other[t];
-        put32(dst, b ? (uint32_t)b->nlanes + 1 : 0);
-        dst += 4;
+        put32(banks[t], b ? (uint32_t)b->nlanes + 1 : 0);
+        parts[count++] = (ks_part_t){banks[t], sizeof banks[t]};
         if (!b) continue;
-        memcpy(dst, b->patterns, sizeof b->patterns);
-        dst += sizeof b->patterns;
-        memcpy(dst, b->lanes, (size_t)b->nlanes * sizeof(lane_t));
-        dst += (size_t)b->nlanes * sizeof(lane_t);
+        parts[count++] = (ks_part_t){b->patterns, sizeof b->patterns};
+        if (b->nlanes)
+            parts[count++] = (ks_part_t){b->lanes, (uint32_t)b->nlanes * sizeof(lane_t)};
     }
-    ks_blob_t *blob = ks_encode(song, (uint32_t)len, kpix_song_id, kpix_song);
-    free(song);
+
+    uint32_t len = 0, crc = 0;
+    for (int i = 0; i < count; i++) {
+        len += parts[i].size;
+        crc = crc32_add(crc, parts[i].data, parts[i].size);
+    }
+    if (len > KS_RAW_MAX) return NULL;
+    ks_sink_t measure = {.limit = len};
+    lz_sink_t sink = {ks_write_bytes, &measure};
+    int packed = !ks_write_parts(parts, count, &sink, 1) && measure.used < len;
+    uint32_t stored = packed ? measure.used : len;
+    ks_blob_t *blob = ks_blob(KS_HEADER + stored);
+    if (!blob) return NULL;
+    ks_sink_t out = {blob->data + KS_HEADER, 0, stored};
+    sink.ctx = &out;
+    if (ks_write_parts(parts, count, &sink, packed) || out.used != stored) {
+        ks_drop(blob);
+        return NULL;
+    }
+    put32(blob->data, KS_MAGIC);
+    put32(blob->data + 4, KS_VERSION);
+    put32(blob->data + 8, len);
+    put32(blob->data + 12, stored);
+    put32(blob->data + 16, crc);
+    put32(blob->data + 20, (uint32_t)packed);
+    ks_set_name(blob, kpix_song_id, kpix_song);
     return blob;
 }
 
