@@ -3,9 +3,9 @@
  * standard IMA one (IMA Digital Audio Focus and Technical Working Groups, "Recommended Practices for Enhancing
  * Digital Audio Compatibility in Multimedia Systems", 1992), run a block at a time from the block's checkpoint. */
 #include "sample.h"
-/* the factory set built in: the host simulator, the DSP tests and the emulator (no flash to fit); on the FM-1 its
- * rows are empty since 0.8 and play the bank's entries of the factory set (the installer puts them there) */
-#if defined(PLAT_HOST) && !defined(SMP_FACT_MOVED)
+/* The Kids device profile has room for the factory sounds in its image and
+ * reserves the old sample-bank window for songs. Studio still uses its bank. */
+#if defined(LION_KIDS_DEVICE) || (defined(PLAT_HOST) && !defined(SMP_FACT_MOVED))
 #define SMP_FACT_BUILTIN 1
 #else
 #define SMP_FACT_BUILTIN 0
@@ -62,7 +62,7 @@ static void fact_init(void)
             s->name[k] = SMP_FACT[i].name[k];
         s->name[k] = 0;
         moved[i] = -1;
-#ifdef PLAT_WEB
+#if defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
         if (!s->n && i >= SMP_FACT_BREAK) {   /* the emulator: the breaks built in (samples.h SMP_WEB) */
             s->adp = SMP_WEB_ADP + SMP_WEB[i - SMP_FACT_BREAK][0];
             s->ck = SMP_WEB_CK + SMP_WEB[i - SMP_FACT_BREAK][1];

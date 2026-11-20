@@ -306,10 +306,26 @@ static void kids_set_length(int delta)
     mark_dirty();
 }
 
+/* Keep list and pitch detents exact. Give the device's continuous controls
+ * a larger step, with the existing speed curve for quick turns. */
+static int kids_continuous_delta(int role, int32_t delta, int limit)
+{
+    int step = clampi(delta, -limit, limit);
+#ifdef LION_KIDS_DEVICE
+    if (step && !ACCEL_OFF) {
+        int fast = accel(role, step);
+        step = fast == step ? 2 * step : fast;
+    }
+#else
+    (void)role;
+#endif
+    return clampi(step, -limit, limit);
+}
+
 static void kids_mix_knobs(const int32_t ev[NE])
 {
     int track = sel_trk();
-    if (ev[EN_K1]) set_tp(track, TP_LEVEL, proj.trk[track].par[TP_LEVEL] + clampi(ev[EN_K1], -100, 100));
+    if (ev[EN_K1]) set_tp(track, TP_LEVEL, proj.trk[track].par[TP_LEVEL] + kids_continuous_delta(EN_K1, ev[EN_K1], 100));
     if (ev[EN_K2]) kids_set_length(clampi(ev[EN_K2], -3, 3));
 }
 
@@ -462,7 +478,9 @@ static void kids_shape_knobs(int first, const int32_t ev[NE])
         if (!ev[EN_K1 + k]) continue;
         static const uint8_t lfo_knobs[] = {KD_DEPTH, KD_TARGET, KD_RATE, KD_WAVE};
         int p = first == KD_DEPTH ? lfo_knobs[k] : first + k;
-        int v = clampi(kids_shaping[track][p] + clampi(ev[EN_K1 + k], -2 * KD_DEPTH_ZERO, 2 * KD_DEPTH_ZERO), 0, max[p]);
+        int delta = max[p] >= 100 ? kids_continuous_delta(EN_K1 + k, ev[EN_K1 + k], max[p]) :
+            clampi(ev[EN_K1 + k], -(int)max[p], max[p]);
+        int v = clampi(kids_shaping[track][p] + delta, 0, max[p]);
         if (v != kids_shaping[track][p]) {
             kids_shape_set(track, p, v);
             mark_dirty();
@@ -480,13 +498,13 @@ static void kids_panel_knobs(const int32_t ev[NE])
     } else if (kids_panel == KP_GLOBAL) {
         if (ev[EN_K1]) set_tempo_x10(proj.tempo_x10 + clampi(ev[EN_K1], -180, 180) * 10);
         if (ev[EN_K2]) {
-            kids_metro = (uint8_t)clampi(kids_metro + clampi(ev[EN_K2], -100, 100), 0, 100);
+            kids_metro = (uint8_t)clampi(kids_metro + kids_continuous_delta(EN_K2, ev[EN_K2], 100), 0, 100);
             engine_kids_metro(kids_metro);
             mark_dirty();
         }
         if (ev[EN_K3]) {
             tpat_t *pattern = tpat(track);
-            int swing = clampi(pattern->groove + clampi(ev[EN_K3], -99, 99), 0, 99);
+            int swing = clampi(pattern->groove + kids_continuous_delta(EN_K3, ev[EN_K3], 99), 0, 99);
             if (swing != pattern->groove || proj.groove != GR_SWING) {
                 if (proj.groove != GR_SWING) set_groove_type(GR_SWING);
                 pattern->groove = (int8_t)swing;
@@ -510,17 +528,17 @@ static void kids_panel_knobs(const int32_t ev[NE])
         int aux = AUX_FX1 + slot;
         uint8_t *par = proj.trk[aux].par;
         if (ev[EN_K1]) {
-            kids_fx_amount[track][slot] = (uint8_t)clampi(kids_fx_amount[track][slot] + clampi(ev[EN_K1], -127, 127), 0, 127);
+            kids_fx_amount[track][slot] = (uint8_t)clampi(kids_fx_amount[track][slot] + kids_continuous_delta(EN_K1, ev[EN_K1], 127), 0, 127);
             kids_send_gain[track][slot] = kids_fx_on[track][slot] ? kids_fx_amount[track][slot] : 0;
         }
         if (slot) {
-            par[TP_E2] = (uint8_t)clampi(par[TP_E2] + clampi(ev[EN_K2], -127, 127), 0, 127);
-            par[TP_E1] = (uint8_t)clampi(par[TP_E1] + clampi(ev[EN_K3], -127, 127), 0, 127);
-            par[TP_E3] = (uint8_t)clampi(par[TP_E3] + clampi(ev[EN_K4], -127, 127), 0, 127);
+            par[TP_E2] = (uint8_t)clampi(par[TP_E2] + kids_continuous_delta(EN_K2, ev[EN_K2], 127), 0, 127);
+            par[TP_E1] = (uint8_t)clampi(par[TP_E1] + kids_continuous_delta(EN_K3, ev[EN_K3], 127), 0, 127);
+            par[TP_E3] = (uint8_t)clampi(par[TP_E3] + kids_continuous_delta(EN_K4, ev[EN_K4], 127), 0, 127);
             if (ev[EN_K2] || ev[EN_K3] || ev[EN_K4]) apply_fx(aux);
         } else {
-            par[TP_E3] = (uint8_t)clampi(par[TP_E3] + clampi(ev[EN_K2], -127, 127), 0, 127);
-            par[TP_E4] = (uint8_t)clampi(par[TP_E4] + clampi(ev[EN_K4], -127, 127), 0, 127);
+            par[TP_E3] = (uint8_t)clampi(par[TP_E3] + kids_continuous_delta(EN_K2, ev[EN_K2], 127), 0, 127);
+            par[TP_E4] = (uint8_t)clampi(par[TP_E4] + kids_continuous_delta(EN_K4, ev[EN_K4], 127), 0, 127);
             if (ev[EN_K3]) kids_delay_choice = (uint8_t)clampi(kids_delay_actual + clampi(ev[EN_K3], -4, 4), 0, kids_delay_limit());
             if (ev[EN_K2] || ev[EN_K3] || ev[EN_K4]) kids_update_delay();
         }
@@ -533,6 +551,12 @@ static int kids_sound_valid(int category, int i)
     if (category == KC_DRUMS) return i < NFKITS || user_kit_name[i - NFKITS][0];
     int engine = preset_engine(i);
     if (engine < 0 || engine == EG_DRUMLINE || engine == EG_MIDI) return 0;
+#ifdef LION_KIDS_DEVICE
+    if (engine == EG_SAMPLE || engine == EG_SLICE) {
+        int sample = i < NPRESETS ? PRESETS[i].par[TP_E1] : user_presets[i - NPRESETS].par[TP_E1];
+        if (!smp_get(sample)) return 0;
+    }
+#endif
     return i < NPRESETS ? kids_role(PRESETS[i].role) == category : category == KC_USER;
 }
 
@@ -810,7 +834,7 @@ static void kids_note_knobs(const int32_t ev[NE])
     unsigned group = 0x500 + (unsigned)index * (NDRUM + 1u) + (is_drum(track) ? ui.dsound + 1u : 0u);
     if (ev[EN_K1] && kids_step_velocity()) {
         kh_begin(&kh_edit, KH_STEP, "Velocity", track, group);
-        kids_edit_velocity(clampi(ev[EN_K1], -127, 127));
+        kids_edit_velocity(kids_continuous_delta(EN_K1, ev[EN_K1], 127));
         kh_end(&kh_edit);
     }
     if (ev[EN_K2] && !is_drum(track) && (has_note || kids_mode == KIDS_STEPS)) {
@@ -1416,7 +1440,6 @@ static void kids_history_strip(void)
 static int kids_draw_strip(int row, int height, uint16_t bg)
 {
     int capacity = CV_MAX / 240;
-    if (height > 120) height = 120; /* Match the original viewport's lower edge. */
     if (row >= height) return 0;
     cv_begin(240, (unsigned)(height - row < capacity ? height - row : capacity), bg);
     cv_oy = -row;
@@ -1581,6 +1604,12 @@ static int glo_overlay_panel_draw(void)
 static void kids_draw(void)
 {
     if (glo_overlay_panel_draw() || kids_shelf_dialog()) return;
+    static uint8_t drawn_mode;
+    if (drawn_mode != kids_mode) {
+        /* The same band index can cover a different set of physical rows. */
+        memset(kids_sig, 0, sizeof kids_sig);
+        drawn_mode = kids_mode;
+    }
     static const uint8_t stage_h[] = {28, 64, 64, 20, 24, 40};
     static const uint8_t steps_h[] = {28, 24, 29, 29, 29, 29, 32, 40};
     static const uint8_t graph_h[] = {28, 28, 128, 16, 40};

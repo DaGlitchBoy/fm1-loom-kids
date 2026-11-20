@@ -9,6 +9,11 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+DEVICE_PREFIX = "FM-1_736"
+PREVIEW_VERSION = "0.0.1"
+PRODUCT = DEVICE_PREFIX + "".join(f"{int(part):02d}" for part in PREVIEW_VERSION.split("."))
+INSTALL_URL = "https://vmphilemon-glitch.github.io/fm1-loom-kids/"
+
 
 def main():
     args = argparse.ArgumentParser(description=__doc__)
@@ -35,15 +40,15 @@ def main():
         config = stage / "app" / "fm1.toml"
         profile = {
             "name": '"lion-kids"',
-            "id_prefix": '"FM-1_736"',
+            "id_prefix": f'"{DEVICE_PREFIX}"',
             "usb_product": '"LION KIDS FM-1"',
             "usb_manufacturer": '"LION KIDS"',
             "pool_spare": "8192",
             "screenshot": '"docs/img/lion-kids-home.png"',
             "description": '"An eight-track groovebox with live playing and a step sequencer. Based on LOOM-8."',
             "repo": '"https://github.com/vmphilemon-glitch/fm1-loom-kids"',
-            "install": '""',
-            "site": '""',
+            "install": f'"{INSTALL_URL}"',
+            "site": f'"{INSTALL_URL}"',
         }
         for feature in ("ble", "ble_pairing", "ble_central", "bt_audio", "usb_audio_in", "usb_host", "mirror"):
             profile[feature] = "false"
@@ -55,14 +60,15 @@ def main():
             lines.append(f"{key} = {profile[key]}" if key in profile else line)
         lines.append('o2_cflags = ["-DLION_KIDS_DEVICE=1"]')
         config.write_text("\n".join(lines) + "\n")
-        flags = ["--host"] if options.host else []
+        flags = ["--host"] if options.host else ["--release", PREVIEW_VERSION]
         subprocess.run([sys.executable, "base/tools/build.py", "app", *flags], cwd=stage, check=True)
         names = ("host/lion-kids_host",) if options.host else (
-            "lion-kids.fwsc", "lion-kids.bin", "lion-kids-res.bin", "lion-kids.elf",
+            f"lion-kids-{PREVIEW_VERSION}.fwsc", "lion-kids.bin",
+            f"lion-kids-{PREVIEW_VERSION}-res.bin", "lion-kids.elf",
             "loader/ota.bin", "firmware.json")
         for name in names:
             source = stage / "app" / "build" / name
-            dest = output / source.name
+            dest = output / source.name.replace(f"-{PREVIEW_VERSION}", "")
             shutil.copy2(source, dest)
             print(dest.relative_to(ROOT))
 

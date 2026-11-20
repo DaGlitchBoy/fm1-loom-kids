@@ -4,6 +4,8 @@ This candidate uses the normal M‑VAVE firmware update path and keeps the stock
 
 The device has one 64-step pattern per track, with the same 16, 32 and 64-step lengths in the Kids controls. Ordinary edits have Undo and Redo. Save, open and clear are outside the device edit history. Each saved song can use up to 16,364 bytes in flash. There is a second flash copy for an interrupted save. Device songs and browser songs are kept separately.
 
+Preview 0.0.1 includes the factory recorded instruments and break loops in the firmware image. It also speeds up continuous controls on the panel and repaints the full screen when returning from a graph view. Preset and step selectors still move one item per detent.
+
 ## Install from Chrome or Edge
 
 1. Open the [LION KIDS installer](https://vmphilemon-glitch.github.io/fm1-loom-kids/). Check that it says **LION KIDS device preview**.

@@ -7,13 +7,13 @@ import json
 from pathlib import Path
 import shutil
 import sys
+from build_lion_device import PREVIEW_VERSION, PRODUCT
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "base" / "tools"))
 from make_site import product_of, read_conf, strip_module
 
 SOURCE = "https://github.com/vmphilemon-glitch/fm1-loom-kids"
-PRODUCT = "FM-1_73600"
 
 def main():
     if len(sys.argv) != 2:
@@ -35,11 +35,11 @@ def main():
     if (hash !== meta.sha256 || productOf(pkg) !== meta.product)''')
     lib = "\n".join(strip_module((web / file).read_text()) for file in ("fm1ports.js", "fm1pkg.js", "fm1ota.js"))
     meta = {
-        "version": "device preview",
+        "version": f"device preview {PREVIEW_VERSION}",
         "product": PRODUCT,
-        "pkg": package.name,
+        "pkg": f"{package.name}?v={PREVIEW_VERSION}",
         "sha256": hashlib.sha256(raw).hexdigest(),
-        "res": resources.name,
+        "res": f"{resources.name}?v={PREVIEW_VERSION}",
         "backup": False,
     }
     config = read_conf(ROOT / "app" / "fm1.toml")
