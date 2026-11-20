@@ -31,6 +31,8 @@ typedef struct {
 } kids_cell_t;
 static kids_cell_t kids_cell;
 static uint32_t kids_sig[8], kids_draws;
+static uint32_t glo_overlay_down_at, glo_overlay_tap_at, glo_overlay_screen_at;
+static uint8_t glo_overlay_taps, glo_overlay_armed, glo_overlay_screen, glo_overlay_painted;
 #include <stddef.h>
 #include <stdlib.h>
 #include "kids_music.h"
@@ -124,6 +126,7 @@ static void kids_reset_banks(void)
     kids_cell.track = -1;
     memset(kids_perf_page, 0, sizeof kids_perf_page);
     memset(kids_cursor, 0, sizeof kids_cursor);
+    glo_overlay_taps = glo_overlay_armed = glo_overlay_screen = glo_overlay_painted = 0;
     kids_seq_view = KIDS_PERFORMANCE;
     kids_perf_manual = 0;
     memset(kids_scale, 0, sizeof kids_scale);
@@ -937,10 +940,37 @@ static void kids_turn_knobs(const int32_t ev[NE])
     }
 }
 
+static int glo_overlay_panel_input(uint32_t down, uint32_t up)
+{
+    const uint32_t glo = 1u << B_GLO;
+    uint32_t now = plat_ms();
+    if (glo_overlay_screen && now - glo_overlay_screen_at < 7000u) return 1;
+    if (down & ~glo || ks_modal || kpix_open || kh_home) glo_overlay_taps = glo_overlay_armed = 0;
+    if (down & glo && !ks_modal && !kpix_open && !kh_home) {
+        glo_overlay_down_at = now;
+        glo_overlay_armed = 1;
+    }
+    if (!(up & glo) || !glo_overlay_armed) return 0;
+    glo_overlay_armed = 0;
+    if (now - glo_overlay_down_at > 480u) {
+        glo_overlay_taps = 0;
+        return 0;
+    }
+    if (now - glo_overlay_tap_at > 850u) glo_overlay_taps = 0;
+    glo_overlay_tap_at = now;
+    if (++glo_overlay_taps != 7) return 0;
+    glo_overlay_taps = 0;
+    glo_overlay_screen = 1;
+    glo_overlay_screen_at = now;
+    kids_notes_off();
+    return 1;
+}
+
 static int kids_input(void)
 {
     if (!kids_mode) return 0;
     uint32_t btn = plat_buttons(), keys = plat_keys();
+    uint32_t up = ui.btn & ~btn;
     uint32_t down = btn & ~ui.btn, kd = keys & ~ui.keys, ku = ui.keys & ~keys;
     int32_t ev[NE];
     for (int i = 0; i < NE; i++) ev[i] = plat_enc(i);
@@ -956,6 +986,7 @@ static int kids_input(void)
     if (ev[EN_SELECT] || ev[EN_K1] || ev[EN_K2] || ev[EN_K3] || ev[EN_K4] ||
         (down & ((1u << B_HOME) | (1u << B_SEQ) | (1u << B_GLO))))
         kids_effect_return.button = 0;
+    if (glo_overlay_panel_input(down, up)) return 1;
     if (ks_input(down, ev)) return 1;
     if (kids_history_input(down, btn, ev[EN_K1])) return 1;
 
@@ -1503,9 +1534,36 @@ static void kids_note_labels(int track, int selected, int velocity, uint16_t ink
     kids_number(181, 20, selected + 1);
 }
 
+static int glo_overlay_panel_draw(void)
+{
+    if (!glo_overlay_screen) return 0;
+    if (plat_ms() - glo_overlay_screen_at >= 7000u) {
+        glo_overlay_screen = glo_overlay_painted = 0;
+        memset(kids_sig, 0, sizeof kids_sig);
+        return 0;
+    }
+    if (glo_overlay_painted) return 1;
+    glo_overlay_painted = 1;
+    const uint16_t rose = RGB(246, 104, 122);
+    const char *const message[] = {"ME AGAPI - O MPAMPAS", "GIA TO LIONTARAKI MOU"};
+    const uint8_t heart[] = {0x36, 0x7f, 0x7f, 0x3e, 0x1c, 0x08};
+    lcd_fill(0, 0, 240, 240, 0);
+    cv_begin(240, 83, 0);
+    for (int i = 0; i < 2; i++) {
+        const loom_font_t *font = &LFONT_M;
+        if (text_w(font, message[i]) > 220) font = &LFONT_B;
+        cv_text((240 - text_w(font, message[i])) / 2, 3 + 22 * i, font, message[i], rose);
+    }
+    for (int y = 0; y < 6; y++)
+        for (int x = 0; x < 7; x++)
+            if ((heart[y] >> x) & 1u) cv_rect(106 + 4 * x, 52 + 4 * y, 4, 4, rose);
+    cv_blit(0, 80);
+    return 1;
+}
+
 static void kids_draw(void)
 {
-    if (kids_shelf_dialog()) return;
+    if (glo_overlay_panel_draw() || kids_shelf_dialog()) return;
     static const uint8_t stage_h[] = {28, 64, 64, 20, 24, 40};
     static const uint8_t steps_h[] = {28, 24, 29, 29, 29, 29, 32, 40};
     static const uint8_t graph_h[] = {28, 28, 128, 16, 40};

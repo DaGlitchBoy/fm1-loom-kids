@@ -142,3 +142,28 @@ expect kids_pixel.0.2.3 4
 spin K1 1
 expect kids_loaded 1
 release HOME
+
+# The timed overlay and shelf confirmation handle the same button independently.
+tap HOME
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+wait 100
+expect kids_glo_overlay 0
+tap GLO
+wait 100
+expect kids_glo_overlay 1
+wait 6600
+expect kids_glo_overlay 1
+wait 450
+expect kids_glo_overlay 0
+press GLO
+wait 5050
+release GLO
+expect kids_dialog 2
+expect kids_glo_overlay 0
+tap HOME
+expect kids_dialog 0

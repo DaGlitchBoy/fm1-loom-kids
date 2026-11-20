@@ -23,11 +23,13 @@ Each track icon follows its category. PRESETS changes categories and ALGORITHM m
 
 The inherited platform recognizes two 1 MiB flash parts. The stock Puya P25Q80 reports JEDEC ID `856014`. Later units use the UC25HQ80, ID `B36014`. The host test accepts both and rejects unknown parts, for which the platform uses RAM-only operation. The bootloader, flash map, package identity and platform submodule revisions are unchanged.
 
-The existing hardware target builds LOOM-8 Studio and requires the JieLi toolchain and SDK. The LION KIDS interface and its song storage are built for the host and web emulators. This release candidate has no LION KIDS firmware package or physical boot validation. The inherited firmware workflow runs on the upstream repository only.
+The existing hardware target builds LOOM-8 Studio. Using the JieLi toolchain and hash-verified AC79 SDK files, the offline Studio build occupied 581,536 of the 581,564 bytes in the application slot and left 2,096 bytes of SRAM free. It passed the simulated update-entry and loader tests and the JEDEC allowlist test for both flash parts.
+
+An isolated compile with the Kids interface and audio enabled exceeded SRAM by 98,600 bytes at link time, even with Kids song writes stubbed out. Turning off Bluetooth, USB audio, USB host and screen mirroring reduced that overage to 26,824 bytes. Neither probe produced a firmware package. The device build also lacks the heap API used by the current Kids song and history code. The largest additional allocations are the audio mix and insert buffers and the two undo capture buffers. The LION KIDS interface and song storage ship in the emulators. The inherited device workflow remains scoped to upstream LOOM-8.
 
 Before publishing an FM-1 install link:
 
-1. Port the Kids interface, audio changes and panel handling to the device target. Give Kids songs an atomic flash backend and verify that saving, clearing and Undo preserve calibration, Studio songs and unrelated slots. The current device map already allocates the data region.
+1. Reduce the Kids mix and insert scratch space, replace bulk undo captures with bounded edits, and port the interface and panel handling to the device target. Give Kids songs an atomic flash backend and verify that saving, clearing and Undo preserve calibration, Studio songs and unrelated slots. The current device map already allocates the data region.
 2. Build with the pinned JieLi toolchain and SDK. Record the device image size, SRAM headroom and worst-case audio load. Run the offline package and update tests for the stock Puya and later UC flash parts, including interrupted updates.
 3. Verify boot, save, clear, reboot and stock recovery on both hardware revisions before publishing. Give LION KIDS its own package identity and point the installer and Firmware Hub manifest to that verified package.
 

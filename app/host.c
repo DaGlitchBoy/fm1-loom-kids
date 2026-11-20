@@ -489,6 +489,8 @@ int app_expect(const char *what, int *got)
             x < 0 || x >= KPIX_SIDE || y < 0 || y >= KPIX_SIDE) return 0;
         *got = kpix_get(slot ? kpix_bank[slot - 1] : kpix_song, x, y);
     }
+    else if (!strcmp(what, "kids_glo_overlay"))
+        *got = glo_overlay_painted;
     else if (!strcmp(what, "kids_dialog"))
         *got = ks_modal;
     else if (!strcmp(what, "kids_shelf_mask")) {

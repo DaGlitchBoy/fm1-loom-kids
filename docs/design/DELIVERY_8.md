@@ -9,8 +9,9 @@ One click on **LION KIDS starten** switches on the instrument. On first use, slo
 Download the web emulator artifact from the [LION KIDS GitHub Actions workflow](https://github.com/vmphilemon-glitch/fm1-loom-kids/actions/workflows/lion-kids.yml) when a run is available. To build from source, open your existing repository checkout with Emscripten and Python with Pillow and libraqm installed.
 
 ```sh
-git fetch origin feat/lion-kids-release:refs/remotes/origin/feat/lion-kids-release
-git switch --track origin/feat/lion-kids-release
+git fetch origin
+git switch feat/lion-kids-sequencer-release
+git pull --ff-only
 git submodule update --init --recursive
 export PYTHON="$PWD/.venv/bin/python"
 "$PYTHON" -c 'from PIL import features; assert features.check_feature("raqm"), "Pillow needs libraqm"' &&
