@@ -20,7 +20,7 @@ function moveStore() {
 // what each control does, on hover and for a screen reader (the Buttons list below the panel says the same)
 const TIP = { FX: "Reverb for this track", SEL: "Delay for this track", ENV: "Envelope for this track",
   LFO: "Modulation graph, signed depth and synced rate",
-  EDIT: "Toggle the selected step in Steps, open songs in GLO, or open Quick FX",
+  EDIT: "Toggle the selected step in Performance or Steps, open songs in GLO, or open Quick FX",
   GLO: "Tempo, metronome, swing and song slots. Hold for five seconds to clear a slot.",
   HOME: "Stage. Hold and turn K1 to undo or redo", SAVE: "Save the loaded song", ARP: "Arpeggiator for this track",
   SEQ: "Open the last sequencer view or alternate between Performance and Steps", PLAY: "Start or stop playback",

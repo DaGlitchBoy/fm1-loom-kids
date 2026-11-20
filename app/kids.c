@@ -1003,15 +1003,15 @@ static int kids_input(void)
 
     if (ev[EN_PRESET]) kids_category_step(ev[EN_PRESET]);
     if (ev[EN_ALGO]) kids_sound_step(ev[EN_ALGO]);
-    if (kids_mode == KIDS_STEPS && (down & (1u << B_EDIT))) {
-        kids_move_cursor(ev[EN_K4]);
-        kh_begin(&kh_edit, KH_STEP, "Step", sel_trk(), 0);
-        kids_toggle_step(kids_selected_step(sel_trk()) % 16);
-        kh_end(&kh_edit);
-        down &= ~(1u << B_EDIT);
-    } else if (kids_mode == KIDS_STEPS || kids_mode == KIDS_PERFORMANCE) {
+    if (kids_mode == KIDS_STEPS || kids_mode == KIDS_PERFORMANCE) {
         if (ev[EN_K4]) kids_perf_manual = 1;
         kids_move_cursor(ev[EN_K4]);
+        if (down & (1u << B_EDIT)) {
+            kh_begin(&kh_edit, KH_STEP, "Step", sel_trk(), 0);
+            kids_toggle_step(kids_selected_step(sel_trk()) % 16);
+            kh_end(&kh_edit);
+            down &= ~(1u << B_EDIT);
+        }
     }
     kids_effect_buttons(down);
     kids_turn_knobs(ev);
@@ -1039,7 +1039,7 @@ static uint32_t kids_button_lights(void)
         kids_mode == KIDS_STEPS || kids_mode == KIDS_PERFORMANCE ? 1u << B_SEQ : 0;
     if (shape[KD_ENV_ON]) buttons |= 1u << B_ENV;
     if (shape[KD_LFO_ON]) buttons |= 1u << B_LFO;
-    if (kids_mode != KIDS_STEPS && shape[KD_EDIT_ON]) buttons |= 1u << B_EDIT;
+    if (kids_mode != KIDS_STEPS && kids_mode != KIDS_PERFORMANCE && shape[KD_EDIT_ON]) buttons |= 1u << B_EDIT;
     if (kids_fx_on[sel_trk()][0]) buttons |= 1u << B_SEL;
     if (kids_fx_on[sel_trk()][1]) buttons |= 1u << B_FX;
     if (kids_arp_on[sel_trk()] && !is_drum(sel_trk())) buttons |= 1u << B_ARP;
@@ -1635,7 +1635,7 @@ static void kids_draw(void)
                 num_s((uint32_t)kids_page_count(trk), s_cat(num_s((uint32_t)kids_perf_page[trk] + 1, s_cat(page, "Page ")), "/"));
                 kids_text(6, 4, page);
                 kids_preset_label(76, 4, 101, &LFONT_XS, name, ink);
-                kids_text(186, 4, "Play keys");
+                kids_text(180, 4, "EDIT Toggle");
             } else if (b >= 2 && b <= 5) {
                 for (int row = 0; row < 2; row++) {
                     int t = (b - 2) * 2 + row, line = row * 18;

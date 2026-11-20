@@ -54,6 +54,18 @@ spin K3 2
 expect stepvel 3 1 64 45
 expect note 3 1 64 64
 expect slen 3 64 2
+# EDIT changes the focused cell without leaving Performance.
+tap EDIT
+expect kids 4
+expect kids_perf_page 4
+expect note 3 1 64 0
+tap EDIT
+expect note 3 1 64 62
+press HOME
+spin K1 -2
+release HOME
+expect note 3 1 64 64
+expect slen 3 64 2
 expect par3.level 100
 expect kids_length 64
 spin K4 1
@@ -152,3 +164,14 @@ tap SEQ
 expect kids_rec 0
 expect playing 1
 tap PLAY
+# In Performance a live drum key selects the hit without editing the pattern.
+tap SEQ
+expect kids 4
+expect kids_cursor 2
+tapkey b2
+expect noteat 1 1 2 1 7
+tap EDIT
+expect kids 4
+expect noteat 1 1 2 1 3
+tap EDIT
+expect noteat 1 1 2 1 7

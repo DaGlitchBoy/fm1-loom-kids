@@ -16,7 +16,7 @@ LION KIDS is an eight-track browser groovebox with live recording, step editing 
 
 LION KIDS is an eight-track groovebox you can play in a desktop browser. It starts with a playable keyboard, eight distinct sounds, colored category icons, and three song slots you can name with pixel art.
 
-- **Performance and Steps** alternate on SEQ and remember the last view. K4 browses steps on a track, and EDIT toggles the selected step in Steps.
+- **Performance and Steps** alternate on SEQ and remember the last view. K4 browses steps on a track, and EDIT toggles the selected step in either view.
 - **Sound controls** stop at either end. Keys and Plucks start with reverb and delay.
 - **Live recording and editing** include overdub, step velocity, root, length and swing, plus session undo and redo.
 - **Song slots** support saving, opening and clearing with confirmation. Song data lives in your browser.

@@ -28,7 +28,7 @@ Turn **SELECT** to pick one of eight tracks, **PRESETS** to choose its category,
 | K2 | Transpose the selected melodic note or chord | Transpose the selected note or chord. On an empty step, set the root for new notes |
 | K3 | Set the selected step's length | Set the selected step's length |
 | Keys | Play live | White keys toggle steps on the visible page. Black keys choose a hit on drum tracks |
-| EDIT | Open Quick FX | Add or remove the note or selected drum hit at the cursor |
+| EDIT | Add or remove the note or last played drum hit at the cursor | Add or remove the note or selected drum hit at the cursor |
 
 K4 moves between pages and wraps at the ends of the current track. For example, turning left from step 1 of a 32-step track selects step 32. Each track has its own cursor. In Performance the rows follow their own loops while playing. Turning K4 lets you inspect the current track independently until you start or stop playback or change views. On a drum step, velocity can be changed for the selected hit. Length applies to the step's group of hits. **Auto** uses the pattern's default note length.
 
@@ -42,7 +42,7 @@ K4 moves between pages and wraps at the ends of the current track. For example, 
 | --- | --- | --- |
 | FX | Reverb | Amount / decay / room size / tone |
 | SEL | Delay | Amount / feedback / beat division / tone |
-| EDIT outside Steps and GLO | Quick FX | Low-pass / drive / bitcrush / chorus |
+| EDIT outside Performance, Steps and GLO | Quick FX | Low-pass / drive / bitcrush / chorus |
 | ENV | Envelope | Attack / hold / sustain / release |
 | LFO | Modulation | Depth / target / rate / waveform |
 | ARP | Arpeggiator | Order / rate / chord / scale |
