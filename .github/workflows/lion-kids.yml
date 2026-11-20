@@ -15,7 +15,7 @@ jobs:
   emulator:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install build tools
@@ -41,7 +41,7 @@ jobs:
           sh tests/run_tests.sh
       - name: Package the browser emulator and corresponding source
         run: sh tools/package_lion_kids.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: lion-kids-release
           path: build/lion-kids-release/
