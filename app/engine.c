@@ -43,8 +43,6 @@ volatile uint32_t eng_acid_lite_count;
 volatile uint32_t eng_punch_drum, eng_punch_mel;
 volatile float eng_pump_db;
 volatile uint8_t eng_scene_now, eng_scene_cue = 0xFF;
-int16_t eng_scope[SCOPE_N];
-volatile uint32_t eng_scope_w;
 volatile uint16_t eng_quiet;
 
 /* the units, in the pool (their structs are opaque: a byte array each, 8-aligned for their floats) */
@@ -1830,8 +1828,6 @@ void engine_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12)
         r = r > 2.0f ? 2.0f : r < -2.0f ? -2.0f : r;
         out_lr[2u * i] = (int32_t)(l * 4194303.0f);
         out_lr[2u * i + 1u] = (int32_t)(r * 4194303.0f);
-        if (i & 1u)
-            eng_scope[eng_scope_w++ & (SCOPE_N - 1u)] = (int16_t)((mix_l[i] + mix_r[i]) * 16383.5f);
     }
     eng_quiet = pk > 0.001f ? 0 : (uint16_t)(eng_quiet < 65535u ? eng_quiet + 1u : 65535u);
     for (p = 0; p < NALLTRK; p++) {                      /* meters: the loudest since the UI took them (Q14, to 2) */
