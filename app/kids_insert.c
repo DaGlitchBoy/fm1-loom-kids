@@ -80,6 +80,22 @@ static void kids_track_insert(int t, float *l, float *r, float *send1, float *se
     float warp = chorus ? 95.0f * fm_sin_turns(kids_chorus_phase) : 0.0f;
     if (!chorus) s->valid = 0;
     if (!crush) s->crush_clock = 0;
+    /* Tremolo alone only needs a gain. Keep that path out of the insert chain. */
+    if (target == KD_VOLUME && !(lowpass || drive || crush || chorus)) {
+        float half_depth = 0.5f * depth;
+        float base = 1.0f - fm_fabsf(half_depth);
+        for (uint32_t i = 0; i < n; i++) {
+            float gain = base + kids_lfo_shape(wave, phase) * half_depth;
+            l[i] *= gain;
+            r[i] *= gain;
+            send1[i] *= gain;
+            send2[i] *= gain;
+            phase += phase_step;
+            if (phase >= 1.0f) phase -= 1.0f;
+        }
+        return;
+    }
+    int filter = lowpass || (depth && target == KD_CUTOFF);
     for (uint32_t i = 0; i < n; i++) {
         float shape = depth ? kids_lfo_shape(wave, phase) * depth : 0.0f;
         float wet = 0.5f * (fm_fabsf(depth) + (target == KD_DISTORTION ? shape : -shape));
@@ -92,8 +108,10 @@ static void kids_track_insert(int t, float *l, float *r, float *send1, float *se
         float gain = target == KD_VOLUME ? 1.0f - wet : 1.0f;
         float x[2] = {l[i], r[i]};
         for (int c = 0; c < 2; c++) {
-            s->low[c] += pole * (x[c] - s->low[c]); /* ~780 Hz, with cutoff modulation down to ~180 Hz */
-            x[c] += (s->low[c] - x[c]) * low;
+            if (filter) {
+                s->low[c] += pole * (x[c] - s->low[c]); /* ~780 Hz, down to ~180 Hz */
+                x[c] += (s->low[c] - x[c]) * low;
+            }
             if (dist) {
                 float y = 1.7f * x[c] / (1.0f + 6.0f * fm_fabsf(x[c]));
                 x[c] += (y - x[c]) * dist;

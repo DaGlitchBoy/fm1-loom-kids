@@ -52,6 +52,7 @@ jobs:
           build=app/build/lion-device
           "$build/lion-kids_host" tests/host/kids_device.xy "$RUNNER_TEMP/sim-output"
           "$PYTHON" tests/host/kids_device_sounds_test.py "$build/lion-kids_host"
+          "$PYTHON" tests/host/kids_device_playback_test.py "$build/lion-kids_host"
           cc -std=c11 -Wall -Wextra -Werror -Iapp tests/host/kids_flash_store_test.c app/kids_flash_store.c -o "$RUNNER_TEMP/checks/flash-store"
           cc -w base/tests/ota_test.c -o "$RUNNER_TEMP/checks/ota"
           cc -w base/tests/ldr_test.c -o "$RUNNER_TEMP/checks/loader"

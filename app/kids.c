@@ -1407,12 +1407,6 @@ static void kids_graph(int track, uint16_t ink)
             cv_line(LEFT + x - 2, previous, LEFT + x, level, trace);
             previous = level;
         }
-        if (on && (playing() || ui.keys)) {
-            int x = (kids_phase_pixel[track] / 4) * 4;
-            int level = MID - (int)(kids_lfo_shape(wave, (float)x / WIDTH) * depth);
-            cv_rect(LEFT + x, 18, 1, 86, col_mix(KIDS_BG, ink, 6));
-            cv_rect(LEFT + x - 2, level - 2, 5, 5, KIDS_WHITE);
-        }
     }
 }
 
@@ -1621,6 +1615,8 @@ static void kids_draw(void)
     int bands = performance || kids_mode == KIDS_STEPS ? 8 : graph ? 5 : 6, trk = sel_trk(), y = 0;
     int now = playing() ? eng_step[trk] : -1;
     uint16_t ink = THEMES[THEME_BW].ink[trk];
+    int phase = kids_mode == KIDS_LFO && kids_shaping[trk][KD_LFO_ON] && (playing() || ui.keys) ?
+        (kids_phase_pixel[trk] / 4) * 4 : -1;
     char name[NAME_LEN + 1]; kids_sound_name(name);
     const tpat_t *tp = tpat(trk);
     int rec_status = seq.rec ? 2 : kids_rec_armed ? 1 : 0;
@@ -1665,8 +1661,8 @@ static void kids_draw(void)
             h = hash_u(h, kids_picks[trk][kids_category]);
             if (graph || (kids_mode == KIDS_HOME && kids_panel == KP_QUICK))
                 for (int p = 0; p < KD_COUNT; p++) h = hash_u(h, kids_shaping[trk][p]);
-            if (kids_mode == KIDS_LFO && b == 2 && kids_shaping[trk][KD_LFO_ON] && (playing() || ui.keys))
-                h = hash_u(h, kids_phase_pixel[trk] / 4 + 1);
+            /* Animate a separate phase strip so transport never invalidates the plot. */
+            if (kids_mode == KIDS_LFO && b == 3) h = hash_u(h, (uint32_t)(phase + 1));
             if (kids_mode == KIDS_HOME) {
                 h = hash_u(h, kids_panel);
                 h = hash_u(h, kids_metro); h = hash_u(h, kids_delay_actual);
@@ -1821,8 +1817,12 @@ static void kids_draw(void)
         } else if (b == 2) {
             kids_graph(trk, ink);
         } else {
-            kids_text(10, 0, kids_mode == KIDS_ENV ?
-                (is_drum(trk) ? "Kit hit envelope" : "Note envelope") : "Synced to song tempo");
+            if (kids_mode == KIDS_ENV) {
+                kids_text(10, 0, is_drum(trk) ? "Kit hit envelope" : "Note envelope");
+            } else {
+                cv_rect(23, 7, 193, 1, KIDS_PANEL);
+                if (phase >= 0) cv_rect(21 + phase, 5, 5, 5, ink);
+            }
         }
         cv_blit(0, y + row);
         }

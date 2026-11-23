@@ -623,6 +623,8 @@ int app_expect(const char *what, int *got)
         *got = (int)(meter_peak + 0.5f);
     else if (!strcmp(what, "cores"))
         *got = engine_core2_state();
+    else if (!strcmp(what, "core2_jobs"))
+        *got = split_last[0];
     else if (!strcmp(what, "dirty"))
         *got = ui_dirty();
     else if (!strcmp(what, "ask"))

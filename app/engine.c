@@ -1192,11 +1192,15 @@ static void heal(void)
     heal_due = 0;
     eng_heals++;
     synth_cut(SY);
-    for (t = 0; t < NTRK; t++)
+    for (t = 0; t < NTRK; t++) {
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        kids_insert_reset(t);
+#endif
         if (eng_drum[t]) {
             drumline_init(DL(t), epar[t]);
             dl_filter_update(t);
         }
+    }
     for (k = 0; k < 2; k++) {
         fx_clear(FXS(k));
         zerof(snd_acc[k], 256);
@@ -1208,18 +1212,20 @@ static void heal(void)
 }
 /* the effects' job, when it runs on the second core, from the block's start: beside the first core's sequencer.
  * fx_done waits for it (or runs it here, if the second core failed) and sets the knobs locked meanwhile */
-static void fx_done(void)
+static int fx_done(void)
 {
-    int k;
+    int k, failed;
     if (!fx_c2)
-        return;
-    if (c2_wait())
+        return 0;
+    failed = c2_wait();
+    if (failed && !c2_chained)
         fx_job_timed(0);
     fx_c2 = 0;
     for (k = 0; k < 2; k++)
         if (fx_dirty >> k & 1u)
             fx_set(FXS(k), fx_type[k], epar[AUX_FX1 + k] + TP_E1);
     fx_dirty = 0;
+    return failed;
 }
 static volatile uint32_t c2_took;                          /* the last job's time (plat_cycles) */
 /* the voices shared out as the cores go (render_sub): the stretch's voices in ws_ord (grouped by engine: each core
@@ -1230,6 +1236,10 @@ static volatile uint32_t c2_took;                          /* the last job's tim
  * it, and gives it back); a voice both gave back the first core renders after the wait. Core 1 checks the index it
  * reads (on some FM-1s its reads come back wrong now and then: loom_cpu1.h) */
 static int8_t ws_ord[NVOICE];
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+static int8_t ws_next[NVOICE];
+#endif
+static inline void render_voice_work(int core, int vi, float *l, float *r, float *a, float *b, uint32_t n);
 static int32_t ws_n = NVOICE;                              /* the queue's length this stretch (synth_order) */
 static volatile int32_t ws_a, ws_b;                        /* taken: by the second core (the bottom), the first (the top) */
 static int ws_take1(void)                                  /* the second core's next voice, -1 none */
@@ -1276,7 +1286,7 @@ static void core2_job(uint32_t arg)
             c2_tapped = 1;
         }
 #endif
-        synth_render_on(SY, 1, vi, vi + 1, c2_l, c2_r, c2_s1, c2_s2, n);
+        render_voice_work(1, vi, c2_l, c2_r, c2_s1, c2_s2, n);
     }
     PROF_ADD(PR_SYNTH1, pt);
     c2_took = plat_cycles() - p0;
@@ -1353,20 +1363,46 @@ static void metro_tick(uint32_t n)
  * lower half; then the halves are summed in the order one core always used, the FX tracks, the master */
 #if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
 #include "kids_insert.c"
+
+/* One job per affected track, so both cores can take jobs without sharing a write buffer. */
+static void kids_group_voice_work(void)
+{
+    int8_t last[NTRK];
+    int jobs = 0;
+    memset(last, -1, sizeof last);
+    memset(ws_next, -1, sizeof ws_next);
+    for (int i = 0; i < ws_n; i++) {
+        int vi = ws_ord[i], track = synth_kids_track(SY, vi);
+        if (kids_mix_mask >> track & 1u) {
+            if (last[track] >= 0)
+                ws_next[last[track]] = (int8_t)vi;
+            else
+                ws_ord[jobs++] = (int8_t)vi;
+            last[track] = (int8_t)vi;
+        } else {
+            ws_ord[jobs++] = (int8_t)vi;
+        }
+    }
+    ws_n = jobs;
+}
 #endif
-static inline void render_primary_voice(int vi, uint32_t n)
+
+static inline void render_voice_work(int core, int vi, float *l, float *r, float *a, float *b, uint32_t n)
 {
 #if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mix_mask) {
-        int t = synth_kids_track(SY, vi);
-        if (kids_mix_mask >> t & 1u) {
-            float (*b)[STRETCH_MAX] = kids_mix[t];
-            synth_render_on(SY, 0, vi, vi + 1, b[0], b[1], b[2], b[3], n);
+        int track = synth_kids_track(SY, vi);
+        if ((unsigned)track < NTRK && (kids_mix_mask >> track & 1u)) {
+            float (*mix)[STRETCH_MAX] = kids_mix[track];
+            for (int count = 0; count < NVOICE && (unsigned)vi < NVOICE; count++) {
+                synth_render_on(SY, core, vi, vi + 1, mix[0], mix[1], mix[2], mix[3], n);
+                vi = ws_next[vi];
+            }
             return;
         }
     }
 #endif
-    synth_render_on(SY, 0, vi, vi + 1, mel_l, mel_r, s1, s2, n);
+    synth_render_on(SY, core, vi, vi + 1, l, r, a, b, n);
 }
 
 static void render_drums(uint32_t n)                    /* the drum tracks (the first core's: render_sub) */
@@ -1408,16 +1444,21 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
         if (kids_send_override) {
             float *source[] = {ts1, ts2};
             for (int k = 0; k < 2; k++) {
+                int amount = kids_send_gain[t][k];
+                if (!amount) {
+                    zerof(source[k], n);
+                    continue;
+                }
                 int peak = 0;
                 for (int key = 0; key < NDRUM; key++) {
                     int weight = epar[t][TP_DRUM(key, k ? DP_SEND2 : DP_SEND1)];
                     if (weight > peak) peak = weight;
                 }
                 if (peak) {
-                    float gain = (float)kids_send_gain[t][k] / (float)peak;
+                    float gain = (float)amount / (float)peak;
                     for (uint32_t i = 0; i < n; i++) source[k][i] *= gain;
                 } else {
-                    float gain = kids_send_gain[t][k] * (0.5f / 127.0f);
+                    float gain = amount * (0.5f / 127.0f);
                     for (uint32_t i = 0; i < n; i++) source[k][i] = (tl[i] + tr[i]) * gain;
                 }
             }
@@ -1500,18 +1541,15 @@ static void render_sub(uint32_t n, uint32_t at)
     synth_prepare(SY, n);                                 /* the shared per-chunk values, before either core renders */
     ws_n = synth_order(SY, ws_ord);
     synth_idle(SY, ws_ord, ws_n, n);                      /* (the silent voices: moved on here, not taken) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    if (kids_mix_mask) kids_group_voice_work();
+#endif
     ws_a = ws_b = 0;
     plat_cpu2_sync();
     c2_chained = 0;
     late = late_at0 = fx_c2 && plat_cpu2_busy();          /* the second core still at the effects' job (begun with the
                                                            * block): it takes the voices straight after it (c2_chain),
                                                            * or, past it already, the first starts it (c2_late) */
-#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
-    if (kids_mix_mask) {   /* each per-track insert has one owner */
-        fx_done();
-        late = late_at0 = 0;
-    } else
-#endif
     if (!late) {
         fx_done();                                        /* (done already, or one core) */
         on2 = c2_run ? c2_run(core2_job, arg | 0x100u) : 0;
@@ -1528,20 +1566,36 @@ static void render_sub(uint32_t n, uint32_t at)
     if (late)
         late = c2_late(arg, &on2);
     while ((vi = ws_take0()) >= 0) {
-        render_primary_voice(vi, n);
+        render_voice_work(0, vi, mel_l, mel_r, s1, s2, n);
         if (late)
             late = c2_late(arg, &on2);
     }
     PROF_ADD(PR_SYNTH0, ps);
     pt = plat_cycles();
-    fx_done();                                            /* (the voices all done here first: the effects' job) */
-    if (on2 && c2_wait()) {                               /* the second failed: what it took, here (it may not have) */
+    int failed;
+    if (fx_c2) {                                         /* still the effects job, possibly chained into voices */
+        failed = fx_done();
+        on2 = c2_chained;
+        c2_chain = 0;
+    } else {
+        failed = on2 && c2_wait();
+    }
+    if (on2 && failed) {                                 /* the second failed: what it took, here (it may not have) */
         zerof(c2_l, n);
         zerof(c2_r, n);
         zerof(c2_s1, n);
         zerof(c2_s2, n);
-        for (i = 0; i < ws_a && i < ws_n; i++)
-            synth_render_on(SY, 0, ws_ord[i], ws_ord[i] + 1, c2_l, c2_r, c2_s1, c2_s2, n);
+        for (i = 0; i < ws_a && i < ws_n; i++) {
+            int voice = ws_ord[i];
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+            if (kids_mix_mask) {
+                int track = synth_kids_track(SY, voice);
+                if (kids_mix_mask >> track & 1u)
+                    for (int c = 0; c < 4; c++) zerof(kids_mix[track][c], n);
+            }
+#endif
+            render_voice_work(0, voice, c2_l, c2_r, c2_s1, c2_s2, n);
+        }
     } else if (on2) {
         PROF_ADD(PR_WAIT, pt);                            /* what the first core waited for the second */
 #if TRK_TAP
@@ -1555,7 +1609,7 @@ static void render_sub(uint32_t n, uint32_t at)
         zerof(c2_s2, n);
     }
     for (i = ws_a; i < ws_n - ws_b; i++)                  /* any both gave back */
-        render_primary_voice(ws_ord[i], n);
+        render_voice_work(0, ws_ord[i], mel_l, mel_r, s1, s2, n);
     split_last[0] = (uint8_t)ws_a;                        /* (the profiler: the voices each core took) */
     split_last[1] = (uint8_t)ws_b;
     split_last[2] = (uint8_t)(late_at0 ? 128u : 0u);

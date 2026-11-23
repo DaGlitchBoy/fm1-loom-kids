@@ -10,7 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DEVICE_PREFIX = "FM-1_736"
-PREVIEW_VERSION = "0.0.1"
+PREVIEW_VERSION = "0.0.2"
 PRODUCT = DEVICE_PREFIX + "".join(f"{int(part):02d}" for part in PREVIEW_VERSION.split("."))
 INSTALL_URL = "https://vmphilemon-glitch.github.io/fm1-loom-kids/"
 
