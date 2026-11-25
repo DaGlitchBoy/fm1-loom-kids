@@ -62,6 +62,7 @@
 <main>
   <button type="button" class="lang" id="lang" lang="ja">日本語</button>
   <h1>Install LION KIDS</h1>
+  <p><a href="./export/">Export saved songs or record live</a></p>
   <p data-t="intro">Connect the FM-1 by USB, then press Install. It works in Chrome or Edge; the browser asks once to allow MIDI: allow it.</p>
   <p data-t="warn">Do not unplug the USB cable while writing.</p>
   <p class="small" data-t="direct"></p>
@@ -1094,7 +1095,7 @@ const log = (t) => {
   if (atEnd) el.scrollTop = el.scrollHeight;
 };
 let image = null, boot = null, res = null;
-const meta = {"version": "device preview 0.0.2", "product": "FM-1_736000002", "pkg": "lion-kids.fwsc?v=0.0.2", "sha256": "f361b3444d319dcd43cfcef435a5327007b2f5084708af9fb22cffacd248d81c", "res": "lion-kids-res.bin?v=0.0.2", "backup": false};
+const meta = {"version": "device preview 0.0.3", "product": "FM-1_736000003", "pkg": "lion-kids.fwsc?v=0.0.3", "sha256": "be316e1eedc7ed604cf0b644708f626b62b84264cea996964e66ed0f61fa9f77", "res": "lion-kids-res.bin?v=0.0.3", "backup": false};
 /* the firmware's own steps around an install (its site's install_app script, or none): before(midi, ui) runs before
    anything is written, may ask (ui.ask) and returns its state, or false to stop there; after(midi, ui, state) once
    the new firmware has started (it waits for it itself). A failure in after is said, the install stays done */
