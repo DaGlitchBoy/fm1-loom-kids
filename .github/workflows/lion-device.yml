@@ -39,12 +39,19 @@ jobs:
           41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d  cfg/eq_cfg_hw.bin
           SUMS
           )
+      - name: Install the pinned Emscripten toolchain
+        run: |
+          git clone --quiet --branch 6.0.10 --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          test "$(git -C "$RUNNER_TEMP/emsdk" rev-parse HEAD)" = a2b92777574c2feda07994cd4f1079a3dfc151f8
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.10
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10
       - name: Build and verify the device preview offline
         env:
           PYTHON: /usr/bin/python3
           JIELI_TOOLCHAIN: ${{ runner.temp }}/jieli/toolchain
           AC79_SDK: ${{ runner.temp }}/sdk
         run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
           set -eu
           ./build.sh --lion-device
           ./build.sh --lion-device --host
@@ -63,7 +70,9 @@ jobs:
           "$PYTHON" base/tools/fm1pkg_make.py "$RUNNER_TEMP/checks/old.bin" "$build/ota.bin" "$RUNNER_TEMP/checks/old.fwsc"
           "$RUNNER_TEMP/checks/loader" "$RUNNER_TEMP/checks/old.fwsc" "$build/lion-kids.fwsc"
           "$RUNNER_TEMP/checks/chips"
+          "$PYTHON" tools/build_lion_device.py --render
           "$PYTHON" tools/make_lion_installer.py "$RUNNER_TEMP/install-preview"
+          node tests/host/lion_song_export.mjs "$build/lion-kids_host" "$RUNNER_TEMP/install-preview"
           tar --exclude=.git --exclude=build --exclude=__pycache__ -czf "$RUNNER_TEMP/install-preview/lion-kids-source.tar.gz" \
             .github app base docs tests tools build.sh AGENTS.md COPYING LICENSE LICENSING.md README.md BUILDING.md
       - uses: actions/upload-artifact@v5

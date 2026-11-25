@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Export &amp; Record · LION KIDS</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <nav><a href="../">LION KIDS</a><a href="../">Firmware installer</a></nav>
+    <h1>Export &amp; Record</h1>
+    <section aria-labelledby="songs-heading">
+      <h2 id="songs-heading">Saved songs</h2>
+      <p>Save your songs on the FM‑1 and stop playback. Connect it over USB, then read the three slots in Chrome or Edge.</p>
+      <div class="actions">
+        <button type="button" id="read">Read songs from FM‑1</button>
+        <label class="file-button">Open song backup<input type="file" id="open" accept=".lionkids,application/json"></label>
+        <button type="button" id="backup" disabled>Download song backup</button>
+      </div>
+      <p class="status" id="song-status" role="status"></p>
+      <div id="slots" class="slots" hidden></div>
+      <p class="detail">Each WAV includes one complete loop and the sound that rings out after it.</p>
+    </section>
+    <section aria-labelledby="live-heading">
+      <h2 id="live-heading">Live performance</h2>
+      <p>Choose the FM‑1 as your audio input. Play the keyboard or a song, then download the recording as a stereo WAV.</p>
+      <div class="actions">
+        <button type="button" id="inputs">Find audio inputs</button>
+        <label for="source">Audio input</label>
+        <select id="source" disabled><option value="">Choose an input</option></select>
+      </div>
+      <div class="actions">
+        <button type="button" id="record" disabled>Record live</button>
+        <button type="button" id="stop" disabled>Stop</button>
+        <a id="recording" class="download" hidden>Download recording</a>
+      </div>
+      <p class="status" id="live-status" role="status"></p>
+    </section>
+  </main>
+  <script type="module" src="./page.mjs"></script>
+</body>
+</html>

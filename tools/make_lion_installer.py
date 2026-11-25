@@ -54,7 +54,12 @@ def main():
         if page.count(marker) != 1:
             sys.exit(f"Unexpected installer template marker {marker}")
         page = page.replace(marker, value)
+    page = page.replace("</h1>", '</h1>\n  <p><a href="./export/">Export saved songs or record live</a></p>', 1)
     out.mkdir(parents=True, exist_ok=True)
+    export = out / "export"
+    shutil.copytree(ROOT / "app" / "web" / "export", export, dirs_exist_ok=True)
+    shutil.copy2(web / "fm1ports.js", export / "fm1ports.mjs")
+    shutil.copy2(build / "song-render.wasm", export)
     (out / "index.html").write_text(page, encoding="utf-8")
     for path in (package, resources, ROOT / "COPYING", ROOT / "LICENSING.md",
                  ROOT / "docs" / "FM1_DEVICE_PREVIEW.md"):
@@ -64,8 +69,10 @@ def main():
     for path in (ROOT / "base" / "LICENSES").glob("*.txt"):
         shutil.copy2(path, licenses / path.name)
     with (out / "SHA256SUMS").open("w") as sums:
-        for path in (package, resources, out / "index.html"):
+        for path in (package, resources):
             sums.write(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n")
+        for path in (out / "index.html", *sorted(export.iterdir())):
+            sums.write(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(out)}\n")
 
 if __name__ == "__main__":
     main()

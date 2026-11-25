@@ -109,9 +109,10 @@ void app_splash(void);
 #define MRQ 2048u                       /* the mirror's frame ring (fm1-base's 4096: RAM), a rect frame 1.1 KB at most */
 #define MR_SEGW 80u                     /* what the viewer has, by 80-pixel segments of each row (30: 4.8 KB more pool) */
 void app_redraw(void);
-#ifndef LION_KIDS_DEVICE
-#define APP_SYSEX                       /* the user sample bank over USB-MIDI (samples.c: F0 7D 46 4C) */
+#ifdef LION_KIDS_RENDER
+#define APP_WEB                         /* offline WAV renderer exports */
 #endif
+#define APP_SYSEX                       /* user sample bank or read-only Kids song export */
 int app_sysex(const uint8_t *p, uint32_t n);
 
 /* the host simulator's part (host.c): LOOM-8's checks and commands, the screen reader's dump */

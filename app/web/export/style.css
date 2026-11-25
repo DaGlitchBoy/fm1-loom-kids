@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+:root {
+  color-scheme: dark;
+  background: #121622;
+  color: #f7f4eb;
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+}
+body { margin: 0; }
+main { max-width: 55rem; padding: 1.5rem 1.25rem 3rem; margin: auto; }
+nav { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
+nav a { color: #f9d783; text-decoration-thickness: 1px; text-underline-offset: .3em; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); letter-spacing: -.04em; margin: 1.4rem 0 1.1rem; }
+h2 { font-size: 1.35rem; margin: 0; }
+section { background: #1d2537; padding: 1.35rem; border: 1px solid #384459; border-radius: 1rem; margin: 1rem 0; }
+p { line-height: 1.5; color: #d7ddef; margin: .6rem 0 1rem; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; margin: .6rem 0; }
+button, .file-button, select, .download {
+  font: inherit; font-weight: 650; padding: .58rem .8rem; border-radius: .55rem;
+  background: #f9d783; color: #1b2231; border: 1px solid #f9d783; cursor: pointer;
+}
+:disabled { opacity: .58; cursor: default; }
+.file-button, select, #backup, #stop { background: #263246; border-color: #7584a0; color: #fff; }
+.file-button { position: relative; display: inline-block; }
+.file-button input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+:focus-visible, .file-button:focus-within { outline: 3px solid #c6e8fb; outline-offset: 3px; }
+.status { color: #c6e8fb; min-height: 1.5em; margin: .6rem 0 0; }
+.detail { color: #c4cde0; font-size: .9rem; margin-bottom: 0; }
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; }
+.slots article { background: #283449; border-radius: .6rem; padding: .8rem; display: grid; gap: .5rem; justify-items: start; }
+.slot-name { display: flex; align-items: center; gap: .5rem; min-height: 1.75rem; }
+canvas { image-rendering: pixelated; width: 1.75rem; height: 1.75rem; }
+[hidden] { display: none !important; }

@@ -167,7 +167,10 @@ void app_frame(void)
 void app_input_only(void) { ui_input_only(); }
 void app_say(const char *a, const char *b) { ui_say(a, b); }
 void app_redraw(void) { ui_redraw(); }
-#ifndef LION_KIDS_DEVICE
+#ifdef LION_KIDS_DEVICE
+#include "kids_song_usb.c"
+int app_sysex(const uint8_t *p, uint32_t n) { return kids_song_usb(p, n); }
+#else
 int app_sysex(const uint8_t *p, uint32_t n) { return smp_frame(p, n); }
 #endif
 
