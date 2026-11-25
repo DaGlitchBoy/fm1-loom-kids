@@ -46,6 +46,28 @@ def playback(binary, output, cores):
     return signal
 
 
+def check_recovery(binary, output):
+    output.mkdir()
+    scenario = output / "restart.xy"
+    lines = ["wait 300", "load 0", "expect history_capacity 1", "bpm 160"]
+    for step in range(1, 17):
+        lines += [f"notes 2 1 {step} 1.25 90 48 55 62", f"notes 3 1 {step} 0.75 115 1 3 5"]
+    lines += ["tap PLAY", "wait 460", "expect cores 1", "spin SELECT 3", "tap REC"]
+    for _ in range(2):
+        lines.append("spin PRESET -9")
+        for _ in range(7):
+            for note in range(10):
+                lines += ["spin ALGO 1", f"tapkey w{note}", "wait 15"]
+            lines.append("spin PRESET 1")
+    lines += ["tap HOME", "spin SELECT -7", "expect kids_preset.acid_line 1",
+              "key w5 down", "wait 90", "expect acid_primary 1", "expect core2_jobs >0",
+              "drop-core2-job", "wait 160", "expect restarts 0", "expect cores 3",
+              "expect guard 8", "expect voices >0", "expect drumhits >0", "key w5 up"]
+    scenario.write_text("\n".join(lines) + "\n")
+    run = subprocess.run([str(binary), str(scenario), str(output)], capture_output=True, text=True)
+    assert run.returncode == 0, run.stdout + run.stderr
+
+
 binary = Path(sys.argv[1]).resolve()
 with tempfile.TemporaryDirectory() as temp:
     out = Path(temp)
@@ -56,8 +78,9 @@ with tempfile.TemporaryDirectory() as temp:
     assert math.sqrt(sum(x * x for x in dual) / len(dual)) > 250, "dense playback went quiet"
     error = math.sqrt(sum((a - b) ** 2 for a, b in zip(single, dual)) / len(dual))
     assert error < 3, f"switching audio cores changed effect routing (RMS difference {error:.1f})"
+    check_recovery(binary, out / "recovery")
     with Image.open(out / "dual/lfo-first.png") as first, Image.open(out / "dual/lfo-second.png") as second:
         difference = ImageChops.difference(first.convert("RGB"), second.convert("RGB"))
         assert difference.crop((0, 56, 240, 184)).getbbox() is None, "phase animation repainted the plot"
         assert difference.crop((0, 184, 240, 200)).getbbox(), "the LFO phase marker stopped moving"
-print("Dense playback matched across both render paths, and only the LFO phase strip animated.")
+print("Dense playback, live preset changes, bounded history and second-core fallback passed.")

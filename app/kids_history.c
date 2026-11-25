@@ -116,7 +116,7 @@ static void kh_reset(void)
 }
 
 /* Encode changed spans without touching neighbouring bytes or transport state. */
-static size_t kh_encode(const uint8_t *before, const kh_region_t *r, int count, uint8_t *out)
+static size_t kh_encode(const uint8_t *before, const kh_region_t *r, int count, uint8_t *out, size_t capacity)
 {
     size_t at = 0, base = 0;
     for (int k = 0; k < count; k++) {
@@ -129,6 +129,7 @@ static size_t kh_encode(const uint8_t *before, const kh_region_t *r, int count, 
             size_t end = start + 1;
             while (end < r[k].size && before[base + end] != after[end]) end++;
             size_t offset = base + start, len = end - start;
+            if (4 + 2 * len > capacity - at) return SIZE_MAX;
             if (out) {
                 out[at] = (uint8_t)offset; out[at + 1] = (uint8_t)(offset >> 8);
                 out[at + 2] = (uint8_t)len; out[at + 3] = (uint8_t)(len >> 8);
@@ -202,7 +203,7 @@ static void kh_end(kh_capture_t *c)
     kh_region_t r[32];
     int n;
     kh_regions(e, r, &n);
-    size_t size = kh_encode(c->before, r, n, NULL);
+    size_t size = kh_encode(c->before, r, n, NULL, SIZE_MAX);
     e->cell_changed = (uint8_t)kh_pending_changed(e);
     if (!size && !e->bank_changed && !e->cell_changed) return;
     uint32_t now = plat_ms();
@@ -214,18 +215,21 @@ static void kh_end(kh_capture_t *c)
         kh_decode(previous, r, c->before, 0);
         if (previous->cell_changed) e->cell = previous->cell;
         e->cell_changed = (uint8_t)kh_pending_changed(e);
-        size = kh_encode(c->before, r, n, NULL);
+        size = kh_encode(c->before, r, n, NULL, SIZE_MAX);
     }
     if (e->cell_changed) e->cell_after = kids_cell;
     e->runs = size ? malloc(size) : NULL;
-    if (size && !e->runs) {
-        /* The current edit still exists. Drop the journal to avoid stale deltas. */
+    /* The audio interrupt can record a step after the sizing pass. Keep every
+     * write within the reservation, even if the live song now differs more. */
+    e->size = size && !e->runs ? SIZE_MAX : kh_encode(c->before, r, n, e->runs, size);
+    if (e->size == SIZE_MAX) {
+        /* The edit still exists. Drop the journal to avoid stale deltas. */
         kh_discard(e);
         kh_clear();
         kh_memory_full = 1;
+        mark_dirty();
         return;
     }
-    e->size = kh_encode(c->before, r, n, e->runs);
     if (merge) {
         kh_discard(&kh_entries[--kh_count]);
         kh_cursor = kh_count;

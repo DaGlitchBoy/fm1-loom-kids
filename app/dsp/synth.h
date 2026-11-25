@@ -332,6 +332,9 @@ int synth_order(const synth_t *s, int8_t *ord);   /* the cores' queue (engine.c)
 void synth_idle(synth_t *s, const int8_t *ord, int nord, uint32_t n);   /* the voices not in it moved n frames on */
 int synth_sounding(const synth_t *s, int v0, int v1);          /* a voice in the range is sounding */
 int synth_voices_used(const synth_t *s);
+#ifdef LION_KIDS_DEVICE
+uint32_t synth_acid_voices(const synth_t *s);
+#endif
 /* the slice engine's newest playing voice on a track (the picture): its slice (0-based) and the position in
  * the sample; 0 when none plays. Called from the main loop: a racy read of the voices, for the screen only */
 int synth_slice_now(const synth_t *s, int trk, int *slice, int32_t *pos);

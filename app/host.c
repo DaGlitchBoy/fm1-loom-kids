@@ -334,25 +334,38 @@ int plat_store_load_prev(uint32_t obj, void *dst, uint32_t max)
 
 /* the second core, simulated: a job runs at once, in order (the split path, the same sums) */
 static int cpu2_on = 1;
-int plat_cpu2_set(int on) { cpu2_on = on; return 0; }
+static int cpu2_drop_next, cpu2_dropped, cpu2_retired;
+int plat_cpu2_set(int on) { cpu2_on = on; cpu2_retired = 0; return 0; }
 int plat_cpu2_on(void) { return cpu2_on; }
 int plat_cpu2_run(void (*fn)(uint32_t), uint32_t arg)
 {
     uint64_t a;
     if (!cpu2_on)
         return 0;
+    if (cpu2_drop_next) {
+        cpu2_drop_next = 0;
+        cpu2_dropped = 1;
+        return 1;
+    }
     a = work_enabled() ? host_instr() : 0;
     fn(arg);
     if (work_on > 0)
         work_c2 += host_instr() - a;
     return 1;
 }
-int plat_cpu2_wait(void) { return 0; }
+int plat_cpu2_wait(void)
+{
+    if (!cpu2_dropped) return 0;
+    cpu2_dropped = 0;
+    cpu2_on = 0;
+    cpu2_retired = 1;
+    return -1;
+}
 void plat_cpu2_sync(void) {}
 int plat_cpu2_busy(void) { return 0; }   /* (a job ran at once) */
-int plat_cpu2_gave_up(void) { return 0; }
+int plat_cpu2_gave_up(void) { return cpu2_retired; }
 uint32_t plat_cpu2_bad(void) { return 0; }
-int plat_cpu2_barred(void) { return 0; }
+int plat_cpu2_barred(void) { return cpu2_retired; }
 int plat_vdc14_mv(void) { return 1600; }
 int plat_sysvdd_mv(void) { return 1380; }
 int plat_last_crash(uint32_t v[5]) { (void)v; return 0; }
@@ -625,6 +638,25 @@ int app_expect(const char *what, int *got)
         *got = engine_core2_state();
     else if (!strcmp(what, "core2_jobs"))
         *got = split_last[0];
+    else if (!strcmp(what, "acid_primary")) {
+        *got = 0;
+        for (int i = 0; i < NVOICE; i++) {
+            unsigned info = synth_vinfo[i];
+            if ((info & 159u) == (128u | EG_ACID)) {
+                if (info & 64u) { *got = 0; break; }
+                *got = 1;
+            }
+        }
+    }
+    else if (!strcmp(what, "history_capacity")) {
+        uint8_t before[3] = {0}, after[3] = {1, 0, 0};
+        kh_region_t region = {after, sizeof after};
+        uint8_t output[12] = {0};
+        size_t capacity = kh_encode(before, &region, 1, NULL, SIZE_MAX);
+        after[2] = 2; /* Another step landed between sizing and writing. */
+        *got = capacity == 6 && kh_encode(before, &region, 1, output, capacity) == SIZE_MAX;
+        for (size_t i = capacity; i < sizeof output; i++) *got &= output[i] == 0;
+    }
     else if (!strcmp(what, "dirty"))
         *got = ui_dirty();
     else if (!strcmp(what, "ask"))
@@ -1920,6 +1952,8 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
     }
     else if (!strcmp(cmd, "cores"))
         plat_cpu2_set(atoi(a));
+    else if (!strcmp(cmd, "drop-core2-job"))
+        cpu2_drop_next = 1;
     else
         return 0;
     return 1;

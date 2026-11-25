@@ -1959,6 +1959,15 @@ void synth_limit(synth_t *s, int max_voices)
 int synth_kids_track(const synth_t *s, int vi) { return s->v[vi].trk; }
 #endif
 
+#ifdef LION_KIDS_DEVICE
+uint32_t synth_acid_voices(const synth_t *s)
+{
+    uint32_t mask = 0;
+    for (int vi = 0; vi < NVOICE; vi++)
+        if (s->v[vi].engine == EG_ACID) mask |= 1u << vi;
+    return mask;
+}
+#endif
 int synth_voice_cost(const synth_t *s, int vi)
 {
     const voice_t *v = &s->v[vi];

@@ -226,6 +226,10 @@ static void guard_apply(void)
     }
     {
         uint8_t cap = guard_on ? guard_cap : NVOICE;
+#ifdef LION_KIDS_DEVICE
+        /* Give the primary core headroom after the platform retires its worker. */
+        if (plat_cpu2_barred() && cap > GUARD_VOICES) cap = GUARD_VOICES;
+#endif
         if (cap == guard_applied)
             return;
         guard_applied = cap;
@@ -1240,11 +1244,17 @@ static int8_t ws_ord[NVOICE];
 static int8_t ws_next[NVOICE];
 #endif
 static inline void render_voice_work(int core, int vi, float *l, float *r, float *a, float *b, uint32_t n);
+#ifdef LION_KIDS_DEVICE
+static int32_t ws_shared;                                 /* the queue prefix the second core may claim */
+#endif
 static int32_t ws_n = NVOICE;                              /* the queue's length this stretch (synth_order) */
 static volatile int32_t ws_a, ws_b;                        /* taken: by the second core (the bottom), the first (the top) */
 static int ws_take1(void)                                  /* the second core's next voice, -1 none */
 {
     int32_t a = ws_a + 1, vi;
+#ifdef LION_KIDS_DEVICE
+    if (a > ws_shared) return -1;
+#endif
     ws_a = a;
     plat_cpu2_sync();
     if (a + ws_b > ws_n || a > ws_n) {
@@ -1384,6 +1394,30 @@ static void kids_group_voice_work(void)
         }
     }
     ws_n = jobs;
+}
+#endif
+
+#ifdef LION_KIDS_DEVICE
+/* FM-1 preview 0.0.3 trapped on the second core inside the Acid soft drive.
+ * Pin Acid jobs to the primary core, including any grouped insert voices. */
+static void kids_pin_acid_work(void)
+{
+    ws_shared = ws_n;
+    uint32_t acid = synth_acid_voices(SY);
+    if (!acid) return;
+    int8_t primary[NVOICE];
+    int reserved = 0;
+    ws_shared = 0;
+    for (int i = 0; i < ws_n; i++) {
+        int voice = ws_ord[i], vi = voice;
+        if (kids_mix_mask)
+            while (vi >= 0 && !(acid >> vi & 1u)) vi = ws_next[vi];
+        if (vi >= 0 && (acid >> vi & 1u))
+            primary[reserved++] = (int8_t)voice;
+        else
+            ws_ord[ws_shared++] = (int8_t)voice;
+    }
+    memcpy(ws_ord + ws_shared, primary, (size_t)reserved);
 }
 #endif
 
@@ -1543,6 +1577,9 @@ static void render_sub(uint32_t n, uint32_t at)
     synth_idle(SY, ws_ord, ws_n, n);                      /* (the silent voices: moved on here, not taken) */
 #if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
     if (kids_mix_mask) kids_group_voice_work();
+#endif
+#ifdef LION_KIDS_DEVICE
+    kids_pin_acid_work();
 #endif
     ws_a = ws_b = 0;
     plat_cpu2_sync();

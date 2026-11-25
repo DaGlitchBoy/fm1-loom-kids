@@ -10,7 +10,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DEVICE_PREFIX = "FM-1_736"
-PREVIEW_VERSION = "0.0.3"
+PREVIEW_VERSION = "0.0.4"
 PRODUCT = DEVICE_PREFIX + "".join(f"{int(part):02d}" for part in PREVIEW_VERSION.split("."))
 INSTALL_URL = "https://vmphilemon-glitch.github.io/fm1-loom-kids/"
 
@@ -46,6 +46,7 @@ def main():
             "usb_product": '"LION KIDS FM-1"',
             "usb_manufacturer": '"LION KIDS"',
             "pool_spare": "8192",
+            "cpu2_fallback": "true",
             "screenshot": '"docs/img/lion-kids-home.png"',
             "description": '"An eight-track groovebox with live playing and a step sequencer. Based on LOOM-8."',
             "repo": '"https://github.com/vmphilemon-glitch/fm1-loom-kids"',
@@ -60,6 +61,8 @@ def main():
             if key == "usb_audio_channels":
                 continue
             lines.append(f"{key} = {profile[key]}" if key in profile else line)
+        if not any(line.startswith("cpu2_fallback") for line in lines):
+            lines.append("cpu2_fallback = true")
         lines.append('o2_cflags = ["-DLION_KIDS_DEVICE=1"]')
         if options.render:
             lines = [line for line in lines if not line.startswith("web_cflags")]
