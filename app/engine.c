@@ -1417,7 +1417,7 @@ static void kids_pin_acid_work(void)
         else
             ws_ord[ws_shared++] = (int8_t)voice;
     }
-    memcpy(ws_ord + ws_shared, primary, (size_t)reserved);
+    memcpy(ws_ord + ws_shared, primary, (uint32_t)reserved);
 }
 #endif
 
