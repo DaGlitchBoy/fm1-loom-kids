@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Make music with eight colorful tracks, a playable keyboard and pixel-art song names. Open-source firmware for the M‑VAVE FM‑1 and a free browser emulator.">
+  <title>LION KIDS · Make a beat on the FM‑1</title>
+  <link rel="stylesheet" href="./site.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="./">LION KIDS</a>
+    <nav aria-label="Main navigation"><a href="./manual/">Manual</a><a href="./export/">Record &amp; export</a><a href="https://github.com/DaGlitchBoy/fm1-loom-kids">Source</a></nav>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="title">
+      <div>
+        <p class="eyebrow">M‑VAVE FM‑1 firmware · Preview {{VERSION}}</p>
+        <h1 id="title">Make a beat.<br><span>Make it yours.</span></h1>
+        <p class="lede">LION KIDS turns the FM‑1 into a small groovebox for learning to play, layer loops, and perform. Try it in your browser or install it on your FM‑1.</p>
+        <div class="actions"><a class="button primary" href="./emu/">Play in browser</a><a class="button secondary" href="./install/">Install on FM‑1</a></div>
+      </div>
+      <figure class="main-shot"><img src="./img/lion-kids-home.png" width="240" height="240" alt="Home screen with eight color-coded instrument tracks, the current bass preset and four performance controls"><figcaption>HOME · Pick a sound and play</figcaption></figure>
+    </section>
+    <section class="workflow" aria-labelledby="workflow">
+      <h2 id="workflow">From first note to full loop</h2>
+      <p>Play drums, synths and sampled instruments on eight tracks. Record as you play, edit individual steps, or use the Performance view to watch the tracks loop together. Add effects and save your music in one of three slots with a pixel-art name.</p>
+      <div class="gallery">
+        <figure><img src="./img/lion-kids-performance.png" width="240" height="240" loading="lazy" alt="Eight tracks on separate timing rows in Performance"><figcaption>Performance · See all eight tracks</figcaption></figure>
+        <figure><img src="./img/lion-kids-steps.png" width="240" height="240" loading="lazy" alt="Step editor with a grid of sixteen numbered steps"><figcaption>Steps · Edit notes and drum hits</figcaption></figure>
+        <figure><img src="./img/kids-shaping-lfo.png" width="240" height="240" loading="lazy" alt="LFO screen with a waveform and four modulation controls"><figcaption>LFO · Add movement in time</figcaption></figure>
+      </div>
+      <a class="text-link" href="./manual/">Read the full manual</a>
+    </section>
+    <section class="export-strip" aria-labelledby="export">
+      <div><h2 id="export">Take your music with you</h2><p>Connect the FM‑1 by USB to download all three saved slots, render one loop as a WAV, or record a live performance in stereo.</p></div>
+      <a class="button primary" href="./export/">Open Record &amp; Export</a>
+    </section>
+    <section class="downloads" aria-labelledby="download">
+      <h2 id="download">Downloads and source</h2>
+      <p>The FM‑1 build is a community firmware preview. Back up your current firmware’s projects before switching. The installer includes a return-to-stock option.</p>
+      <ul>
+        <li><a href="./lion-kids.fwsc" download>Firmware file (.fwsc)</a> · <a href="./lion-kids-source.tar.gz" download>Firmware source</a></li>
+        <li><a href="./lion-kids-web.zip" download>Offline browser emulator (.zip)</a> · <a href="./lion-kids-emulator-source.tar.gz" download>Emulator source</a></li>
+        <li><a href="./SHA256SUMS">SHA-256 checksums</a> · <a href="./FM1_DEVICE_PREVIEW.md">Device build notes</a></li>
+      </ul>
+    </section>
+  </main>
+  <footer class="bar credits">
+    <p>Based on <a href="https://github.com/charlesvestal/fm1-loom">LOOM‑8 by Charles Vestal</a>, with <a href="https://github.com/charlesvestal/fm1-base">fm1-base</a> and <a href="https://github.com/hugelton/felucca-bsp">felucca-bsp</a>. <a href="./LICENSING.md">Licensing and credits</a> · <a href="./COPYING">GPLv3</a> · <a href="./LICENSE">MPL 2.0</a></p>
+  </footer>
+</body>
+</html>

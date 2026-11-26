@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+:root {
+  color-scheme: dark;
+  --bg: #101523;
+  --panel: #1b2337;
+  --border: #34405a;
+  --ink: #f5f2e9;
+  --muted: #c6cedc;
+  --gold: #ffda84;
+  --mint: #a0e8d2;
+  font: 1rem/1.6 system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+.bar, main { width: min(70rem, calc(100% - 3rem)); margin-inline: auto; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .55rem 1.4rem; padding-block: 1.35rem; }
+header.bar { border-bottom: 1px solid var(--border); }
+nav { display: flex; flex-wrap: wrap; gap: .3rem 1.25rem; }
+nav a { color: var(--muted); text-decoration: none; }
+a { color: var(--mint); text-underline-offset: .2em; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; }
+.brand, .eyebrow { font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: .08em; }
+.brand { color: var(--gold); text-decoration: none; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 24rem); align-items: center; gap: 2rem 4rem; padding-block: clamp(2rem, 7vw, 5rem); }
+.eyebrow { font-size: .88rem; color: var(--gold); }
+h1, h2, p, figure { margin: 0; }
+h1 { font-size: clamp(2.8rem, 6vw, 5.6rem); line-height: .98; letter-spacing: -.065em; margin-block: .7rem 1.2rem; }
+h1 span { color: var(--mint); }
+h2 { font-size: clamp(1.55rem, 3vw, 2.25rem); line-height: 1.17; letter-spacing: -.03em; margin-bottom: .6rem; }
+p { color: var(--muted); }
+.lede { max-width: 36rem; font-size: clamp(1rem, 1.7vw, 1.2rem); }
+.actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1.5rem; }
+.button { display: inline-block; white-space: nowrap; padding: .65rem 1.05rem; border: 1px solid var(--border); border-radius: .45rem; font-weight: 750; text-decoration: none; }
+.button.primary { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+.button.secondary { color: var(--ink); background: var(--panel); }
+.main-shot { background: var(--panel); padding: clamp(.8rem, 2vw, 1.35rem); border: 1px solid var(--border); border-radius: .8rem; }
+figure img { display: block; max-width: 100%; height: auto; image-rendering: pixelated; background: #141a28; }
+.main-shot img { width: 100%; }
+figcaption { margin-top: .55rem; color: var(--muted); font-size: .92rem; }
+.workflow, .downloads { padding-block: 2rem; border-top: 1px solid var(--border); }
+.workflow > p, .downloads > p { max-width: 65ch; }
+.gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; margin-block: 1.25rem; }
+.gallery figure { padding: .75rem; background: var(--panel); border-radius: .55rem; }
+.gallery img { width: 100%; max-width: 240px; margin-inline: auto; }
+.text-link { font-weight: 750; }
+.export-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.4rem; background: var(--panel); border-left: 3px solid var(--mint); margin: 1rem 0 2rem; }
+.export-strip div { max-width: 52ch; }
+.downloads ul { padding-left: 1.2em; }
+.credits { border-top: 1px solid var(--border); font-size: .92rem; }
+.manual { width: min(55rem, calc(100% - 3rem)); padding-block: 2rem; }
+.manual h1 { font-size: clamp(2.4rem, 6vw, 4.5rem); }
+.manual h2 { margin-top: 2.5rem; scroll-margin-top: 1rem; }
+.manual h3 { margin-block: 1.4rem .4rem; }
+.manual p, .manual ul, .manual ol { margin-block: .55rem 1rem; }
+.manual table { border-collapse: collapse; margin-block: 1rem; width: 100%; background: var(--panel); table-layout: fixed; }
+.manual th, .manual td { padding: .55rem; border: 1px solid var(--border); text-align: left; overflow-wrap: anywhere; }
+.manual pre { padding: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); }
+.manual #TOC { display: block; padding: .2rem 1rem; background: var(--panel); }
+.manual img { max-width: 100%; height: auto; }
+@media (max-width: 690px) {
+  .hero { grid-template-columns: 1fr; }
+  .main-shot { max-width: 23rem; }
+}
+@media (max-width: 540px) {
+  .bar, main, .manual { width: calc(100% - 2rem); }
+  .gallery { grid-template-columns: 1fr; }
+  .gallery figure { max-width: 19rem; }
+}

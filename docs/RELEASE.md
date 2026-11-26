@@ -1,56 +1,58 @@
-# Prepare a LION KIDS browser release
+# Publish LION KIDS
 
-The `Build LION KIDS emulator` GitHub Actions workflow builds and tests the pinned source. Its `lion-kids-release` artifact contains the browser ZIP, complete corresponding source with submodules, and SHA-256 checksums. Download the artifact from the run for the exact release commit. GitHub's automatic source archives omit submodule contents. Attach the corresponding-source archive with the browser ZIP.
+LION KIDS has a public project site for the FM‑1 firmware preview, desktop-browser emulator, manual, and USB Record & Export page. The downloadable firmware, browser ZIP, corresponding source bundles and SHA-256 checksums are on that site. [Project homepage](https://daglitchboy.github.io/fm1-loom-kids/)
 
-## Public repository description
+## Repository listing
 
-LION KIDS is an eight-track browser groovebox with live recording, step editing and pixel-art song names. Based on LOOM-8 by Charles Vestal.
+A suggested **About** description is:
 
-## GitHub draft
+> LION KIDS is an eight-track groovebox firmware for the M‑VAVE FM‑1, with a browser emulator, pixel-art song names and stereo USB recording. Based on LOOM‑8 by Charles Vestal.
 
-1. Choose a public version and tag the reviewed commit. A tag such as `v1.0.0-rc1` builds the browser candidate. The workflow produces artifacts without publishing a release.
-2. Open **Releases → Draft a new release** and select that tag. Title the draft **LION KIDS 1.0.0-rc1** and attach `lion-kids-web.zip`, `lion-kids-source.tar.gz`, and `SHA256SUMS`.
-3. Paste the notes below. Review the draft and mark it as a prerelease if using an RC tag. Publish when ready.
+Set **Website** to `https://daglitchboy.github.io/fm1-loom-kids/` in the repository's About settings. GitHub displays the default branch's README on the **Code** tab. The project website is served separately from `gh-pages`.
 
-### GitHub release notes
+The repository can be renamed. Update the local remote, build metadata, and published links together after a rename. Changing a GitHub Pages path can move the emulator to a different browser storage scope. If retaining emulator songs at a previously published URL matters, keep that URL available until you have a copy. [GitHub rename documentation](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)
 
-LION KIDS is an eight-track groovebox you can play in a desktop browser. It starts with a playable keyboard, eight distinct sounds, colored category icons, and three song slots you can name with pixel art.
+GitHub's **forked from** label shows the repository's fork relationship. Leaving the fork network permanently can remove issues, pull requests, stars and other GitHub metadata. LION KIDS can be published while the fork relationship remains. The license files and source acknowledgments accompany every distribution. [GitHub fork documentation](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/detaching-a-fork)
 
-- **Performance and Steps** alternate on SEQ and remember the last view. K4 browses steps on a track, and EDIT toggles the selected step in either view.
-- **Sound controls** stop at either end. Keys and Plucks start with reverb and delay.
-- **Live recording and editing** include overdub, step velocity, root, length and swing, plus session undo and redo.
-- **Song slots** support saving, opening and clearing with confirmation. Song data lives in your browser.
+## Build the downloadable assets
 
-Download the browser ZIP and follow the included **LION KIDS user manual**. The source archive includes the complete corresponding source and license notices. LION KIDS builds on **LOOM-8 by Charles Vestal**. This is a desktop-browser emulator release.
+1. Review and merge the LION KIDS publication pull request into `main`.
+2. Build the reviewed browser source with the **Build LION KIDS emulator** workflow. Its artifact contains the browser ZIP, complete corresponding source including submodules, and SHA-256 checksums.
+3. For a new device version, use the **Build LION KIDS FM-1 preview** workflow on the maintained device branch or via workflow dispatch. Its artifact contains the installer, firmware package, resource file and corresponding source. Preserve those assets together.
+4. Assemble the Pages directory using Python and Pandoc. Pass the unpacked installer artifact as the first directory, the browser artifact as the second, and a new output directory as the third.
 
-## Community posts
+```sh
+python3 tools/build_lion_site.py firmware-artifact browser-artifact pages-output
+cd pages-output
+sha256sum -c SHA256SUMS
+```
 
-Replace `<release URL>` with the actual GitHub release URL once it is public. The public post previews can include the HOME, Performance or Steps screenshot from the manual.
+Deploy the generated files to `gh-pages`. Keep this branch set as the Pages source to preserve public URLs. The published firmware version can stay fixed while the front page or documentation is updated.
 
-**M‑VAVE forum title**
-LION KIDS – a browser groovebox based on LOOM-8
+## Prepare a GitHub release
 
-**M‑VAVE forum post**
-I made LION KIDS to make the first few minutes of playing and recording a loop easier. It has eight playable tracks, a Performance view, a step editor, and three songs you can name with pixel art. It's based on LOOM-8 by Charles Vestal. This release runs in a desktop browser, with no FM‑1 connection required. The download and source are here: <release URL>. Feedback on the controls and the first-run experience is welcome.
+Open **Releases → Draft a new release**. Select a tag such as `v0.0.4` for the exact firmware source commit, which may differ from the website or emulator source commit. For the currently hosted firmware that commit is `e8d7213ba84f1c23df5fcd3b63066b87ab1a8f3d`. The offline emulator ZIP records its own source commit in `SOURCE-COMMIT.txt`.
 
-**Reddit title**
-LION KIDS is an eight-track browser groovebox for learning to make a loop
+Title the release **LION KIDS 0.0.4 — FM‑1 preview** and mark it as a prerelease. Add the firmware and resource files, both corresponding-source archives, and the offline browser ZIP from the project homepage. Link to the site's complete checksums and include these release notes:
 
-**Reddit post**
-LION KIDS is a small open-source groovebox based on Charles Vestal's LOOM-8. You can play a preset, record a loop, switch between Performance and a step editor, and save three songs with pixel-art names. It comes with a browser ZIP, a quick-start manual and the source: <release URL>. I'd like to hear which controls felt intuitive and where you got stuck.
+> LION KIDS turns the M‑VAVE FM‑1 into an eight-track groovebox for learning to play, layer loops and perform. Play synths, sampled instruments and drums. Overdub on the keys or edit steps, add effects and save three songs with pixel-art names.
+>
+> Try the browser emulator, read the manual, or install the FM‑1 preview from the [LION KIDS homepage](https://daglitchboy.github.io/fm1-loom-kids/). The Record & Export page downloads song backups, renders one loop to WAV, and records live stereo over USB.
+>
+> This preview includes the 0.0.4 audio recovery changes. Acid Bass runs on the primary core, and the firmware can continue on one core after a second-core fault. Back up your existing projects before switching firmware.
+>
+> LION KIDS builds on LOOM‑8 by Charles Vestal, with fm1-base and felucca-bsp. The combined builds are distributed under GPL-3.0-only with corresponding source.
 
-Before posting, check the community's rules for project announcements and self-promotion. Use the release link instead of an installer or firmware link.
+### Community announcement draft
 
-## The Firmware Hub
+**LION KIDS · an eight-track groovebox for the M‑VAVE FM‑1**
 
-The current deliverable is a browser emulator. The inherited device target builds LOOM-8 Studio. A LION KIDS listing for installation needs a separate device port, its own package identity and manifest, an applicable Hub-compatible build/provenance path, and hardware validation. The generated device manifest and installer refer to upstream LOOM-8. The browser release has no firmware manifest. See the [platform's Firmware Hub metadata documentation](../base/docs/FIRMWARE-JSON.md).
+> I made LION KIDS to make it easier to play a sound, record a loop and build up a song. It has eight tracks, Performance and Steps views, and three song slots you can name with pixel art. You can export a saved loop or record a live performance over USB.
+>
+> It builds on LOOM‑8 by Charles Vestal. You can try it without an FM‑1 in the browser. The installer, manual, screenshots and source are all on the [project homepage](https://daglitchboy.github.io/fm1-loom-kids/). The FM‑1 build is a preview, and feedback on playing and recording is welcome.
 
-## Rename and privacy checklist
+Use this as a starting point for the FM‑1 community and Reddit, following each community's rules. For a Firmware Hub listing, use the firmware file and the matching GitHub build's `firmware.json` metadata once the service accepts the build's format and provenance. [Firmware Hub metadata documentation](../base/docs/FIRMWARE-JSON.md)
 
-The GitHub repository name and URL can drop “loom” without renaming the emulator's internal build files. After a repository rename, update your clone's `origin`, any documentation links, and the URLs in announcements. Review existing Pages configuration and links, external indexes and badges, and reusable workflow calls or actions referenced by repository name. Existing web and Git links usually redirect until the old name is reused. GitHub Pages URLs and action references have separate redirect limitations. Changing the address used to run the emulator can change its IndexedDB origin and make older songs appear missing.
+## Personal data
 
-Review the GitHub account's public name, profile email, avatar and account handle used to publish. A release can show the publisher's public account and its profile details. Enable GitHub email privacy and use the GitHub-provided no-reply email for new commits. Inspect the final tag, generated release notes, screenshots and assets. The current branch histories have been cleaned of the earlier private commit email. Previously shared commit IDs can still resolve in GitHub's retained copies. GitHub Support controls removal of those copies.
-
-- [GitHub repository rename behavior](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository)
-- [GitHub commit email settings](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address)
-- [GitHub sensitive data removal](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)
+The site serves static files and uses local browser audio and MIDI permissions. Its pages contain no tracking scripts. Review your public GitHub profile name, avatar and contact fields before posting. Use GitHub's no-reply address for public commits and enable **Block command line pushes that expose my email**. The publisher's account handle will be visible when you publish a GitHub release. Old public copies and cached history can remain accessible after a rename. [GitHub email settings](https://github.com/settings/emails) · [Removing sensitive data from GitHub](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository)

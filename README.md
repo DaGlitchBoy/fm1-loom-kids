@@ -1,15 +1,19 @@
 # LION KIDS
 
-An eight-track music-making instrument for the browser. Play presets, record a loop, edit it step by step, and save your song with a pixel-art name.
+LION KIDS is an open-source groovebox firmware for the M‑VAVE FM‑1, with a free browser emulator. Choose one of eight colorful tracks, play a sound, and turn a few notes into a loop. Save up to three songs and give each a pixel-art name.
 
-- [Start playing and learn the controls](docs/LION_KIDS_MANUAL.md)
-- [Release build, downloads and publishing checklist](docs/RELEASE.md)
-- [Starter sounds and hardware review](docs/design/LION_KIDS_RELEASE.md)
-- [Install LION KIDS on the FM‑1](https://daglitchboy.github.io/fm1-loom-kids/)
-- [FM‑1 device preview and install steps](docs/FM1_DEVICE_PREVIEW.md)
+| Start here | |
+| --- | --- |
+| [Project homepage](https://daglitchboy.github.io/fm1-loom-kids/) | Screenshots, downloads and an overview |
+| [Play in browser](https://daglitchboy.github.io/fm1-loom-kids/emu/) | Try the instrument on a computer |
+| [Install on FM‑1](https://daglitchboy.github.io/fm1-loom-kids/install/) | Install the 0.0.4 firmware preview in Chrome or Edge |
+| [User manual](https://daglitchboy.github.io/fm1-loom-kids/manual/) | Learn the panel controls and workflows |
+| [Record & Export](https://daglitchboy.github.io/fm1-loom-kids/export/) | Back up saved device songs, export a loop, or record live stereo over USB |
 
-![The LION KIDS stage](docs/img/lion-kids-home.png)
+![LION KIDS HOME showing eight colorful instrument tracks](docs/img/lion-kids-home.png)
 
-LION KIDS is based on [LOOM-8 by Charles Vestal](https://github.com/charlesvestal/fm1-loom) and its [fm1-base](https://github.com/charlesvestal/fm1-base) and [felucca-bsp](https://github.com/hugelton/felucca-bsp) platform dependencies. The combined browser build is GPL-3.0-only. The individual file licenses and third-party credits are in [LICENSING.md](LICENSING.md), [COPYING](COPYING), and [LICENSE](LICENSE).
+Play synths, drums and sampled instruments. Record as you play, or edit the notes and drum hits in **Steps**. **Performance** shows all eight tracks while each plays its own 16-, 32- or 64-step loop. Add reverb, delay, an envelope, an LFO, Quick Effects or an arpeggiator directly from the panel.
 
-The current release runs in a desktop browser or the host simulator. A separate FM‑1 device preview is available from the preview build workflow for an initial hardware test.
+The device preview is downloadable from the homepage with its corresponding source and checksums. See the [device build notes](docs/FM1_DEVICE_PREVIEW.md), [manual source](docs/LION_KIDS_MANUAL.md) and [release checklist](docs/RELEASE.md).
+
+LION KIDS builds on **LOOM‑8 by Charles Vestal**, with **fm1-base** and **felucca-bsp**. The combined firmware and emulator builds use GPL-3.0-only. Individual files keep their original licenses. [LOOM‑8](https://github.com/charlesvestal/fm1-loom) · [Licensing and credits](LICENSING.md) · [GPLv3](COPYING) · [MPL 2.0](LICENSE)
