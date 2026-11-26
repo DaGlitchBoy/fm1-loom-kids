@@ -5,7 +5,7 @@ An eight-track music-making instrument for the browser. Play presets, record a l
 - [Start playing and learn the controls](docs/LION_KIDS_MANUAL.md)
 - [Release build, downloads and publishing checklist](docs/RELEASE.md)
 - [Starter sounds and hardware review](docs/design/LION_KIDS_RELEASE.md)
-- [Install LION KIDS on the FM‑1](https://vmphilemon-glitch.github.io/fm1-loom-kids/)
+- [Install LION KIDS on the FM‑1](https://daglitchboy.github.io/fm1-loom-kids/)
 - [FM‑1 device preview and install steps](docs/FM1_DEVICE_PREVIEW.md)
 
 ![The LION KIDS stage](docs/img/lion-kids-home.png)

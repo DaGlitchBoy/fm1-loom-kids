@@ -7,13 +7,11 @@ import json
 from pathlib import Path
 import shutil
 import sys
-from build_lion_device import PREVIEW_VERSION, PRODUCT
+from build_lion_device import PREVIEW_VERSION, PRODUCT, SOURCE
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "base" / "tools"))
 from make_site import product_of, read_conf, strip_module
-
-SOURCE = "https://github.com/vmphilemon-glitch/fm1-loom-kids"
 
 def main():
     if len(sys.argv) != 2:

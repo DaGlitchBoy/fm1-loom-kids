@@ -6,7 +6,7 @@ One click on **LION KIDS starten** switches on the instrument. On first use, slo
 
 ## Try it on a Mac
 
-Download the web emulator artifact from the [LION KIDS GitHub Actions workflow](https://github.com/vmphilemon-glitch/fm1-loom-kids/actions/workflows/lion-kids.yml) when a run is available. To build from source, open your existing repository checkout with Emscripten and Python with Pillow and libraqm installed.
+Download the web emulator artifact from the [LION KIDS GitHub Actions workflow](https://github.com/DaGlitchBoy/fm1-loom-kids/actions/workflows/lion-kids.yml) when a run is available. To build from source, open your existing repository checkout with Emscripten and Python with Pillow and libraqm installed.
 
 ```sh
 git fetch origin

@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DEVICE_PREFIX = "FM-1_736"
 PREVIEW_VERSION = "0.0.4"
 PRODUCT = DEVICE_PREFIX + "".join(f"{int(part):02d}" for part in PREVIEW_VERSION.split("."))
-INSTALL_URL = "https://vmphilemon-glitch.github.io/fm1-loom-kids/"
+SOURCE = "https://github.com/DaGlitchBoy/fm1-loom-kids"
+INSTALL_URL = "https://daglitchboy.github.io/fm1-loom-kids/"
 
 
 def main():
@@ -49,7 +50,7 @@ def main():
             "cpu2_fallback": "true",
             "screenshot": '"docs/img/lion-kids-home.png"',
             "description": '"An eight-track groovebox with live playing and a step sequencer. Based on LOOM-8."',
-            "repo": '"https://github.com/vmphilemon-glitch/fm1-loom-kids"',
+            "repo": f'"{SOURCE}"',
             "install": f'"{INSTALL_URL}"',
             "site": f'"{INSTALL_URL}"',
         }

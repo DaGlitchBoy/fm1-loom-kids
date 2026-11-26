@@ -1,6 +1,6 @@
 # Codex task — LION KIDS milestone 1: functional child-friendly emulator UI
 
-**Repository:** https://github.com/vmphilemon-glitch/fm1-loom-kids
+**Repository:** https://github.com/DaGlitchBoy/fm1-loom-kids
 **Upstream reference:** https://github.com/charlesvestal/fm1-loom
 **Preferred model:** Astra Low / Standard when available.
 **Safety boundary:** NEVER flash, install firmware, run USB/MIDI device writers, modify the bootloader or hardware recovery. Only host/web-emulator work.
