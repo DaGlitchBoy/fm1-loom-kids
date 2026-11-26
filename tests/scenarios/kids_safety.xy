@@ -1,0 +1,25 @@
+# Save fixture in Studio, then verify Kids edits never write it.
+step 1 1 1 1 100
+projsave 1 Original
+storesave app/build/scenarios/kids_safety/original.store
+kids-entry
+expect kids 1
+expect project_slot 0
+tap SEQ
+tap SEQ
+tapkey w0
+expect note 1 1 1 0
+tapkey w4
+expect note 1 1 5 1
+spin PRESET 1
+tap SAVE
+tap SEL
+expect kids 1
+wait 7000
+storesave app/build/scenarios/kids_safety/after_kids.store
+reboot
+wait 300
+expect kids 0
+expect note 1 1 1 1
+expect note 1 1 5 0
+storesave app/build/scenarios/kids_safety/after_reboot.store

@@ -1,4 +1,8 @@
-# LOOM-8 licensing
+# LION KIDS licensing and credits
+
+LION KIDS is based on [LOOM-8 by Charles Vestal](https://github.com/charlesvestal/fm1-loom). The LION KIDS firmware and browser emulator are distributed as GPL-3.0-only builds with their complete corresponding source. The inherited notices and individual file licenses are documented below.
+
+## LOOM-8 licensing
 
 LOOM-8 is free software, file by file: each file says its licence in its first lines (`SPDX-License-Identifier`).
 Most are under the Mozilla Public License, version 2.0 (`MPL-2.0`, full text in `LICENSE`); the acid engine
@@ -106,11 +110,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   simulator and the browser emulator build them in.
 - The factory closed hat (`app/samples/909_hat.wav`) is 9W9's hat, a sample 9W9 takes from
   [ER-99](https://github.com/matthewcieplak/er-99) by Matthew Cieplak, cut by `tools/prep_909.py`. It stays under
-  **GPL-3.0** (ER-99's and 9W9's licence; not athousanddetails's to relicense). It is not part of the firmware: on
-  the FM-1 it lives in the sample bank, a separate file the installer or the samples page writes beside the
+  **GPL-3.0** (ER-99's and 9W9's licence; not athousanddetails's to relicense). On the inherited LOOM-8 FM-1 build
+  it lives in the sample bank, a separate file the installer or the samples page writes beside the
   firmware (`samples/factory.bin` on the site), aggregated with it, not linked into it; the firmware image has no
-  copy (its factory rows are empty there). The browser emulator builds it in; the emulator links nothing of
-  JieLi's, and its MPL-2.0 parts may be combined with GPL-3.0 (MPL-2.0 section 3.3).
+  copy (its factory rows are empty there). The browser emulator and the separate LION KIDS device profile build it
+  in under GPL-3.0. These builds link no JieLi SDK libraries, and their MPL-2.0 parts may be combined with GPL-3.0
+  (MPL-2.0 section 3.3).
 - The recorded instruments (`app/samples/piano.wav`, `upright.wav`, `strings.wav`, `brass.wav`, `flute.wav`,
   `orch_hit.wav`) are cut from the Versilian Studios Chamber Orchestra 2 Community Edition (VSCO 2 CE,
   github.com/sgossner/VSCO-2-CE), CC0 1.0, by `tools/prep_recordings.py`.

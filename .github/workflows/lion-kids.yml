@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MPL-2.0
+name: Build LION KIDS emulator
+
+on:
+  push:
+    branches: [main, 'feat/lion-kids-release', 'feat/lion-kids-sequencer-release']
+    tags: ['v[0-9]*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 python3-pil
+          /usr/bin/python3 -c 'from PIL import features; assert features.check_feature("raqm")'
+      - name: Install the upstream Emscripten toolchain
+        run: |
+          git clone --quiet --branch 6.0.10 --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          test "$(git -C "$RUNNER_TEMP/emsdk" rev-parse HEAD)" = a2b92777574c2feda07994cd4f1079a3dfc151f8
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.10
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10
+      - name: Build and test the emulators
+        env:
+          PYTHON: /usr/bin/python3
+          CC: gcc-14
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          "$CC" --version
+          emcc --version
+          ./build.sh --host
+          sh tests/run_tests.sh
+      - name: Package the browser emulator and corresponding source
+        run: sh tools/package_lion_kids.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: lion-kids-release
+          path: build/lion-kids-release/
+          if-no-files-found: error

@@ -1620,6 +1620,60 @@ static void t_player_switch(void)     /* the player changed while its notes soun
     printf("ok %s\n", cur);
 }
 
+#ifdef PLAT_HOST
+static void t_kids_arp(void)
+{
+    static const int patterns[] = {0, 1, 2, 3, 5};
+    static const int wanted[][5] = {{60,64,67,60,64}, {67,64,60,67,64},
+        {60,64,67,64,60}, {67,64,60,64,67}};
+    cur = "Kids arp order and timing";
+    for (int order = 0; order < 5; order++) {
+        reset();
+        S.kids_mode = 1;
+        par[0][TP_PLAYER] = PL_ARP;
+        par[0][TP_P1] = ARP_1_16;
+        par[0][TP_P2] = (uint8_t)patterns[order];
+        par[0][TP_P3] = 1;
+        seq_key(&S, 0, 60, 1, 100);
+        seq_key(&S, 0, 64, 1, 100);
+        seq_key(&S, 0, 67, 1, 100);
+        run(5 * L16 - L16 / 2);
+        CHECK(count(E_ON, 0) == 5);
+        for (int i = 0; i < 5; i++) {
+            ev_t *e = on_n(i);
+            CHECK(e && (order < 4 ? e->a == wanted[order][i] : (e->a == 60 || e->a == 64 || e->a == 67)));
+            if (i) CHECK(e && near(e->t - on_n(i - 1)->t, L16, 2));
+        }
+    }
+    cur = "Kids recorded chord replays once through arp";
+    reset();
+    S.kids_mode = 1;
+    par[0][TP_PLAYER] = PL_ARP;
+    par[0][TP_P1] = ARP_1_16;
+    par[0][TP_P2] = 3;
+    par[0][TP_P3] = 1;
+    start();
+    run(10);
+    seq_rec(&S, 1);
+    seq_key(&S, 0, 60, 1, 100);
+    seq_key(&S, 0, 64, 1, 100);
+    seq_key(&S, 0, 67, 1, 100);
+    run(4 * L16 - L16 / 2);
+    seq_key(&S, 0, 60, 0, 0);
+    seq_key(&S, 0, 64, 0, 0);
+    seq_key(&S, 0, 67, 0, 0);
+    run(10);
+    seq_rec(&S, 0);
+    CHECK(st(0, 0)->note[0] == 60 && st(0, 0)->note[1] == 64 && st(0, 0)->note[2] == 67 && !st(0, 0)->note[3]);
+    stop();
+    nev = 0;
+    start();
+    run(4 * L16 - L16 / 2);
+    CHECK(count(E_ON, 0) == 4 && on_n(0)->a == 67 && on_n(1)->a == 64 && on_n(2)->a == 60 && on_n(3)->a == 64);
+    stop();
+}
+#endif
+
 static void t_step_players(void)      /* the arp and the strum play the steps' notes too */
 {
     ev_t *a, *b, *c;
@@ -3427,6 +3481,9 @@ int main(void)
     t_song_bars();
     t_brain();
     t_arp();
+#ifdef PLAT_HOST
+    t_kids_arp();
+#endif
     t_maestro();
     t_player_switch();
     t_step_players();

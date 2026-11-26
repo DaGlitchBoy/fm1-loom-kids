@@ -1,0 +1,83 @@
+name: Build LION KIDS FM-1 preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feat/lion-kids-fm1-device']
+
+permissions:
+  contents: read
+
+jobs:
+  device-preview:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Set up the FM-1 compiler and pinned SDK files
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y python3-pil
+          /usr/bin/python3 -c 'from PIL import features; assert features.check_feature("raqm")'
+          mkdir -p "$RUNNER_TEMP/jieli" "$RUNNER_TEMP/sdk/cpu/wl82/tools/cfg"
+          curl --fail --silent --show-error --location \
+            https://github.com/DimmKirr/setup-fm1-toolchain/releases/download/toolchain-20260730.1/toolchain-20260730.1.tar.xz \
+            -o "$RUNNER_TEMP/jieli/toolchain.tar.xz"
+          printf '%s  %s\n' d3fc3be92cfc07ccb0ac682b3b2e41e4d14593426067e6c3c6e908db2f90c0e0 \
+            "$RUNNER_TEMP/jieli/toolchain.tar.xz" | sha256sum -c
+          tar -xJf "$RUNNER_TEMP/jieli/toolchain.tar.xz" -C "$RUNNER_TEMP/jieli"
+          sdk="$RUNNER_TEMP/sdk/cpu/wl82/tools"
+          upstream=https://raw.githubusercontent.com/amitv87/fw-AC79_AIoT_SDK/d179b4484759423312073f5fbb232501aa491047/cpu/wl82/tools
+          for path in uboot.boot cfg_tool.bin cfg/eq_cfg_hw.bin; do
+            curl --fail --silent --show-error --location "$upstream/$path" -o "$sdk/$path"
+          done
+          (cd "$sdk" && sha256sum -c <<'SUMS'
+          4e3b4c220dc96641cb5a723f41e68ce41d5261ae9434bb33fbd7f2c59976ded4  uboot.boot
+          276579954f076886a6a7694f65dc71c034a63a2c204b76749065c0ac7b010d1b  cfg_tool.bin
+          41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d  cfg/eq_cfg_hw.bin
+          SUMS
+          )
+      - name: Install the pinned Emscripten toolchain
+        run: |
+          git clone --quiet --branch 6.0.10 --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          test "$(git -C "$RUNNER_TEMP/emsdk" rev-parse HEAD)" = a2b92777574c2feda07994cd4f1079a3dfc151f8
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.10
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10
+      - name: Build and verify the device preview offline
+        env:
+          PYTHON: /usr/bin/python3
+          JIELI_TOOLCHAIN: ${{ runner.temp }}/jieli/toolchain
+          AC79_SDK: ${{ runner.temp }}/sdk
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          set -eu
+          ./build.sh --lion-device
+          ./build.sh --lion-device --host
+          mkdir -p "$RUNNER_TEMP/sim-output" "$RUNNER_TEMP/checks"
+          build=app/build/lion-device
+          "$build/lion-kids_host" tests/host/kids_device.xy "$RUNNER_TEMP/sim-output"
+          "$PYTHON" tests/host/kids_device_sounds_test.py "$build/lion-kids_host"
+          "$PYTHON" tests/host/kids_device_playback_test.py "$build/lion-kids_host"
+          cc -std=c11 -Wall -Wextra -Werror -Iapp tests/host/kids_flash_store_test.c app/kids_flash_store.c -o "$RUNNER_TEMP/checks/flash-store"
+          cc -w base/tests/ota_test.c -o "$RUNNER_TEMP/checks/ota"
+          cc -w base/tests/ldr_test.c -o "$RUNNER_TEMP/checks/loader"
+          cc base/tests/flash_ok_test.c -o "$RUNNER_TEMP/checks/chips"
+          "$RUNNER_TEMP/checks/flash-store"
+          "$RUNNER_TEMP/checks/ota" "$build/lion-kids.fwsc"
+          head -c 200000 "$build/lion-kids.bin" > "$RUNNER_TEMP/checks/old.bin"
+          "$PYTHON" base/tools/fm1pkg_make.py "$RUNNER_TEMP/checks/old.bin" "$build/ota.bin" "$RUNNER_TEMP/checks/old.fwsc"
+          "$RUNNER_TEMP/checks/loader" "$RUNNER_TEMP/checks/old.fwsc" "$build/lion-kids.fwsc"
+          "$RUNNER_TEMP/checks/chips"
+          "$PYTHON" tools/build_lion_device.py --render
+          "$PYTHON" tools/make_lion_installer.py "$RUNNER_TEMP/install-preview"
+          git rev-parse HEAD > "$RUNNER_TEMP/install-preview/FIRMWARE-SOURCE-COMMIT.txt"
+          node tests/host/lion_song_export.mjs "$build/lion-kids_host" "$RUNNER_TEMP/install-preview"
+          tar --exclude=.git --exclude=build --exclude=__pycache__ -czf "$RUNNER_TEMP/install-preview/lion-kids-source.tar.gz" \
+            .github app base docs tests tools build.sh AGENTS.md COPYING LICENSE LICENSING.md README.md BUILDING.md
+      - uses: actions/upload-artifact@v5
+        with:
+          name: LION KIDS FM-1 preview
+          path: ${{ runner.temp }}/install-preview/
+          if-no-files-found: error

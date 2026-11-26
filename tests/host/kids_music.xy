@@ -1,0 +1,138 @@
+# LOOM_KIDS=1
+wait 300
+kids-legacy-band
+spin SELECT 1
+expect trk 2
+spin K1 -100
+expect par2.level 0
+spin K1 83
+expect par2.level 83
+spin SELECT 1
+expect par3.level >0
+spin SELECT -1
+expect par2.level 83
+# Retain hidden notes when shortening this pattern.
+spin K2 2
+expect kids_length 64
+step 2 1 64 77 100
+step 2 2 16 74 100
+spin K2 -2
+expect kids_length 16
+tap SEQ
+tap SEQ
+spin K4 48
+expect kids_bar 1
+tap HOME
+spin K2 1
+expect kids_length 32
+spin K2 1
+expect kids_length 64
+expect note 2 1 64 77
+expect note 2 2 16 74
+spin K2 -2
+# C major snaps C sharp down to C. The first release leaves the shared note held.
+spin K4 1
+key 7 down
+key 8 down
+expect kids_held.60 2
+key 7 up
+expect kids_held.60 1
+key 8 up
+expect kids_held.60 0
+# Egyptian in-scale chord on D: D, G, C.
+spin K4 5
+spin K3 1
+key 9 down
+expect kids_note.1 62
+expect kids_note.2 67
+expect kids_note.3 72
+# Change voicing under a held key. Release still uses note-on ownership.
+spin K3 6
+key 9 up
+expect kids_held.67 0
+expect kids_held.72 0
+# Factory bass is monophonic. All four pitches reach the live-note path
+# and release safely, with voice stealing left to the preset's own mode.
+spin K4 -6
+expect par2.vmode 1
+key 7 down
+expect kids_held.60 1
+expect kids_held.64 1
+expect kids_held.67 1
+expect kids_held.71 1
+key 7 up
+wait 1000
+expect voices 0
+# Arm without playing, cancel on target change and on entry to Steps.
+tap REC
+expect kids_rec 1
+expect playing 0
+spin SELECT 1
+expect kids_rec 0
+spin SELECT -1
+tap REC
+tap SEQ
+expect kids_rec 0
+tap REC
+expect kids_rec 0
+tap HOME
+# Overdub onto an occupied step. The existing note and first three Cmaj7
+# tones fill the cell. The fourth tone still plays, but does not replace data.
+step 2 1 2 55 100
+tap REC
+expect kids_rec 1
+tap PLAY
+expect kids_rec 2
+key 7 down
+wait 25
+key 7 up
+wait 60
+expect noteat 2 1 2 1 55
+expect noteat 2 1 2 2 60
+expect noteat 2 1 2 3 64
+expect noteat 2 1 2 4 67
+expect kids_overflow 1
+expect slen 2 2 >0
+shot kids-recording.png
+spin SELECT 1
+expect kids_rec 0
+expect playing 1
+tap PLAY
+expect playing 0
+spin SELECT -1
+# Replay the take with a polyphonic preset and no physical notes held.
+param 2 vmode 0
+master 2900
+peakreset
+tap PLAY
+wait 300
+expect peak_db_min -45
+tap PLAY
+# Two overlapping major chords share G and keep it held after C is released.
+spin K3 -5
+key 7 down
+key 14 down
+expect kids_held.67 2
+expect voices >2
+key 7 up
+expect kids_held.67 1
+key 14 up
+wait 1000
+expect voices 0
+# A drum track ignores scale/chord edits and records its normal hit.
+spin SELECT -1
+tap REC
+tap PLAY
+tapkey b0
+tap PLAY
+expect note 1 1 2 1
+expect kids_rec 0
+# REC can also start and stop a take over a running loop.
+tap PLAY
+expect playing 1
+tap REC
+expect kids_rec 2
+tap REC
+expect kids_rec 0
+expect playing 1
+tap PLAY

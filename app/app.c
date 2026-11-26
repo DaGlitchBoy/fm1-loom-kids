@@ -8,6 +8,9 @@
 #include "gfx_loom.c"
 #include "engine.c"
 #include "project.c"
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+static uint64_t kids_stashed_hits(void);
+#endif
 #include "pages.c"
 #include "ui.c"
 #include "midicc.c"
@@ -61,6 +64,10 @@ void app_init(void)
 #ifndef PLAT_HOST
     plat_loom_init();
 #endif
+#ifdef LION_KIDS_DEVICE
+    /* The Kids journal owns the former imported-sample window. */
+    project_defaults();
+#else
     {   /* the user bank, read in place through its windows (none without the flash, or over a store object) */
         const uint8_t *reg[SMP_NREG];
         int ok = store_clear_of_bank();
@@ -79,16 +86,22 @@ void app_init(void)
     loom_large_load();                              /* the large type faces, from there too */
     project_load(project_last_slot());              /* the slot used last; defaults when nothing (or another format) is saved */
     presets_load();
+#endif
+#ifdef LION_KIDS_DEVICE
+    d909_res_get = res_samples;
+#endif
     engine_init(&pats, proj_par);
     project_apply();
 #ifndef PLAT_HOST
     if (!DEBUG_BUILD)                               /* a release: two cores, unless the second was given up */
         proj.one_core = (uint8_t)(plat_cpu2_barred() != 0);
+#ifndef LION_KIDS_DEVICE
     else if (plat_cpu2_barred() && !proj.one_core) {     /* it crashed (or was given up) with two cores: one from now on */
         proj.one_core = 1;
         project_save(proj_slot);                    /* written now, on one core, the project as it loaded;
                                                      * Setup > 2nd core turns it back on */
     }
+#endif
     if (!proj.one_core && plat_cpu2_set(1) == 0)  /* the second core: at power-on, before the audio and the timers */
         engine_set_core2(plat_cpu2_run, plat_cpu2_wait);   /* (fm1-base's: a failure of it restarts the FM-1) */
 #else
@@ -154,7 +167,12 @@ void app_frame(void)
 void app_input_only(void) { ui_input_only(); }
 void app_say(const char *a, const char *b) { ui_say(a, b); }
 void app_redraw(void) { ui_redraw(); }
+#ifdef LION_KIDS_DEVICE
+#include "kids_song_usb.c"
+int app_sysex(const uint8_t *p, uint32_t n) { return kids_song_usb(p, n); }
+#else
 int app_sysex(const uint8_t *p, uint32_t n) { return smp_frame(p, n); }
+#endif
 
 /* the name over the eight tracks' inks woven as threads, in the default theme (pages.c THEMES[0]) */
 void app_splash(void)
@@ -181,6 +199,9 @@ void app_backup_flush(void) {}
 void app_backup_hold(int on) { store_held = (uint8_t)(on != 0); }
 void app_backup_restored(void)
 {
+#ifdef LION_KIDS_DEVICE
+    ui_init();
+#else
     memset(stored_known, 0, sizeof stored_known);  /* (what project.c knew of the flash is stale) */
     slot_known = 0;
     if (project_load(proj_slot) != 0)
@@ -188,6 +209,7 @@ void app_backup_restored(void)
     presets_load();
     after_load();
     ui.dirty = 0;
+#endif
 }
 
 #ifdef PLAT_HOST

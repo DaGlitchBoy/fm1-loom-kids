@@ -13,6 +13,10 @@ export JIELI_TOOLCHAIN AC79_SDK
 PY="${PYTHON:-python3}"
 [ -f base/tools/build.py ] || { echo "build.sh: no fm1-base in base/ (git submodule update --init --recursive)"; exit 1; }
 "$PY" -c 'import PIL' 2>/dev/null || { echo "build.sh: $PY has no Pillow (pip3 install Pillow)"; exit 1; }
+if [ "${1:-}" = --lion-device ]; then
+    shift
+    exec "$PY" tools/build_lion_device.py "$@"
+fi
 case " $* " in
     *" --web "*)                            # the emulator: fm1-base's page with LOOM-8's bits (tools/emu_page.py)
         "$PY" base/tools/build.py app "$@"

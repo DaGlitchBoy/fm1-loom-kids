@@ -1,0 +1,177 @@
+# Three independent loop lengths. Track 1 is the default kit.
+wait 300
+kids-legacy-band
+expect kids_length 16
+spin SELECT 1
+spin K2 1
+expect kids_length 32
+spin SELECT 1
+spin K2 2
+expect kids_length 64
+tap SEQ
+expect kids 4
+spin K4 -1
+expect kids_cursor 64
+expect kids_perf_page 4
+spin K4 1
+expect kids_cursor 1
+expect kids_perf_page 1
+tap SEQ
+expect kids 2
+spin K2 2
+expect kids_note 62
+tapkey b0
+expect note 3 1 1 0
+spin K4 -1
+expect kids_cursor 64
+expect kids_bar 4
+tap EDIT
+expect note 3 1 64 62
+spin K1 -28
+expect stepvel 3 1 64 72
+spin K2 1
+expect note 3 1 64 63
+spin K3 4
+expect slen 3 64 4
+wait 100
+shot kids-steps.png
+tap EDIT
+expect note 3 1 64 0
+spin K1 -45
+expect kids_velocity 55
+tapkey w15
+expect stepvel 3 1 64 55
+# Re-opening from HOME remembers Steps, and SEQ toggles back to Performance.
+tap HOME
+tap SEQ
+expect kids 2
+tap SEQ
+expect kids 4
+expect kids_cursor 64
+spin K1 -10
+spin K2 2
+spin K3 2
+expect stepvel 3 1 64 45
+expect note 3 1 64 64
+expect slen 3 64 2
+# EDIT changes the focused cell without leaving Performance.
+tap EDIT
+expect kids 4
+expect kids_perf_page 4
+expect note 3 1 64 0
+tap EDIT
+expect note 3 1 64 62
+press HOME
+spin K1 -2
+release HOME
+expect note 3 1 64 64
+expect slen 3 64 2
+expect par3.level 100
+expect kids_length 64
+spin K4 1
+expect kids_cursor 1
+spin K4 16
+expect kids_cursor 17
+spin K4 -1
+expect kids_cursor 16
+spin SELECT -1
+expect kids_cursor 1
+spin K4 -1
+expect kids_cursor 32
+spin SELECT -1
+spin K4 -1
+expect kids_cursor 16
+spin K4 1
+expect kids_cursor 1
+spin SELECT 2
+expect kids_cursor 16
+tap GLO
+spin K3 24
+expect kids_swing 24
+spin K4 1
+expect kids_slot 2
+expect kids_swing 24
+spin K3 -24
+expect kids_swing 0
+tap SEQ
+expect kids 4
+# Playing keys in Performance keeps existing steps.
+master 2800
+peakreset
+tapkey b0
+wait 130
+expect peak_db_min -46
+expect note 3 1 1 0
+step 1 1 1 1 100
+step 2 1 17 65 100
+step 3 1 19 62 100
+step 3 1 33 66 100
+tap PLAY
+expect kids_perf_page 1
+expect kids_cell.1.1 2
+wait 2000
+expect kids_perf_page 2
+expect kids_perf_page.1 1
+expect kids_perf_page.2 2
+expect kids_cell.2.1 2
+expect kids_cell.3.3 2
+shot kids-performance.png
+wait 2000
+expect kids_perf_page 3
+expect kids_perf_page.2 1
+expect kids_perf_page.3 3
+expect kids_cell.3.1 2
+wait 2000
+expect kids_perf_page 4
+expect kids_perf_page.1 1
+expect kids_perf_page.2 2
+expect kids_cell.3.16 2
+# Manual movement during playback changes the selected track only.
+spin K4 16
+expect kids_perf_page 1
+expect kids_perf_page.2 2
+tap PLAY
+spin SELECT -2
+tap SEQ
+expect kids 2
+expect kids_bar 1
+# Per-hit velocity is isolated on a shared drum step.
+tapkey w1
+tapkey b1
+tapkey w1
+spin K1 -36
+expect kids_velocity 64
+tapkey b0
+expect kids_velocity 100
+tapkey b1
+expect kids_velocity 64
+tapkey w1
+spin K1 -20
+expect kids_velocity 80
+tapkey w1
+expect kids_velocity 80
+tapkey b0
+expect kids_velocity 100
+tap SEQ
+expect kids 4
+expect kids_cell.1.2 2
+tap REC
+tap PLAY
+tapkey b2
+expect kids_rec 2
+expect noteat 1 1 2 1 7
+tap SEQ
+expect kids_rec 0
+expect playing 1
+tap PLAY
+# In Performance a live drum key selects the hit without editing the pattern.
+tap SEQ
+expect kids 4
+expect kids_cursor 2
+tapkey b2
+expect noteat 1 1 2 1 7
+tap EDIT
+expect kids 4
+expect noteat 1 1 2 1 3
+tap EDIT
+expect noteat 1 1 2 1 7

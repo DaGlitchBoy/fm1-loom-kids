@@ -192,6 +192,11 @@ enum { GD_CUT, GD_RES, GD_PITCH, GD_PAN, GD_VOL, GD_SEND1, GD_SEND2, GD_CHAR, NG
 enum { LD_SYNTH, LD_ENV, LD_FILTER, LD_AMP, LD_FREE = 4, NLD = 8 };   /* TP_LDEST: module (LD_AMP: "voice"), + LD_FREE = free-running */
 #define LS_SYNC_N 8                                /* TP_LSPEED values below this are synced divisions */
 enum { PL_OFF, PL_ARP, PL_STRUM, PL_HOLD, PL_RAND, NPL };
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+extern volatile uint8_t kids_send_override;
+extern volatile uint8_t kids_send_gain[NTRK][2];
+#endif
+
 #define NARPSPD 11
 #define ARP_1_16 6                                 /* the arp's speed 1/16 (its default) */
 /* arp: P1 speed (1/4 1/8D 1/4T 1/8 1/16D 1/8T 1/16 1/16T 1/32 1/32T 1/64; before project
@@ -283,6 +288,10 @@ typedef struct synth synth_t;         /* opaque: dsp/synth.c */
 void synth_glfo_restart(synth_t *s);              /* the shared LFO from its start (the transport started) */
 float synth_glfo_now(const synth_t *s);            /* its value now, -1..1 (the page's picture) */
 #define SYNTH_BYTES 12288             /* room for the struct (checked at compile time in synth.c) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+#undef SYNTH_BYTES
+#define SYNTH_BYTES 12672
+#endif
 
 void synth_init(synth_t *s, uint8_t (*par)[NTP]);   /* par: the tracks' parameter arrays, NTRK + 1 of them (the conductor's, SY_GLFO_TRK: the shared LFO) */
 void synth_tempo(synth_t *s, float bpm);
@@ -323,6 +332,9 @@ int synth_order(const synth_t *s, int8_t *ord);   /* the cores' queue (engine.c)
 void synth_idle(synth_t *s, const int8_t *ord, int nord, uint32_t n);   /* the voices not in it moved n frames on */
 int synth_sounding(const synth_t *s, int v0, int v1);          /* a voice in the range is sounding */
 int synth_voices_used(const synth_t *s);
+#ifdef LION_KIDS_DEVICE
+uint32_t synth_acid_voices(const synth_t *s);
+#endif
 /* the slice engine's newest playing voice on a track (the picture): its slice (0-based) and the position in
  * the sample; 0 when none plays. Called from the main loop: a racy read of the voices, for the screen only */
 int synth_slice_now(const synth_t *s, int trk, int *slice, int32_t *pos);
@@ -334,6 +346,9 @@ extern uint32_t synth_load_steals;                            /* notes that took
 /* what voice vi costs to render, in rough units for the cores' split (engine.c split_at): 0 silent, 4 an
  * ordinary voice (bellows 5), knit 3 + its unison (+ 1 osc 2, + 1 sub or noise); the Braids engines by their model
  * (braids.h: 3 .. 8, cane's bell the most) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+int synth_kids_track(const synth_t *s, int vi);
+#endif
 int synth_voice_cost(const synth_t *s, int vi);
 extern volatile uint16_t synth_peak[NTRK];                     /* per track meters, Q14, decaying (UI) */
 /* the profiler (samples.c SB_PROF, tools/perf_read.py): the time each voice took, by its engine, in synth_clock's

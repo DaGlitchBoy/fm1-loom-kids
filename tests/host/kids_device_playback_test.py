@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: MPL-2.0
+"""Check dense Kids playback with active LFOs on the one- and two-core render paths."""
+from array import array
+import math
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import wave
+
+from PIL import Image, ImageChops
+
+
+def playback(binary, output, cores):
+    output.mkdir()
+    events = ["wait 300", f"cores {cores}", f"expect cores {1 if cores else 2}", "master 1900"]
+    for track in (1, 2, 4, 5, 6, 7, 8):
+        for step in (1, 5, 9, 13):
+            root = 48 + track * 2 + (step - 1) // 4
+            chord = f"{root} {root + 3} {root + 7}" if track in (2, 4, 5) else str(root)
+            events.append(f"notes {track} 1 {step} 3.5 75 {chord}")
+    for step in (1, 5, 9, 13):
+        events.append(f"notes 3 1 {step} 1 100 1")
+    events.extend([
+        "spin SELECT 4", "tap EDIT", "spin K2 10", "spin K4 12", "tap HOME",
+        "spin SELECT -1", "wav dense.wav", "tap PLAY", "wait 530",
+        "expect voices >8", "tap LFO", "expect kids 5", "spin K1 63", "spin K3 3",
+        "wait 48", "expect kids_dsp.4.5 1",
+        f"expect core2_jobs {'>0' if cores else '0'}",
+        "shot lfo-first.png", "wait 230",
+        "shot lfo-second.png", "tap HOME", "expect kids 1", "wait 300",
+        "tap LFO", "wait 250", "tap LFO", "wait 500", "tap PLAY", "wavstop",
+    ])
+    scenario = output / "dense.xy"
+    scenario.write_text("\n".join(events) + "\n")
+    # Real-time CPU contention on the host should not trip the device voice cap.
+    env = dict(os.environ, LOOM_LOAD="0")
+    result = subprocess.run([str(binary), str(scenario), str(output)], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    with wave.open(str(output / "dense.wav")) as wav:
+        assert wav.getsampwidth() == 2
+        signal = array("h", wav.readframes(wav.getnframes()))
+        if sys.byteorder == "big":
+            signal.byteswap()
+    return signal
+
+
+def check_recovery(binary, output):
+    output.mkdir()
+    scenario = output / "restart.xy"
+    lines = ["wait 300", "load 0", "expect history_capacity 1", "bpm 160"]
+    for step in range(1, 17):
+        lines += [f"notes 2 1 {step} 1.25 90 48 55 62", f"notes 3 1 {step} 0.75 115 1 3 5"]
+    lines += ["tap PLAY", "wait 460", "expect cores 1", "spin SELECT 3", "tap REC"]
+    for _ in range(2):
+        lines.append("spin PRESET -9")
+        for _ in range(7):
+            for note in range(10):
+                lines += ["spin ALGO 1", f"tapkey w{note}", "wait 15"]
+            lines.append("spin PRESET 1")
+    lines += ["tap HOME", "spin SELECT -7", "expect kids_preset.acid_line 1",
+              "key w5 down", "wait 90", "expect acid_primary 1", "expect core2_jobs >0",
+              "drop-core2-job", "wait 160", "expect restarts 0", "expect cores 3",
+              "expect guard 8", "expect voices >0", "expect drumhits >0", "key w5 up"]
+    scenario.write_text("\n".join(lines) + "\n")
+    run = subprocess.run([str(binary), str(scenario), str(output)], capture_output=True, text=True)
+    assert run.returncode == 0, run.stdout + run.stderr
+
+
+binary = Path(sys.argv[1]).resolve()
+with tempfile.TemporaryDirectory() as temp:
+    out = Path(temp)
+    single = playback(binary, out / "single", 0)
+    dual = playback(binary, out / "dual", 1)
+    assert len(single) == len(dual) > 100_000
+    assert max(map(abs, dual)) < 32767, "the dense fixture saturated"
+    assert math.sqrt(sum(x * x for x in dual) / len(dual)) > 250, "dense playback went quiet"
+    error = math.sqrt(sum((a - b) ** 2 for a, b in zip(single, dual)) / len(dual))
+    assert error < 3, f"switching audio cores changed effect routing (RMS difference {error:.1f})"
+    check_recovery(binary, out / "recovery")
+    with Image.open(out / "dual/lfo-first.png") as first, Image.open(out / "dual/lfo-second.png") as second:
+        difference = ImageChops.difference(first.convert("RGB"), second.convert("RGB"))
+        assert difference.crop((0, 56, 240, 184)).getbbox() is None, "phase animation repainted the plot"
+        assert difference.crop((0, 184, 240, 200)).getbbox(), "the LFO phase marker stopped moving"
+print("Dense playback, live preset changes, bounded history and second-core fallback passed.")

@@ -28,6 +28,9 @@
 #include "drumline.h"
 #include "sample.h"
 #include "wavetables.h"
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+#include "kids_dsp.h"
+#endif
 
 #define SUB 16                                /* filter coefficient refresh, steal fade steps */
 #define NCK 8                                 /* chunk slots a prepare may cover (n <= 512) */
@@ -159,6 +162,10 @@ typedef struct {
     uint16_t pos;                     /* sample in the chunk */
     uint8_t ck;                       /* chunk slot since prepare */
     uint8_t nchunk;                   /* chunks so far (the slow refreshes count on it, not on the block size) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    kids_gate_t kids_gate;
+    uint8_t kids_gate_live;
+#endif
     env_t amp, flt;                   /* stepped once a sub-block (SUB samples) */
     uint8_t fresh;                    /* configured mid-block: refresh the coefficients before the next sample;
                                        * bit 1: started since the last render, its first configuration due there */
@@ -235,6 +242,11 @@ struct synth {
 };
 uint32_t synth_load_steals;           /* new notes that took a sounding voice to stay inside LOAD_ADMIT (synth.h) */
 _Static_assert(sizeof(struct synth) <= SYNTH_BYTES, "synth_t outgrew SYNTH_BYTES");
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+kids_dsp_track_t kids_dsp_tracks[NTRK];
+volatile uint8_t kids_send_override;
+volatile uint8_t kids_send_gain[NTRK][2];
+#endif
 #ifdef PLAT_HOST
 uint16_t synth_host_solo = 0xFFFFu;           /* the host's stems: bits 0-7 the tracks, 8 / 9 the FX returns */
 int synth_sizeof(void) { return (int)sizeof(struct synth); }
@@ -1365,6 +1377,9 @@ static void voice_start(synth_t *s, voice_t *v, int note, int vel, int glide_ms,
     if (!in_render)                              /* a render (the steal) writes nothing the tracks share */
         v->age = s->counter++;
     v->amp.stage = ENV_ATTACK;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    v->kids_gate_live = 0;
+#endif
     v->flt.stage = ENV_ATTACK;
     v->tsec = 0.0f;
     if (v->engine == EG_RAYON)                   /* its fall and its tine from the top, every note */
@@ -1774,6 +1789,9 @@ void synth_note_on(synth_t *s, int trk, int note, int vel, int glide_ms, uint32_
             t->last_pitch = v->pitch;
             if (mode == VM_MONO || !was_held || v->amp.stage == ENV_RELEASE) {   /* legato: only from silence */
                 v->amp.stage = ENV_ATTACK;       /* retrigger from the level now */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+                v->kids_gate_live = 0;
+#endif
                 v->flt.stage = ENV_ATTACK;
                 v->tsec = 0.0f;
                 if (v->engine == EG_RAYON)
@@ -1811,7 +1829,11 @@ static void voice_release(voice_t *v)
  * note's length: slices on the steps play through as the break did) */
 static void key_release(voice_t *v)
 {
-    if (v->engine == EG_SLICE && v->amp.stage != ENV_RELEASE)
+    if (v->engine == EG_SLICE && v->amp.stage != ENV_RELEASE
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        && !kids_dsp_tracks[v->trk].value[KD_ENV_ON]
+#endif
+        )
         v->held = 0;
     else
         voice_release(v);
@@ -1933,6 +1955,19 @@ void synth_limit(synth_t *s, int max_voices)
 /* a voice's cost in units of ~1.1 % of a block: on the FM-1 its measured time (or, a note just started, its track's
  * voices' and a unit for its set-up); else, and in the simulator (its samples the same every run), the model below */
 #define COST_TICKS_UNIT 5.98f                    /* 1.1 % of 544 clock ticks, a frame's time */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+int synth_kids_track(const synth_t *s, int vi) { return s->v[vi].trk; }
+#endif
+
+#ifdef LION_KIDS_DEVICE
+uint32_t synth_acid_voices(const synth_t *s)
+{
+    uint32_t mask = 0;
+    for (int vi = 0; vi < NVOICE; vi++)
+        if (s->v[vi].engine == EG_ACID) mask |= 1u << vi;
+    return mask;
+}
+#endif
 int synth_voice_cost(const synth_t *s, int vi)
 {
     const voice_t *v = &s->v[vi];
@@ -2594,6 +2629,12 @@ static void voice_chunk(synth_t *s, voice_t *v)
     c->gr = v->pan_r * vg;
     c->g1 = fm_clampf((float)(P(s, trk, TP_SEND1) + t->perf.send1) + (gd == GD_SEND1 ? g : 0.0f), 0.0f, 127.0f) * (1.0f / 127.0f);
     c->g2 = fm_clampf((float)(P(s, trk, TP_SEND2) + t->perf.send2) + (gd == GD_SEND2 ? g : 0.0f), 0.0f, 127.0f) * (1.0f / 127.0f);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    if (kids_send_override) {
+        c->g1 = kids_send_gain[trk][0] * (1.0f / 127.0f);
+        c->g2 = kids_send_gain[trk][1] * (1.0f / 127.0f);
+    }
+#endif
     /* pitch: the glide, bend, performance pitch, vibrato, an LFO on the pitch (+-12 semitones at 100 %) */
     v->pitch_cur += (v->pitch - v->pitch_cur) * v->glide_k;
     c->pitch_off = (float)t->bend_c + t->pb_base + t->pb_step * (float)(k + 1) + t->lpitch[k] * lenv;
@@ -2696,6 +2737,23 @@ static void voice_subblock(synth_t *s, voice_t *v, int aligned)
     }
     c = &v->c;
     v->fresh = 0;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    const kids_dsp_track_t *kids = &kids_dsp_tracks[v->trk];
+    if (kids->value[KD_ENV_ON]) {
+        if (!v->kids_gate_live) {
+            v->kids_gate = (kids_gate_t){.level = v->amp.level, .from = v->amp.level};
+            v->kids_gate_live = 1;
+        }
+        if (aligned) {
+            v->amp.level = kids_gate_advance(&v->kids_gate, kids, v->amp.stage == ENV_RELEASE, SUB);
+            if (v->kids_gate.phase == KD_DONE) v->amp.stage = ENV_OFF;
+            if (v->engine != EG_ACID) env_step(&v->flt, c->flt_ar, c->flt_dc, c->flt_sl, c->flt_rc);
+        }
+    } else {
+        if (v->kids_gate_live && v->amp.stage != ENV_OFF && v->amp.stage != ENV_RELEASE)
+            v->amp.stage = ENV_DECAY;
+        v->kids_gate_live = 0;
+#endif
     if (v->engine == EG_ACID) {                  /* its 303's envelopes: the voice at 1 until acid_run ends it */
         if (v->amp.stage != ENV_OFF)
             v->amp.level = 1.0f;
@@ -2703,6 +2761,9 @@ static void voice_subblock(synth_t *s, voice_t *v, int aligned)
         env_step(&v->amp, c->amp_ar, c->amp_dc, c->amp_sl, c->amp_rc);
         env_step(&v->flt, c->flt_ar, c->flt_dc, c->flt_sl, c->flt_rc);
     }
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    }
+#endif
     if (c->cut_oct == v->fco && v->flt.level == v->flv && c->fenv_oct == v->ffe && v->fhz > 0.0f) {
         hz = v->fhz;
     } else {

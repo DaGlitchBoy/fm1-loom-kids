@@ -1,0 +1,155 @@
+# Zero-configuration start, live timing, exclusive names, and last song on reboot.
+wait 300
+expect kids 1
+expect kids_loaded 1
+expect kids_slot 1
+expect kids_shelf_mask 0
+expect kids_name_id 4
+expect kids_category 1
+expect kids_preset.acid_line 1
+expect par1.engine 10
+expect note 1 1 1 0
+expect note 3 1 1 0
+expect note 3 1 16 0
+spin SELECT 1
+expect kids_category 5
+expect kids_preset.marimba 1
+expect kids_send.2.1 48
+expect kids_send.2.2 52
+spin SELECT 1
+expect kids_category 2
+expect kids_preset.Twill 1
+expect par3.d1.model 21
+expect par3.d3.model 26
+expect par3.d5.model 25
+spin SELECT 1
+expect kids_category 0
+expect kids_preset.bellows 1
+expect kids_send.4.1 48
+expect kids_send.4.2 52
+spin SELECT 1
+expect kids_category 3
+expect kids_preset.dusty_pad 1
+spin SELECT 1
+expect kids_category 4
+expect kids_preset.breath_lead 1
+spin SELECT 1
+expect kids_category 4
+expect kids_preset.flute 1
+spin SELECT 1
+expect kids_category 3
+expect kids_preset.whisper_pad 1
+spin SELECT -7
+master 2800
+tap REC
+tap PLAY
+wait 105
+key w0 down
+wait 30
+key w0 up
+wait 95
+key w1 down
+wait 26
+key w1 up
+tap REC
+tap PLAY
+expect note 1 1 2 53
+expect note 1 1 4 55
+expect stepnudge 1 1 2 11
+expect stepnudge 1 1 4 -11
+tap SEQ
+tap SEQ
+tapkey w5
+expect stepnudge 1 1 6 0
+tap HOME
+tap SAVE
+tap GLO
+spin K4 1
+tap EDIT
+expect kids_loaded 2
+expect kids_name_id 1
+expect note 1 1 1 0
+tap SAVE
+press EDIT
+wait 420
+release EDIT
+spin K1 3
+tap EDIT
+expect kids_name_id 1
+spin K1 7
+spin K4 1
+tap EDIT
+expect kids_name_id 11
+expect kids_pixel.0.0.0 4
+spin K4 1
+expect kids_pixel.11.0.0 5
+expect kids_pixel.0.0.0 4
+tap HOME
+reboot
+wait 300
+expect kids_loaded 2
+expect kids_slot 2
+expect kids_name_id 11
+expect kids_pixel.11.0.0 5
+expect kids_pixel.0.0.0 4
+tap GLO
+spin K4 1
+tap EDIT
+expect kids_loaded 3
+expect kids_name_id 8
+press GLO
+wait 5050
+release GLO
+expect kids_dialog 2
+tap EDIT
+expect kids_dialog 0
+expect kids_shelf_mask 3
+reboot
+wait 300
+expect kids_loaded 3
+expect kids_name_id 8
+expect note 3 1 1 0
+tap GLO
+spin K4 -2
+tap EDIT
+expect kids_loaded 1
+expect note 1 1 2 53
+expect note 1 1 4 55
+expect stepnudge 1 1 2 11
+expect stepnudge 1 1 4 -11
+tap HOME
+# Icons are derived from each track's category and stay with it on focus changes.
+expect kids_icon_category.1 1
+expect kids_icon_category.2 5
+expect kids_icon_category.3 2
+expect kids_icon_category.4 0
+expect kids_icon_category.5 3
+expect kids_icon_category.6 4
+expect kids_icon_category.7 4
+expect kids_icon_category.8 3
+expect kids_send.1.1 0
+expect kids_send.1.2 0
+spin PRESET -1
+expect kids_icon_category.1 0
+expect kids_send.1.1 48
+expect kids_send.1.2 52
+spin PRESET -1
+expect kids_icon_category.1 0
+spin PRESET 5
+expect kids_icon_category.1 5
+expect kids_send.1.1 48
+expect kids_send.1.2 52
+spin ALGO -1
+wait 300
+shot lion-kids-preset.png
+expect kids_icon_category.1 5
+spin PRESET -1
+expect kids_icon_category.1 4
+expect kids_send.1.1 0
+expect kids_send.1.2 0
+press HOME
+spin K1 -1
+release HOME
+expect kids_icon_category.1 5
+expect kids_send.1.1 48
+expect kids_send.1.2 52

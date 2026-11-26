@@ -43,8 +43,6 @@ volatile uint32_t eng_acid_lite_count;
 volatile uint32_t eng_punch_drum, eng_punch_mel;
 volatile float eng_pump_db;
 volatile uint8_t eng_scene_now, eng_scene_cue = 0xFF;
-int16_t eng_scope[SCOPE_N];
-volatile uint32_t eng_scope_w;
 volatile uint16_t eng_quiet;
 
 /* the units, in the pool (their structs are opaque: a byte array each, 8-aligned for their floats) */
@@ -100,6 +98,9 @@ static uint8_t eng_drum[NTRK];                     /* the track's engine is the 
 static uint8_t fx_type[2];                        /* each slot's effect, as set */
 static uint32_t metro_left;                       /* the metronome's click: samples left, phase, rate */
 static float metro_ph, metro_inc;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+static uint8_t kids_metro_gain = 100;
+#endif
 static int16_t bend_c[NTRK];                      /* the bend component's cents, per track */
 /* MIDI for the main loop (midicc.c): every CC, Program Change and the master channel's note-ons, and every track's
  * notes for the track on the screen (midicc.c key_midi), raw USB-MIDI
@@ -225,6 +226,10 @@ static void guard_apply(void)
     }
     {
         uint8_t cap = guard_on ? guard_cap : NVOICE;
+#ifdef LION_KIDS_DEVICE
+        /* Give the primary core headroom after the platform retires its worker. */
+        if (plat_cpu2_barred() && cap > GUARD_VOICES) cap = GUARD_VOICES;
+#endif
         if (cap == guard_applied)
             return;
         guard_applied = cap;
@@ -237,7 +242,7 @@ static void guard_apply(void)
 /* uint32 commands, single producer (main loop) / single consumer (audio ISR): type:4 | a:8 | b:8 | c:12 (C_PARAM: b
  * the parameter's low eight bits, c its value and, at bit 8, its ninth: synth.h NTP) */
 enum { C_PARAM, C_ALL, C_KEY, C_KEYS_OFF, C_PUNCH, C_BRAIN_KEY, C_MASTER, C_FX, C_PANIC,
-       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP };     /* at most sixteen: the type is four bits */
+       C_METRO, C_TEMPO, C_GROOVE, C_SCENE, C_NOP, C_KIDS_PLAYER, C_KIDS_DSP };     /* at most sixteen: the type is four bits */
 #define CQ 512u
 static uint32_t cq[CQ];
 static volatile uint32_t cq_w, cq_r;
@@ -309,6 +314,15 @@ void engine_fx(int slot, int type, const uint8_t knob[4], int hp, int lp, int wi
 }
 void engine_panic(void) { cq_put(C_PANIC, 0, 0, 0); }
 void engine_metronome(int mode) { cq_put(C_METRO, (uint32_t)mode, 0, 0); }
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+static void engine_kids_metro(int gain) { cq_put(C_METRO, gain ? 2u : 0u, (uint32_t)gain + 1u, 0); }
+static void engine_kids_player(int track, int mode) { cq_put(C_KIDS_PLAYER, (uint32_t)track, (uint32_t)mode, 0); }
+static void kids_insert_reset(int track);
+static void engine_kids_dsp(int track, int parameter, int value)
+{
+    cq_put(C_KIDS_DSP, (uint32_t)track, (uint32_t)parameter, (uint32_t)value);
+}
+#endif
 void engine_tempo(int bpm_x10)                  /* 400..3000 fits the command's twelve-bit value */
 {
     if (bpm_x10 < 400)
@@ -575,6 +589,9 @@ static void s_drum(void *x, int trk, int sound, int vel, int pitch_semi, int sho
     PROF_T(pn);
     if (trk < 0 || trk >= NTRK || !eng_drum[trk] || sound < 0 || sound >= NDRUM)
         return;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    drumline_kids_env(DL(trk), &kids_dsp_tracks[trk]);
+#endif
     drumline_hit(DL(trk), sound, vel, pitch_semi + glfo_kit_semis(trk, sound), short_gate, long_tail || perf_tail[trk]);
 #ifdef PLAT_HOST
     host_drum_hits++;                                  /* (the host's load model: a hit's own cost) */
@@ -1000,7 +1017,32 @@ static void drain(void)
             seq_midi_notes_off(&seq);                /* (after the keys' offs: whatever is still on out there) */
             break;
         }
-        case C_METRO: seq.metronome = (uint8_t)a; break;
+        case C_METRO:
+            seq.metronome = (uint8_t)a;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+            kids_metro_gain = b ? (uint8_t)(b - 1) : 100;
+            if (!kids_metro_gain) metro_left = 0;
+#endif
+            break;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        case C_KIDS_PLAYER:
+            /* The UI publishes the new knob immediately. Release any voices owned
+             * by the previous player before routing queued keys to the new one. */
+            ppar[a][TP_PLAYER] = epar[a][TP_PLAYER];
+            seq_kids_player_reset(&seq, (int)a, &SINK);
+            ppar[a][TP_PLAYER] = epar[a][TP_PLAYER] = (uint8_t)b;
+            break;
+        case C_KIDS_DSP: {
+            kids_dsp_track_t *p = &kids_dsp_tracks[a];
+            p->value[b] = (uint8_t)v;
+            if (b == KD_ATTACK) p->attack = (float)kids_envelope_ms(KD_ATTACK, (int)v) * KD_FRAMES_PER_MS;
+            if (b == KD_HOLD) p->hold = (float)kids_envelope_ms(KD_HOLD, (int)v) * KD_FRAMES_PER_MS;
+            if (b == KD_SUSTAIN) p->sustain = (float)v * (1.0f / 127.0f);
+            if (b == KD_RELEASE) p->release = (float)kids_envelope_ms(KD_RELEASE, (int)v) * KD_FRAMES_PER_MS;
+            if (!v && (b == KD_EDIT_ON || b == KD_CHORUS)) kids_insert_reset((int)a);
+            break;
+        }
+#endif
         case C_TEMPO: seq.bpm = (float)v * 0.1f; break;
         case C_GROOVE: seq.groove_type = (uint8_t)a; break;
         case C_SCENE:
@@ -1154,11 +1196,15 @@ static void heal(void)
     heal_due = 0;
     eng_heals++;
     synth_cut(SY);
-    for (t = 0; t < NTRK; t++)
+    for (t = 0; t < NTRK; t++) {
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        kids_insert_reset(t);
+#endif
         if (eng_drum[t]) {
             drumline_init(DL(t), epar[t]);
             dl_filter_update(t);
         }
+    }
     for (k = 0; k < 2; k++) {
         fx_clear(FXS(k));
         zerof(snd_acc[k], 256);
@@ -1170,18 +1216,20 @@ static void heal(void)
 }
 /* the effects' job, when it runs on the second core, from the block's start: beside the first core's sequencer.
  * fx_done waits for it (or runs it here, if the second core failed) and sets the knobs locked meanwhile */
-static void fx_done(void)
+static int fx_done(void)
 {
-    int k;
+    int k, failed;
     if (!fx_c2)
-        return;
-    if (c2_wait())
+        return 0;
+    failed = c2_wait();
+    if (failed && !c2_chained)
         fx_job_timed(0);
     fx_c2 = 0;
     for (k = 0; k < 2; k++)
         if (fx_dirty >> k & 1u)
             fx_set(FXS(k), fx_type[k], epar[AUX_FX1 + k] + TP_E1);
     fx_dirty = 0;
+    return failed;
 }
 static volatile uint32_t c2_took;                          /* the last job's time (plat_cycles) */
 /* the voices shared out as the cores go (render_sub): the stretch's voices in ws_ord (grouped by engine: each core
@@ -1192,11 +1240,21 @@ static volatile uint32_t c2_took;                          /* the last job's tim
  * it, and gives it back); a voice both gave back the first core renders after the wait. Core 1 checks the index it
  * reads (on some FM-1s its reads come back wrong now and then: loom_cpu1.h) */
 static int8_t ws_ord[NVOICE];
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+static int8_t ws_next[NVOICE];
+#endif
+static inline void render_voice_work(int core, int vi, float *l, float *r, float *a, float *b, uint32_t n);
+#ifdef LION_KIDS_DEVICE
+static int32_t ws_shared;                                 /* the queue prefix the second core may claim */
+#endif
 static int32_t ws_n = NVOICE;                              /* the queue's length this stretch (synth_order) */
 static volatile int32_t ws_a, ws_b;                        /* taken: by the second core (the bottom), the first (the top) */
 static int ws_take1(void)                                  /* the second core's next voice, -1 none */
 {
     int32_t a = ws_a + 1, vi;
+#ifdef LION_KIDS_DEVICE
+    if (a > ws_shared) return -1;
+#endif
     ws_a = a;
     plat_cpu2_sync();
     if (a + ws_b > ws_n || a > ws_n) {
@@ -1238,7 +1296,7 @@ static void core2_job(uint32_t arg)
             c2_tapped = 1;
         }
 #endif
-        synth_render_on(SY, 1, vi, vi + 1, c2_l, c2_r, c2_s1, c2_s2, n);
+        render_voice_work(1, vi, c2_l, c2_r, c2_s1, c2_s2, n);
     }
     PROF_ADD(PR_SYNTH1, pt);
     c2_took = plat_cycles() - p0;
@@ -1292,8 +1350,12 @@ __attribute__((noinline)) static void add_in(float *dst, const float *src, uint3
 static void metro_tick(uint32_t n)
 {
     uint32_t i;
+    float gain = 0.5f;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    gain *= kids_metro_gain * 0.01f;
+#endif
     for (i = 0; i < n && metro_left; i++, metro_left--) {
-        float env = (float)metro_left * (1.0f / 1800.0f), v = fm_sin_turns(metro_ph) * env * env * 0.5f;
+        float env = (float)metro_left * (1.0f / 1800.0f), v = fm_sin_turns(metro_ph) * env * env * gain;
         metro_ph += metro_inc;
         if (metro_ph >= 1.0f)
             metro_ph -= 1.0f;
@@ -1309,6 +1371,74 @@ static void metro_tick(uint32_t n)
 #endif
 /* one stretch: the upper half of the voices and the drumlines here while the second core renders the
  * lower half; then the halves are summed in the order one core always used, the FX tracks, the master */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+#include "kids_insert.c"
+
+/* One job per affected track, so both cores can take jobs without sharing a write buffer. */
+static void kids_group_voice_work(void)
+{
+    int8_t last[NTRK];
+    int jobs = 0;
+    memset(last, -1, sizeof last);
+    memset(ws_next, -1, sizeof ws_next);
+    for (int i = 0; i < ws_n; i++) {
+        int vi = ws_ord[i], track = synth_kids_track(SY, vi);
+        if (kids_mix_mask >> track & 1u) {
+            if (last[track] >= 0)
+                ws_next[last[track]] = (int8_t)vi;
+            else
+                ws_ord[jobs++] = (int8_t)vi;
+            last[track] = (int8_t)vi;
+        } else {
+            ws_ord[jobs++] = (int8_t)vi;
+        }
+    }
+    ws_n = jobs;
+}
+#endif
+
+#ifdef LION_KIDS_DEVICE
+/* FM-1 preview 0.0.3 trapped on the second core inside the Acid soft drive.
+ * Pin Acid jobs to the primary core, including any grouped insert voices. */
+static void kids_pin_acid_work(void)
+{
+    ws_shared = ws_n;
+    uint32_t acid = synth_acid_voices(SY);
+    if (!acid) return;
+    int8_t primary[NVOICE];
+    int reserved = 0;
+    ws_shared = 0;
+    for (int i = 0; i < ws_n; i++) {
+        int voice = ws_ord[i], vi = voice;
+        if (kids_mix_mask)
+            while (vi >= 0 && !(acid >> vi & 1u)) vi = ws_next[vi];
+        if (vi >= 0 && (acid >> vi & 1u))
+            primary[reserved++] = (int8_t)voice;
+        else
+            ws_ord[ws_shared++] = (int8_t)voice;
+    }
+    memcpy(ws_ord + ws_shared, primary, (uint32_t)reserved);
+}
+#endif
+
+static inline void render_voice_work(int core, int vi, float *l, float *r, float *a, float *b, uint32_t n)
+{
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    if (kids_mix_mask) {
+        int track = synth_kids_track(SY, vi);
+        if ((unsigned)track < NTRK && (kids_mix_mask >> track & 1u)) {
+            float (*mix)[STRETCH_MAX] = kids_mix[track];
+            for (int count = 0; count < NVOICE && (unsigned)vi < NVOICE; count++) {
+                synth_render_on(SY, core, vi, vi + 1, mix[0], mix[1], mix[2], mix[3], n);
+                vi = ws_next[vi];
+            }
+            return;
+        }
+    }
+#endif
+    synth_render_on(SY, core, vi, vi + 1, l, r, a, b, n);
+}
+
 static void render_drums(uint32_t n)                    /* the drum tracks (the first core's: render_sub) */
 {
     int t;
@@ -1316,8 +1446,18 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
     for (t = 0; t < NTRK; t++) {
         float g, gl, gr;
         uint32_t pt1;
-        if (!eng_drum[t] || !drumline_sounding(DL(t)))
-            continue;
+        if (!eng_drum[t]) continue;
+        int sounding = drumline_sounding(DL(t));
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        if (seq.kids_mode && kids_dsp_tracks[t].value[KD_EDIT_ON] && kids_dsp_tracks[t].value[KD_CHORUS]) {
+            if (sounding) kids_insert[t].tail = 600;
+            else if (kids_insert[t].tail) {
+                kids_insert[t].tail -= n < kids_insert[t].tail ? n : kids_insert[t].tail;
+                sounding = 1;
+            }
+        }
+#endif
+        if (!sounding) continue;
         pt1 = plat_cycles();
         zerof(tl, n);
         zerof(tr, n);
@@ -1334,6 +1474,31 @@ static void render_drums(uint32_t n)                    /* the drum tracks (the 
             tap_drum(t, tl, tr, trk_glide[t][GL_SEND].cur < 0.0f ? g : trk_glide[t][GL_SEND].cur, g, n);
 #endif
         glide_set(&trk_glide[t][GL_SEND], g);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        if (kids_send_override) {
+            float *source[] = {ts1, ts2};
+            for (int k = 0; k < 2; k++) {
+                int amount = kids_send_gain[t][k];
+                if (!amount) {
+                    zerof(source[k], n);
+                    continue;
+                }
+                int peak = 0;
+                for (int key = 0; key < NDRUM; key++) {
+                    int weight = epar[t][TP_DRUM(key, k ? DP_SEND2 : DP_SEND1)];
+                    if (weight > peak) peak = weight;
+                }
+                if (peak) {
+                    float gain = (float)amount / (float)peak;
+                    for (uint32_t i = 0; i < n; i++) source[k][i] *= gain;
+                } else {
+                    float gain = amount * (0.5f / 127.0f);
+                    for (uint32_t i = 0; i < n; i++) source[k][i] = (tl[i] + tr[i]) * gain;
+                }
+            }
+        }
+        if (seq.kids_mode) kids_track_insert(t, tl, tr, ts1, ts2, n);
+#endif
         add_glide(perc_l, tl, &trk_glide[t][GL_L], n);
         add_glide(perc_r, tr, &trk_glide[t][GL_R], n);
         add_glide(s1, ts1, &trk_glide[t][GL_SEND], n);
@@ -1401,12 +1566,21 @@ static void render_sub(uint32_t n, uint32_t at)
     zerof(s1, n);
     zerof(s2, n);
     perf_tick(n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    kids_mix_begin(n);
+#endif
 #if TRK_TAP
     tap_set(n, at);                                       /* the USB audio input's tracks: this stretch's sinks */
 #endif
     synth_prepare(SY, n);                                 /* the shared per-chunk values, before either core renders */
     ws_n = synth_order(SY, ws_ord);
     synth_idle(SY, ws_ord, ws_n, n);                      /* (the silent voices: moved on here, not taken) */
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    if (kids_mix_mask) kids_group_voice_work();
+#endif
+#ifdef LION_KIDS_DEVICE
+    kids_pin_acid_work();
+#endif
     ws_a = ws_b = 0;
     plat_cpu2_sync();
     c2_chained = 0;
@@ -1429,20 +1603,36 @@ static void render_sub(uint32_t n, uint32_t at)
     if (late)
         late = c2_late(arg, &on2);
     while ((vi = ws_take0()) >= 0) {
-        synth_render_on(SY, 0, vi, vi + 1, mel_l, mel_r, s1, s2, n);
+        render_voice_work(0, vi, mel_l, mel_r, s1, s2, n);
         if (late)
             late = c2_late(arg, &on2);
     }
     PROF_ADD(PR_SYNTH0, ps);
     pt = plat_cycles();
-    fx_done();                                            /* (the voices all done here first: the effects' job) */
-    if (on2 && c2_wait()) {                               /* the second failed: what it took, here (it may not have) */
+    int failed;
+    if (fx_c2) {                                         /* still the effects job, possibly chained into voices */
+        failed = fx_done();
+        on2 = c2_chained;
+        c2_chain = 0;
+    } else {
+        failed = on2 && c2_wait();
+    }
+    if (on2 && failed) {                                 /* the second failed: what it took, here (it may not have) */
         zerof(c2_l, n);
         zerof(c2_r, n);
         zerof(c2_s1, n);
         zerof(c2_s2, n);
-        for (i = 0; i < ws_a && i < ws_n; i++)
-            synth_render_on(SY, 0, ws_ord[i], ws_ord[i] + 1, c2_l, c2_r, c2_s1, c2_s2, n);
+        for (i = 0; i < ws_a && i < ws_n; i++) {
+            int voice = ws_ord[i];
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+            if (kids_mix_mask) {
+                int track = synth_kids_track(SY, voice);
+                if (kids_mix_mask >> track & 1u)
+                    for (int c = 0; c < 4; c++) zerof(kids_mix[track][c], n);
+            }
+#endif
+            render_voice_work(0, voice, c2_l, c2_r, c2_s1, c2_s2, n);
+        }
     } else if (on2) {
         PROF_ADD(PR_WAIT, pt);                            /* what the first core waited for the second */
 #if TRK_TAP
@@ -1456,7 +1646,7 @@ static void render_sub(uint32_t n, uint32_t at)
         zerof(c2_s2, n);
     }
     for (i = ws_a; i < ws_n - ws_b; i++)                  /* any both gave back */
-        synth_render_on(SY, 0, ws_ord[i], ws_ord[i] + 1, mel_l, mel_r, s1, s2, n);
+        render_voice_work(0, ws_ord[i], mel_l, mel_r, s1, s2, n);
     split_last[0] = (uint8_t)ws_a;                        /* (the profiler: the voices each core took) */
     split_last[1] = (uint8_t)ws_b;
     split_last[2] = (uint8_t)(late_at0 ? 128u : 0u);
@@ -1470,6 +1660,9 @@ static void render_sub(uint32_t n, uint32_t at)
     add_in(mel_r, c2_r, n);
     add_in(s1, c2_s1, n);
     add_in(s2, c2_s2, n);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    kids_mix_finish(n);
+#endif
     for (t = 0; t < NTRK; t++)                            /* the synth's meters, into the common ones */
         if (!eng_drum[t]) {
             float v = (float)synth_peak[t] * (1.0f / 16383.5f);
@@ -1596,6 +1789,9 @@ void engine_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12)
         drain();
         PROF_ADD(PR_DRAIN, pt);
         bpm = seq_tempo(&seq);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        kids_phase_step = bpm * (1.0f / (240.0f * SY_SR));
+#endif
         synth_tempo(SY, bpm);
         fx_tempo(FXS(0), bpm);
         fx_tempo(FXS(1), bpm);
@@ -1723,8 +1919,6 @@ void engine_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12)
         r = r > 2.0f ? 2.0f : r < -2.0f ? -2.0f : r;
         out_lr[2u * i] = (int32_t)(l * 4194303.0f);
         out_lr[2u * i + 1u] = (int32_t)(r * 4194303.0f);
-        if (i & 1u)
-            eng_scope[eng_scope_w++ & (SCOPE_N - 1u)] = (int16_t)((mix_l[i] + mix_r[i]) * 16383.5f);
     }
     eng_quiet = pk > 0.001f ? 0 : (uint16_t)(eng_quiet < 65535u ? eng_quiet + 1u : 65535u);
     for (p = 0; p < NALLTRK; p++) {                      /* meters: the loudest since the UI took them (Q14, to 2) */
@@ -1792,6 +1986,16 @@ void engine_init(patterns_t *P, uint8_t (*par)[NTP])
         seq_prof = &eng_prof[PR_SIX];
     }
     synth_init(SY, par);
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    kids_chorus_phase = 0.0f;
+    kids_phase_playing = 0;
+    for (t = 0; t < NTRK; t++) {
+        kids_phase[t] = 0.0f;
+        kids_phase_pixel[t] = 0;
+        kids_dsp_tracks[t] = (kids_dsp_track_t){0};
+        kids_insert[t] = (kids_insert_t){0};
+    }
+#endif
     for (k = 0; k < NDL; k++)
         dl_owner[k] = 0xFF;
     for (t = 0; t < NTRK; t++) {

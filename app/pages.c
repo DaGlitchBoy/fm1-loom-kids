@@ -1385,6 +1385,9 @@ static int hit_same(const hit_t *a, const hit_t *b)
 static void hits_gc(void)
 {
     uint64_t used = 0;
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+    used = kids_stashed_hits();
+#endif
     for (int k = 0; k < NLANE; k++)
         if (pats.lane[k].used && lane_is_hit(pats.lane[k].param))
             for (int i = 0; i < NSTEP; i++)
@@ -2244,7 +2247,12 @@ static void page_footer(char *t)
     case P_SETUP:
         s_cat(t, "SEL Bluetooth|KEYS play");
         break;
-    case P_MASTER: case P_MASTER2: case P_STATUS:
+    case P_STATUS:
+#if defined(PLAT_HOST) || defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)
+        s_cat(t, "HOME Kids Stage|KEYS play");
+        break;
+#endif
+    case P_MASTER: case P_MASTER2:
         s_cat(t, "KEYS play");
         break;
     case P_SENDS:
@@ -3621,7 +3629,7 @@ static void draw_steps_as(void)
         return;
     }
     {
-    int trk = sel_trk(), drum = is_drum(trk), pt = cur_pat(trk), ph = eng_step[trk];
+    int trk = sel_trk(), drum = is_drum(trk), pt = cur_pat(trk), ph = is_seqt(trk) ? eng_step[trk] : -1;
     const tpat_t *tp = tpat(trk);
     uint32_t h = hash_u(hash_u(2166136261u, 0x57u), (uint32_t)trk | (uint32_t)pt << 4 | (uint32_t)ui.bar << 8 |
                                           (uint32_t)ui.held << 10 | (uint32_t)ui.dsound << 26);

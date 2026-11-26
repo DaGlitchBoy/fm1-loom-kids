@@ -297,6 +297,36 @@ int main(void)
         check("knobs at their ends: finite, under +18 dBFS", ok);
     }
 
+    /* The five Kids labels must match measured first echoes at every offered tempo. */
+    {
+        const int bpm[] = {40, 60, 90, 119, 120, 180, 220};
+        const uint8_t choices[] = {45, 58, 83, 109, 122};
+        const float fraction[] = {0.25f, 1.0f / 3.0f, 0.5f, 0.75f, 1.0f};
+        for (unsigned tempo = 0; tempo < sizeof bpm / sizeof bpm[0]; tempo++)
+            for (unsigned d = 0; d < sizeof choices / sizeof choices[0]; d++) {
+                if (fx_delay_halves(choices[d], 64, (float)bpm[tempo])) continue;
+                uint8_t knob[4] = {choices[d], 64, 0, 127};
+                fx_init(fx, dly_l, dly_r, rv);
+                fx_tempo(fx, (float)bpm[tempo]);
+                fx_set(fx, FXT_DELAY, knob);
+                int at = 0, expected = (int)(44100.0f * 60.0f * fraction[d] / bpm[tempo] + 0.5f);
+                float peak = 0;
+                for (int block = 0; block < 24000 / BLK; block++) {
+                    memset(in, 0, sizeof in);
+                    if (!block) in[0] = 1.0f;
+                    memset(ol, 0, sizeof ol);
+                    memset(orr, 0, sizeof orr);
+                    fx_process(fx, in, ol, orr, BLK);
+                    for (int sample = 0; sample < BLK; sample++) {
+                        float v = fm_fabsf(ol[sample]);
+                        if (v > peak) { peak = v; at = block * BLK + sample; }
+                    }
+                }
+                snprintf(name, sizeof name, "Kids delay choice %u at %d BPM: %d vs %d frames", d, bpm[tempo], at, expected);
+                check(name, peak > 0.3f && at >= expected - 2 && at <= expected + 4);
+            }
+    }
+
     printf("-- delay at 120 BPM: time 1/4 = 0.5 s, dotted 1/8 = 0.375 s\n");
     {
         /* time 121: (121 * 10) >> 7 = 9, 1/4; time 108: 8, 1/8D; fine 64 (none); repeats 0.47; tone open.

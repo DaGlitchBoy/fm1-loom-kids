@@ -1,0 +1,169 @@
+wait 300
+expect kids_loaded 1
+expect kids_shelf_mask 0
+tap SEQ
+tap SEQ
+tapkey w0
+tap HOME
+spin K1 -15
+tap SAVE
+expect kids_shelf_mask 1
+tap GLO
+spin K4 30
+expect kids_slot 3
+spin K4 1
+expect kids_slot 3
+expect kids_loaded 1
+tap SAVE
+expect kids_shelf_mask 1
+spin K4 -30
+expect kids_slot 1
+spin K4 -1
+expect kids_slot 1
+spin K4 1
+tap EDIT
+expect kids_loaded 2
+expect note 1 1 1 0
+expect par1.level 100
+spin K1 -15
+tap SAVE
+expect kids_shelf_mask 3
+spin K4 1
+tap EDIT
+expect kids_loaded 3
+tap SAVE
+expect kids_shelf_mask 7
+# Overwrite the loaded song even when the preview is elsewhere and all slots are full.
+tap HOME
+spin K1 -9
+tap GLO
+spin K4 -2
+tap SAVE
+expect kids_slot 1
+expect kids_loaded 3
+expect kids_shelf_mask 7
+expect par1.level 91
+# Hold GLO for five seconds to delete the preview.
+press GLO
+wait 4900
+expect kids_dialog 0
+wait 150
+release GLO
+expect kids_dialog 2
+expect kids_loaded 3
+wait 5010
+expect kids_dialog 0
+expect kids_shelf_mask 7
+press GLO
+wait 5050
+release GLO
+expect kids_dialog 2
+tap HOME
+expect kids_dialog 0
+expect kids_shelf_mask 7
+press GLO
+wait 5050
+release GLO
+wait 30
+shot kids-delete-preview.png
+tap EDIT
+expect kids_loaded 3
+expect kids_shelf_mask 6
+expect par1.level 91
+press HOME
+spin K1 -1
+expect kids_shelf_mask 7
+spin K1 1
+expect kids_shelf_mask 6
+spin K1 -1
+release HOME
+# Use a library emoji and draw in a blank slot without altering the assigned name.
+press EDIT
+wait 420
+expect kids_names 1
+release EDIT
+expect kids_loaded 3
+expect kids_name_slot 1
+tap EDIT
+expect kids_name_id 8
+spin K1 10
+expect kids_name_slot 11
+spin K2 2
+spin K3 3
+spin K4 1
+expect kids_pixel.11.2.3 4
+spin K1 1
+expect kids_pixel.12.2.3 0
+spin K1 -1
+expect kids_pixel.11.2.3 4
+tap EDIT
+expect kids_pixel.0.2.3 4
+wait 1900
+shot kids-pixel-editor.png
+tap SEL
+expect kids_pixel.11.2.3 0
+expect kids_pixel.0.2.3 4
+spin K1 -10
+spin K2 -2
+spin K3 -3
+tap PLAY
+expect kids_pixel.1.0.0 4
+tap HOME
+expect kids_names 0
+expect kids_panel 4
+wait 180
+reboot
+wait 300
+expect kids_loaded 3
+expect kids_shelf_mask 7
+expect par1.level 91
+tap GLO
+expect kids_loaded 3
+expect kids_pixel.0.2.3 4
+expect kids_pixel.1.0.0 4
+expect kids_pixel.11.2.3 0
+wait 1900
+shot kids-pixel-shelf.png
+press EDIT
+wait 420
+release EDIT
+tap SEL
+expect kids_pixel.1.0.0 0
+tap HOME
+spin K4 -2
+tap EDIT
+expect kids_loaded 1
+expect par1.level 85
+expect note 1 1 1 60
+press HOME
+spin K1 -1
+expect kids_loaded 3
+expect kids_pixel.0.2.3 4
+spin K1 1
+expect kids_loaded 1
+release HOME
+
+# The timed overlay and shelf confirmation handle the same button independently.
+tap HOME
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+tap GLO
+wait 100
+expect kids_glo_overlay 0
+tap GLO
+wait 100
+expect kids_glo_overlay 1
+wait 6600
+expect kids_glo_overlay 1
+wait 450
+expect kids_glo_overlay 0
+press GLO
+wait 5050
+release GLO
+expect kids_dialog 2
+expect kids_glo_overlay 0
+tap HOME
+expect kids_dialog 0

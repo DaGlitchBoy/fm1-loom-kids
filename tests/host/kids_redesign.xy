@@ -1,0 +1,97 @@
+# LOOM_KIDS=1: boot directly into playable HOME.
+wait 300
+kids-legacy-band
+expect kids 1
+expect kids_buttons 64
+expect project_slot 0
+spin SELECT -1
+expect trk 1
+spin SELECT 20
+expect trk 8
+spin SELECT 1
+expect trk 8
+master 2800
+wav playable-home.wav
+peakreset
+key w0 down
+wait 360
+expect peak_db_min -40
+spin SELECT -20
+expect trk 1
+expect kids_sound 1
+spin ALGO -1
+expect kids_sound 1
+spin ALGO 30
+expect kids_sound 11
+spin ALGO 1
+expect kids_sound 11
+key w0 up
+wait 1500
+expect voices 0
+# Category endpoints (no custom user presets). T2 starts in Bass.
+spin SELECT 1
+expect trk 2
+expect kids_category 1
+spin PRESET -1
+expect kids_category 0
+spin PRESET -1
+expect kids_category 0
+spin PRESET 1
+expect kids_category 1
+# Separate note encodings survive a full round trip, including non-active patterns.
+chord 2 1 1 4 60 64 67
+chord 2 8 64 4 48 55 60
+lock 2 1 1 cut 40
+key w2 down
+spin PRESET 1
+expect kids_category 2
+expect note 2 1 1 0
+key w2 up
+tap SEQ
+tap SEQ
+tapkey w0
+expect note 2 1 1 1
+spin ALGO 1
+expect kids_sound 2
+expect note 2 1 1 1
+tap HOME
+spin PRESET -1
+expect noteat 2 1 1 1 60
+expect noteat 2 1 1 2 64
+expect noteat 2 1 1 3 67
+expect noteat 2 8 64 1 48
+expect lock 2 1 1 cut 40
+spin PRESET 1
+expect kids_sound 2
+expect note 2 1 1 1
+spin PRESET -1
+tap OCT+
+expect kids_octave 1
+expect kids_bar 1
+key w0 down
+expect kids_note 65
+wait 300
+shot playable-home.png
+key w0 up
+tap OCT-
+expect kids_octave 0
+tap SEL
+expect kids 1
+wait 400
+wavstop
+reboot
+wait 300
+kids-legacy-band
+expect kids 1
+expect project_slot 0
+# The audio engine supports three simultaneous kits. A fourth request must
+# keep the selected melodic sound and its patterns.
+param 3 engine 8
+param 4 engine 8
+spin SELECT 1
+expect trk 2
+expect kids_category 1
+chord 2 1 1 4 60 64 67
+spin PRESET 1
+expect kids_category 1
+expect noteat 2 1 1 2 64

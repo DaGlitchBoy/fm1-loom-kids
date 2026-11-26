@@ -1,0 +1,153 @@
+# Panels retain the stage and control the selected track's individual switches.
+wait 300
+kids-legacy-band
+expect kids 1
+expect kids_send.1.1 0
+expect kids_send.1.2 0
+expect kids_metro 0
+tap ARP
+expect kids_panel 3
+expect kids_lights 64
+tap FX
+expect kids_panel 1
+expect kids_send.1.2 52
+spin K1 10
+spin K2 10
+spin K3 10
+spin K4 10
+expect kids_send.1.2 62
+tap SEL
+expect kids_panel 2
+expect kids_send.1.1 48
+expect kids_send.1.2 62
+expect kids_lights 67
+shot kids-delay.png
+spin K3 2
+expect kids_delay 4
+expect kids_delay_halves 0
+spin SELECT 1
+expect kids_lights 64
+expect kids_send.2.1 0
+expect kids_send.2.2 0
+tap FX
+expect kids_panel 1
+expect kids_send.2.2 52
+expect kids_send.1.2 62
+shot kids-reverb.png
+tap FX
+expect kids_panel 2
+expect kids_send.2.2 0
+expect kids_lights 64
+spin SELECT -1
+expect kids_lights 67
+tap FX
+expect kids_panel 1
+expect kids_lights 67
+tap FX
+expect kids_panel 2
+expect kids_send.1.1 48
+expect kids_send.1.2 0
+expect kids_lights 66
+tap FX
+expect kids_send.1.2 62
+tap SEL
+expect kids_panel 2
+expect kids_send.1.1 48
+tap SEL
+expect kids_send.1.1 0
+expect kids_send.1.2 62
+expect kids_panel 1
+tap GLO
+expect kids_panel 4
+spin K1 -80
+expect kids_delay 1
+expect kids_delay_halves 0
+spin K1 80
+expect kids_delay 4
+expect kids_delay_halves 0
+shot kids-global.png
+spin SELECT 1
+tap ARP
+expect kids_panel 3
+expect kids_lights 320
+spin K1 3
+spin K2 -2
+spin K3 2
+spin K4 1
+shot kids-arp.png
+tapkey w0
+tap ARP
+expect kids_panel 0
+expect kids_lights 64
+tap ARP
+spin SELECT -1
+expect kids_lights 65
+spin SELECT 1
+expect kids_lights 320
+tap ARP
+# The metronome is a real click on a silent project; its zero setting is silent.
+master 2800
+tap GLO
+peakreset
+tap PLAY
+wait 720
+tap PLAY
+expect peak_db_max -90
+spin K2 25
+wait 12
+expect kids_metro 25
+wav click-low.wav
+tap PLAY
+wait 720
+tap PLAY
+wavstop
+spin K2 50
+wait 12
+expect kids_metro 75
+wav click-high.wav
+tap PLAY
+wait 720
+tap PLAY
+wavstop
+spin K2 -75
+wait 12
+expect kids_metro 0
+# Same drum hit in four independently initialized sessions.
+reboot
+wait 300
+kids-legacy-band
+master 2800
+wav dry.wav
+tapkey b4
+wait 1500
+wavstop
+reboot
+wait 300
+kids-legacy-band
+master 2800
+tap FX
+wav reverb.wav
+tapkey b4
+tap FX
+wait 1500
+wavstop
+reboot
+wait 300
+kids-legacy-band
+master 2800
+tap SEL
+wav delay.wav
+tapkey b4
+tap SEL
+wait 1500
+wavstop
+reboot
+wait 300
+kids-legacy-band
+master 2800
+tap FX
+tap SEL
+wav both.wav
+tapkey b4
+wait 1580
+wavstop

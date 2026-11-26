@@ -2,3 +2,20 @@ build/
 .DS_Store
 __pycache__/
 *.o
+.venv/
+.env
+.env.*
+!.env.example
+# Host emulator song storage and its atomic-write scratch files.
+song-[123].ks
+song-[123].lock
+song-[123].tmp.*
+pixelmaps.ks
+pixelmaps.lock
+pixelmaps.tmp.*
+startup.ks
+startup.lock
+startup.tmp.*
+
+# The shared builder regenerates the upstream device manifest during local builds.
+/firmware.json

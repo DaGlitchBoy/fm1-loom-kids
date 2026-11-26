@@ -1,4 +1,18 @@
-# Building LOOM-8
+# Building LION KIDS
+
+Use a recursive checkout of this repository, Emscripten, and Python 3 with Pillow and libraqm. The checked-in [browser workflow](.github/workflows/lion-kids.yml) pins the version used for public packages.
+
+```sh
+git submodule update --init --recursive
+./build.sh --web
+python3 -m http.server 8000 --bind 127.0.0.1 --directory app/build/emu
+```
+
+The [user manual](docs/LION_KIDS_MANUAL.md) also covers running the browser ZIP without compiling it. The [release checklist](docs/RELEASE.md) explains which assets to publish.
+
+## Inherited LOOM-8 developer targets
+
+The following reference describes the upstream Studio targets. The LION KIDS browser build above uses a different output directory and release workflow.
 
 LOOM-8 is an app on [fm1-base](https://github.com/charlesvestal/fm1-base) (in `base/`, a git submodule, with
 [felucca-bsp](https://github.com/hugelton/felucca-bsp) inside it as `base/bsp`). Clone with the submodules:

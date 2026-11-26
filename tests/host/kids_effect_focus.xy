@@ -1,0 +1,135 @@
+wait 300
+kids-legacy-band
+spin SELECT 1
+tap FX
+tap SEL
+tap ENV
+tap LFO
+tap EDIT
+tap ARP
+expect kids_lights 351
+expect kids_undo 6
+# Opening each of the already enabled effects leaves all states intact.
+tap FX
+expect kids_panel 1
+expect kids_send.2.1 48
+expect kids_send.2.2 52
+tap SEL
+expect kids_panel 2
+expect kids_lights 351
+tap ENV
+expect kids 3
+expect kids_lights 287
+tap LFO
+expect kids 5
+expect kids_lights 287
+tap EDIT
+expect kids_panel 5
+expect kids_lights 351
+tap ARP
+expect kids_panel 3
+expect kids_lights 351
+# HOME and GLO have separate focus. Each same-button repeat does bypass.
+tap HOME
+tap FX
+expect kids_panel 1
+expect kids_send.2.2 52
+tap FX
+expect kids_panel 0
+expect kids_send.2.2 0
+tap GLO
+tap SEL
+expect kids_send.2.1 48
+tap SEL
+expect kids_send.2.1 0
+tap ENV
+expect kids 3
+tap ENV
+expect kids 1
+expect kids_lights 344
+tap EDIT
+expect kids_panel 5
+tap EDIT
+expect kids_panel 0
+tap ARP
+expect kids_panel 3
+tap ARP
+expect kids_panel 0
+expect kids_lights 72
+tap LFO
+spin K1 -254
+spin K3 -10
+wait 20
+expect kids_dsp.2.7 0
+expect kids_dsp.2.14 0
+spin K3 1
+wait 15
+expect kids_dsp.2.14 1
+spin K3 1
+wait 15
+expect kids_dsp.2.14 2
+spin K3 1
+wait 15
+expect kids_dsp.2.14 3
+spin K3 1
+wait 15
+expect kids_dsp.2.14 4
+spin K3 1
+wait 15
+expect kids_dsp.2.14 5
+spin K3 1
+wait 15
+expect kids_dsp.2.14 6
+spin K3 1
+wait 15
+expect kids_dsp.2.14 7
+spin K3 1
+wait 15
+expect kids_dsp.2.14 8
+spin K3 1
+wait 15
+expect kids_dsp.2.14 9
+spin K3 1
+wait 15
+expect kids_dsp.2.14 9
+spin K1 127
+wait 15
+expect kids_dsp.2.7 127
+expect kids_lights 8
+spin K1 -92
+spin K3 -3
+wait 20
+shot kids-lfo-inverted.png
+tap LFO
+expect kids_lights 64
+tap LFO
+expect kids 5
+expect kids_dsp.2.7 35
+expect kids_dsp.2.14 6
+# A direct note held during a player change still gets released.
+tap HOME
+key w8 down
+wait 60
+expect voices >0
+tap ARP
+wait 1500
+expect voices 0
+key w8 up
+tap ARP
+expect kids_lights 72
+# Both a graph and a home overlay come back after a quick detour.
+tap ENV
+tap SEL
+tap SEL
+expect kids 3
+expect kids_send.2.1 0
+tap FX
+tap SEL
+tap SEL
+expect kids 1
+expect kids_panel 1
+expect kids_send.2.1 0
+tap SEL
+wait 320
+tap SEL
+expect kids_panel 0

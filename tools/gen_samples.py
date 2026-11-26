@@ -12,9 +12,8 @@ samples (tools/sampleio.py), into a header the firmware compiles in (dsp/sample.
   gen_samples.py --factory-bank OUT.bin   the factory set as a user bank's image, its entries marked as the factory
                                      set's (the installer and the samples page add them to the FM-1's bank)
 
-Since 0.8 the FM-1's build leaves the factory set out of the image (94 KB, for Bluetooth): its rows are empty there
-and play the bank's entries of the factory set, the same bytes (sampleio.ima_encode); the host simulator, the DSP
-tests and the emulator keep it built in (SMP_FACT_BUILTIN, dsp/sample.c).
+Since 0.8 the LOOM-8 FM-1 build reads these sounds from the flash sample bank.
+The LION KIDS FM-1 build embeds the instruments and breaks, without using its song storage.
 """
 import math
 import struct
@@ -231,7 +230,7 @@ def main():
         wrows.append((len(wadp), len(wck), len(s)))
         wadp += adp
         wck += ck
-    lines.append("#ifdef PLAT_WEB")
+    lines.append("#if defined(PLAT_WEB) || defined(LION_KIDS_DEVICE)")
     lines.append(f"static const uint8_t SMP_WEB_ADP[{len(wadp)}] = {{")
     for i in range(0, len(wadp), 24):
         lines.append("    " + ", ".join(str(b) for b in wadp[i:i + 24]) + ",")

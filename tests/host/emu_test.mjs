@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-// The browser build in Node: boot it, go to the Engine page (EDIT) and play T1's kit on the black keys (a kit's white keys
-// there write its steps), expect sound and screen frames.
+// The browser build in Node: play T1's kit immediately from HOME, expect sound and screen frames.
 import fs from "fs";
 const wasm = fs.readFileSync(process.argv[2]);
 let mem;
@@ -12,8 +11,8 @@ if (ex._initialize) ex._initialize();
 ex.web_master(2800); ex.web_boot();
 let peak = 0;
 const BLACK = [1,3,5,8,10,13,15,17,20,22,25];
-const B_EDIT = 4;                                   // plat.h: the Engine page, where the keys play
-ex.web_render(4096); ex.web_buttons(1 << B_EDIT); ex.web_render(4096); ex.web_buttons(0); ex.web_render(4096);
+// Play the default drum kit directly from HOME.
+ex.web_render(4096);
 for (let i = 0; i < 400; i++) {
   if (i % 20 === 0 && i < 340) ex.web_keys(1 << BLACK[(i / 20) % 11]);
   ex.web_render(128);

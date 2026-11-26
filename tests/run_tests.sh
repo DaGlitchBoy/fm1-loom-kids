@@ -36,11 +36,15 @@ run sample-bank sh -c "'$PY' tools/loom_samples.py build build/gen/user_bank.bin
     'sweep two=build/gen/wav/sweep.wav:57' && '$PY' tools/loom_samples.py syx build/gen/user_bank.syx \
     'piano two=build/gen/wav/piano.wav:60%16k' 'sweep two=build/gen/wav/sweep.wav:57'"
 run bank-tool "$PY" tests/host/bank_test.py
+run kids-music-map sh -c '"$0" -std=c99 -Wall -Wextra -Werror -Iapp tests/host/kids_music_test.c -o "$1/kids_music_test" && "$1/kids_music_test"' "$CC" "$OUT"
+run kids-flash-store sh -c '"$0" -std=c11 -Wall -Wextra -Werror -Iapp tests/host/kids_flash_store_test.c app/kids_flash_store.c -o "$1/kids_flash_store_test" && "$1/kids_flash_store_test"' "$CC" "$OUT"
+run kids-page "$PY" tests/host/kids_page_test.py
 # the units' own tests, written beside them (their WAVs in build/host/)
 for t in synth braids drumline fx seq factory; do
     run "$t" sh "tests/host/${t}_test.sh"
 done
 if command -v node >/dev/null 2>&1; then           # the samples page's bank against loom_samples.py's
+    run kids-web-controls node tests/host/kids_web_controls.mjs
     run samples-web node tests/host/samples_web.mjs "$PY"
     # the backup page's sample section (app/web/backup/extras.js) against a simulated FM-1 and the command line
     run backup-web node tests/host/backup_web.mjs "$PY"
@@ -64,6 +68,30 @@ else
     echo "  skip update path (no $B/loom.fwsc: ./build.sh)"
 fi
 run host-build sh build.sh --host
+mkdir -p "$B/scenarios/kids_redesign"
+run kids-redesign env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_redesign.xy "$B/scenarios/kids_redesign"
+mkdir -p "$B/scenarios/kids_music"
+run kids-music env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_music.xy "$B/scenarios/kids_music"
+mkdir -p "$B/scenarios/kids_sequencer"
+run kids-sequencer env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_sequencer.xy "$B/scenarios/kids_sequencer"
+mkdir -p "$B/scenarios/kids_effects"
+run kids-effects env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_effects.xy "$B/scenarios/kids_effects"
+run kids-effects-audio "$PY" tests/host/kids_effects_test.py "$B/scenarios/kids_effects"
+mkdir -p "$B/scenarios/kids_shaping"
+run kids-shaping env LOOM_KIDS=1 LOOM_LOAD=0 LOOM_MST=raw $B/host/loom_host tests/host/kids_shaping.xy "$B/scenarios/kids_shaping"
+run kids-shaping-audio "$PY" tests/host/kids_shaping_test.py "$B/scenarios/kids_shaping"
+mkdir -p "$B/scenarios/kids_effect_focus" "$B/scenarios/kids_history"
+run kids-effect-focus env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_effect_focus.xy "$B/scenarios/kids_effect_focus"
+run kids-history env LOOM_KIDS=1 $B/host/loom_host tests/host/kids_history.xy "$B/scenarios/kids_history"
+rm -rf "$B/scenarios/kids_shelf"
+mkdir -p "$B/scenarios/kids_shelf"
+run kids-shelf env LOOM_KIDS=1 LOOM_KIDS_SHELF="$B/scenarios/kids_shelf" \
+    $B/host/loom_host tests/host/kids_shelf.xy "$B/scenarios/kids_shelf"
+rm -rf "$B/scenarios/kids_release"
+mkdir -p "$B/scenarios/kids_release"
+run kids-release env LOOM_KIDS=1 LOOM_KIDS_SHELF="$B/scenarios/kids_release" \
+    $B/host/loom_host tests/host/kids_release.xy "$B/scenarios/kids_release"
+run kids-shelf-bytes "$PY" tests/host/kids_shelf_test.py "$B/host/loom_host"
 run lookahead sh tests/host/lookahead_test.sh    # (needs the simulator just built)
 # a bank image larger than the bank's windows is refused by the simulator's loader (as the tool and the FM-1 refuse it)
 run bank-too-big sh -c "mkdir -p $OUT/big && head -c 221185 /dev/zero > $OUT/big.bin && \
@@ -73,6 +101,7 @@ if command -v emcc >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then   # 
     run emu sh -c "sh build.sh --web >/dev/null && node tests/host/emu_test.mjs $B/emu/app.wasm"
     # fm1-base's page with LOOM-8's bits, its worklet with the part resample (in time at 48 kHz)
     run emu-page node tests/host/emu_page_test.mjs $B/emu
+    run emu-kids-dsp node tests/host/kids_dsp_web.mjs $B/emu/app.wasm
 else
     echo "  skip emu (no emcc or node)"
 fi
@@ -81,6 +110,7 @@ for s in tests/scenarios/*.xy; do
     rm -rf "$B/scenarios/$n" && mkdir -p "$B/scenarios/$n"
     run "scenario-$n" $B/host/loom_host "$s" "$B/scenarios/$n"
 done
+run kids-saved-projects "$PY" tests/host/kids_safety_test.py "$B/scenarios/kids_safety"
 # the USB audio input's ten channels as usbtracks.xy recorded them: the tracks in their own, at their level, before their pan
 run usb-channels "$PY" tests/usbtracks_check.py "$B/scenarios/usbtracks"
 # every page, engine and type, through the layout audit (tools/layout_sweep.py)

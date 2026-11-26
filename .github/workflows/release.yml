@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   prepare:
+    # This inherited firmware job builds Studio. LION KIDS releases use the emulator workflow.
+    if: github.repository == 'charlesvestal/fm1-loom'
     runs-on: ubuntu-24.04
     permissions:
       contents: write

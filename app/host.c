@@ -334,25 +334,38 @@ int plat_store_load_prev(uint32_t obj, void *dst, uint32_t max)
 
 /* the second core, simulated: a job runs at once, in order (the split path, the same sums) */
 static int cpu2_on = 1;
-int plat_cpu2_set(int on) { cpu2_on = on; return 0; }
+static int cpu2_drop_next, cpu2_dropped, cpu2_retired;
+int plat_cpu2_set(int on) { cpu2_on = on; cpu2_retired = 0; return 0; }
 int plat_cpu2_on(void) { return cpu2_on; }
 int plat_cpu2_run(void (*fn)(uint32_t), uint32_t arg)
 {
     uint64_t a;
     if (!cpu2_on)
         return 0;
+    if (cpu2_drop_next) {
+        cpu2_drop_next = 0;
+        cpu2_dropped = 1;
+        return 1;
+    }
     a = work_enabled() ? host_instr() : 0;
     fn(arg);
     if (work_on > 0)
         work_c2 += host_instr() - a;
     return 1;
 }
-int plat_cpu2_wait(void) { return 0; }
+int plat_cpu2_wait(void)
+{
+    if (!cpu2_dropped) return 0;
+    cpu2_dropped = 0;
+    cpu2_on = 0;
+    cpu2_retired = 1;
+    return -1;
+}
 void plat_cpu2_sync(void) {}
 int plat_cpu2_busy(void) { return 0; }   /* (a job ran at once) */
-int plat_cpu2_gave_up(void) { return 0; }
+int plat_cpu2_gave_up(void) { return cpu2_retired; }
 uint32_t plat_cpu2_bad(void) { return 0; }
-int plat_cpu2_barred(void) { return 0; }
+int plat_cpu2_barred(void) { return cpu2_retired; }
 int plat_vdc14_mv(void) { return 1600; }
 int plat_sysvdd_mv(void) { return 1380; }
 int plat_last_crash(uint32_t v[5]) { (void)v; return 0; }
@@ -417,7 +430,143 @@ static const char *const MN[NMS] = {"lo", "mid", "hi", "-", "color", "camount", 
 /* fm1-base's expect, for LOOM-8's own state with one value */
 int app_expect(const char *what, int *got)
 {
-    if (!strcmp(what, "playing"))
+    if (!strcmp(what, "kids"))
+        *got = kids_mode;
+    else if (!strcmp(what, "kids_buttons"))
+        *got = (int)lit_btn;
+    else if (!strcmp(what, "kids_sound")) {
+        int pos; kids_sound_count(&pos); *got = pos;
+    } else if (!strcmp(what, "kids_sounds")) {
+        int pos; *got = kids_sound_count(&pos);
+    } else if (!strcmp(what, "kids_category"))
+        *got = kids_category;
+    else if (!strncmp(what, "kids_icon_category.", 19)) {
+        int track = atoi(what + 19) - 1;
+        *got = track >= 0 && track < NTRK ? kids_categories[track] : -1;
+    } else if (!strncmp(what, "kids_preset.", 12))
+        *got = ieq(proj.trk[sel_trk()].name, what + 12);
+    else if (!strcmp(what, "kids_octave"))
+        *got = ui.oct;
+    else if (!strcmp(what, "kids_note"))
+        *got = ui.rem[0];
+    else if (!strncmp(what, "kids_note.", 10)) {
+        int i = atoi(what + 10) - 1;
+        *got = i >= 0 && i < ui.nrem ? ui.rem[i] : 0;
+    } else if (!strncmp(what, "kids_held.", 10)) {
+        int pitch = atoi(what + 10);
+        *got = pitch >= 1 && pitch <= 127 ? kids_note_users[pitch] : 0;
+    } else if (!strcmp(what, "kids_length"))
+        *got = tpat(sel_trk())->len;
+    else if (!strcmp(what, "kids_rec"))
+        *got = seq.rec ? 2 : kids_rec_armed;
+    else if (!strcmp(what, "kids_overflow"))
+        *got = (int)seq.rec_overflow;
+    else if (!strcmp(what, "project_slot"))
+        *got = proj_slot < NPROJ ? proj_slot + 1 : 0;
+    else if (!strcmp(what, "kids_draws"))
+        *got = (int)kids_draws;
+    else if (!strcmp(what, "kids_cursor"))
+        *got = kids_selected_step(sel_trk()) + 1;
+    else if (!strcmp(what, "kids_perf_page"))
+        *got = kids_perf_page[sel_trk()] + 1;
+    else if (!strncmp(what, "kids_perf_page.", 15)) {
+        int t = atoi(what + 15) - 1;
+        if (t < 0 || t >= NTRK) return 0;
+        *got = kids_perf_page[t] + 1;
+    }
+    else if (!strcmp(what, "kids_velocity"))
+        *got = kids_step_velocity();
+    else if (!strcmp(what, "kids_swing"))
+        *got = tpat(sel_trk())->groove;
+    else if (!strncmp(what, "kids_cell.", 10)) {
+        int track, cell;
+        if (sscanf(what + 10, "%d.%d", &track, &cell) != 2 ||
+            track < 1 || track > NTRK || cell < 1 || cell > 16) return 0;
+        *got = kids_performance_cell(track - 1, cell - 1);
+    }
+    else if (!strcmp(what, "kids_lights"))
+        *got = (int)kids_button_lights();
+    else if (!strcmp(what, "kids_slot"))
+        *got = ks_selected + 1;
+    else if (!strcmp(what, "kids_name_id"))
+        *got = kpix_song_id + 1;
+    else if (!strcmp(what, "kids_loaded"))
+        *got = ks_loaded < KS_SLOTS ? ks_loaded + 1 : 0;
+    else if (!strcmp(what, "kids_names"))
+        *got = kpix_open;
+    else if (!strcmp(what, "kids_name_slot"))
+        *got = kpix_slot + 1;
+    else if (!strncmp(what, "kids_pixel.", 11)) {
+        int slot, x, y;
+        if (sscanf(what + 11, "%d.%d.%d", &slot, &x, &y) != 3 || slot < 0 || slot > KPIX_COUNT ||
+            x < 0 || x >= KPIX_SIDE || y < 0 || y >= KPIX_SIDE) return 0;
+        *got = kpix_get(slot ? kpix_bank[slot - 1] : kpix_song, x, y);
+    }
+    else if (!strcmp(what, "kids_glo_overlay"))
+        *got = glo_overlay_painted;
+    else if (!strcmp(what, "kids_dialog"))
+        *got = ks_modal;
+    else if (!strcmp(what, "kids_shelf_mask")) {
+        *got = 0;
+        for (int i = 0; i < KS_SLOTS; i++) if (ks_has_song(ks_slots[i].blob)) *got |= 1 << i;
+    }
+    else if (!strncmp(what, "kids_kit_live.", 14)) {
+        int i = atoi(what + 14) - 1;
+        if (i < 0 || i >= NTRK) return 0;
+        *got = eng_drum[i];
+    }
+    else if (!strcmp(what, "kids_song_limit"))
+        *got = KS_BLOB_MAX;
+    else if (!strncmp(what, "kids_slot_crc.", 14)) {
+        int i = atoi(what + 14) - 1;
+        if (i < 0 || i >= KS_SLOTS) return 0;
+        const ks_blob_t *b = ks_slots[i].blob;
+        *got = b ? (int32_t)crc32_of(b->data, b->len) : 0;
+    }
+    else if (!strncmp(what, "kids_slot_size.", 15)) {
+        int i = atoi(what + 15) - 1;
+        if (i < 0 || i >= KS_SLOTS) return 0;
+        *got = ks_has_song(ks_slots[i].blob) ? (int)ks_slots[i].blob->len : 0;
+    }
+    else if (!strcmp(what, "kids_undo"))
+        *got = kh_cursor;
+    else if (!strcmp(what, "kids_redo"))
+        *got = kh_count - kh_cursor;
+    else if (!strcmp(what, "kids_history"))
+        *got = kh_visible;
+    else if (!strcmp(what, "kids_history_bytes")) {
+        *got = 0;
+        for (int i = 0; i < kh_count; i++) {
+            const kh_edit_t *e = &kh_entries[i];
+            *got += (int)e->size;
+            if (e->bank) *got += (int)(sizeof *e->bank + e->bank->nlanes * sizeof(lane_t));
+        }
+    }
+    else if (!strcmp(what, "kids_phase"))
+        *got = kids_phase_pixel[sel_trk()];
+    else if (!strncmp(what, "kids_dsp.", 9)) {
+        int track, parameter;
+        if (sscanf(what + 9, "%d.%d", &track, &parameter) != 2 ||
+            track < 1 || track > NTRK || parameter < 0 || parameter >= KD_COUNT) return 0;
+        *got = kids_dsp_tracks[track - 1].value[parameter];
+    }
+    else if (!strcmp(what, "kids_panel"))
+        *got = kids_panel;
+    else if (!strcmp(what, "kids_delay"))
+        *got = kids_delay_actual;
+    else if (!strcmp(what, "kids_delay_halves"))
+        *got = fx_delay_halves(epar[AUX_FX1][TP_E1], epar[AUX_FX1][TP_E2], seq_tempo(&seq));
+    else if (!strcmp(what, "kids_metro"))
+        *got = kids_metro_gain;
+    else if (!strncmp(what, "kids_send.", 10)) {
+        int track, bus;
+        if (sscanf(what + 10, "%d.%d", &track, &bus) != 2 ||
+            track < 1 || track > NTRK || bus < 1 || bus > 2) return 0;
+        *got = kids_send_gain[track - 1][bus - 1];
+    }
+    else if (!strcmp(what, "kids_bar"))
+        *got = ui.bar + 1;
+    else if (!strcmp(what, "playing"))
         *got = seq.playing;
     else if (!strcmp(what, "scene"))
         *got = seq.scene + 1;
@@ -487,6 +636,27 @@ int app_expect(const char *what, int *got)
         *got = (int)(meter_peak + 0.5f);
     else if (!strcmp(what, "cores"))
         *got = engine_core2_state();
+    else if (!strcmp(what, "core2_jobs"))
+        *got = split_last[0];
+    else if (!strcmp(what, "acid_primary")) {
+        *got = 0;
+        for (int i = 0; i < NVOICE; i++) {
+            unsigned info = synth_vinfo[i];
+            if ((info & 159u) == (128u | EG_ACID)) {
+                if (info & 64u) { *got = 0; break; }
+                *got = 1;
+            }
+        }
+    }
+    else if (!strcmp(what, "history_capacity")) {
+        uint8_t before[3] = {0}, after[3] = {1, 0, 0};
+        kh_region_t region = {after, sizeof after};
+        uint8_t output[12] = {0};
+        size_t capacity = kh_encode(before, &region, 1, NULL, SIZE_MAX);
+        after[2] = 2; /* Another step landed between sizing and writing. */
+        *got = capacity == 6 && kh_encode(before, &region, 1, output, capacity) == SIZE_MAX;
+        for (size_t i = capacity; i < sizeof output; i++) *got &= output[i] == 0;
+    }
     else if (!strcmp(what, "dirty"))
         *got = ui_dirty();
     else if (!strcmp(what, "ask"))
@@ -628,7 +798,7 @@ static int expect_more(const char *what, const char *a, const char *b, const cha
             host_fails++;
         } else
             printf("  ok note %s %s %s == %d\n", t, pt, st, got);
-    } else if (!strcmp(what, "noteat") || !strcmp(what, "stepvel")) {   /* expect noteat T PAT S I VALUE: the step's
+    } else if (!strcmp(what, "noteat") || !strcmp(what, "stepvel") || !strcmp(what, "stepnudge")) {   /* expect noteat T PAT S I VALUE: the step's
                                                      * I-th note (1-4); expect stepvel T PAT S VALUE: its velocity */
         char t[16], pt[16], st[16], i[16], v[16];
         tpat_t *tp;
@@ -642,7 +812,7 @@ static int expect_more(const char *what, const char *a, const char *b, const cha
         tp = pat_of(atoi(t), atoi(pt));
         s = atoi(st) - 1;
         k = at ? atoi(i) - 1 : 0;
-        got = !tp || s < 0 || s >= NSTEP || k < 0 || k >= SN ? -1 : at ? tp->st[s].note[k] : tp->st[s].vel;
+        got = !tp || s < 0 || s >= NSTEP || k < 0 || k >= SN ? -1 : at ? tp->st[s].note[k] : !strcmp(what, "stepnudge") ? tp->st[s].nudge : tp->st[s].vel;
         if (got != atoi(v)) {
             printf("FAIL expect %s %s %s %s%s%s == %s, got %d\n", what, t, pt, st, at ? " " : "", at ? i : "", v, got);
             host_fails++;
@@ -1055,7 +1225,13 @@ static int song_cmd(const char *cmd)
     char buf[512], *w[80];
     int n = words(buf, w, 80), t, k;
     host_env();
-    if (!strcmp(cmd, "knob")) {                     /* knob T PARAM VALUE */
+    if (!strcmp(cmd, "kids-entry")) {             /* browser's labelled entry button, through real input */
+        uint32_t held = held_btn;
+        held_btn |= 1u << 30;
+        run_ms(32);
+        held_btn = held;
+        run_ms(32);
+    } else if (!strcmp(cmd, "knob")) {                     /* knob T PARAM VALUE */
         if (n < 4)
             host_die("knob T PARAM VALUE", "");
         t = atoi(w[1]) - 1;
@@ -1398,8 +1574,73 @@ static int song_cmd(const char *cmd)
     return 1;
 }
 
+#ifndef PLAT_WEB
+#ifndef LION_KIDS_DEVICE
+#include "kids_flash_platform.c"
+#endif
+
+static int host_compare_flash_chunk(void *ctx, const uint8_t *p, uint32_t n)
+{
+    set_in_t *expected = ctx;
+    if (n > expected->left || memcmp(expected->p, p, n)) return -1;
+    expected->p += n;
+    expected->left -= n;
+    return 0;
+}
+
+static void host_check_kids_flash(void)
+{
+    unsigned slot = ks_loaded;
+    kfs_record_t before;
+    if (kfs_read(&kfs_plat_io, slot, &before) || ks_flash_save(slot, before.revision))
+        host_die("could not stream song to simulated flash", "");
+    kfs_record_t written;
+    if (kfs_read(&kfs_plat_io, slot, &written) || written.revision != before.revision + 1)
+        host_die("could not read streamed song from simulated flash", "");
+    _Static_assert(sizeof cv_px >= KS_FLASH_BLOCK, "reuse display scratch for flash validation");
+    lcd_sync();
+    if (ks_flash_read_song(&written, (uint8_t *)(void *)cv_px, NULL))
+        host_die("bounded flash reader could not validate streamed song", "");
+
+    ks_blob_t *expected = ks_pack();
+    if (!expected || get32(expected->data + 8) != get32(written.data + 8) ||
+        get32(expected->data + 16) != get32(written.data + 16) ||
+        memcmp(expected->data + KS_HEADER_V1, written.data + KS_HEADER_V1, KS_HEADER - KS_HEADER_V1))
+        host_die("decoded flash song differs from the standard save", "");
+    ks_decoded_t decoded = {0};
+    if (ks_unpack(expected, &decoded, 0)) host_die("standard song decode failed", "");
+    set_in_t bytes = {(const uint8_t *)decoded.song, get32(expected->data + 8)};
+    lz_sink_t compare = {host_compare_flash_chunk, &bytes};
+    if (ks_flash_read_song(&written, (uint8_t *)(void *)cv_px, &compare) || bytes.left)
+        host_die("streamed flash song differs byte-for-byte", "");
+    ks_unload(&decoded);
+    ks_drop(expected);
+}
+#endif
+
 int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d)
 {
+#if !defined(PLAT_WEB)
+    if (!strcmp(cmd, "kids-legacy-band")) {
+        /* Existing behavior scenarios explicitly use the factory band from before
+         * the Kids starter bank, including their specific kit and preset order. */
+        project_defaults();
+        project_apply();
+        kids_init_panels();
+        kids_category_sync();
+        return 1;
+    }
+    if (!strcmp(cmd, "kids-flash-check")) { host_check_kids_flash(); return 1; }
+#ifndef LION_KIDS_DEVICE
+    if (!strcmp(cmd, "kids-shelf-fail")) { ks_fail_next = 1; return 1; }
+    if (!strcmp(cmd, "kids-shelf-conflict")) {
+        int slot = clampi(atoi(a), 1, KS_SLOTS) - 1;
+        if (ks_file_write(slot, ks_slots[slot].revision, ks_slots[slot].blob)) host_die("shelf conflict fixture failed", a);
+        return 1;
+    }
+#endif
+#endif
+
     if (song_cmd(cmd))
         return 1;
     if (!strcmp(cmd, "expect"))
@@ -1711,6 +1952,12 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
     }
     else if (!strcmp(cmd, "cores"))
         plat_cpu2_set(atoi(a));
+    else if (!strcmp(cmd, "drop-core2-job"))
+        cpu2_drop_next = 1;
+#ifndef PLAT_WEB
+    else if (!strcmp(cmd, "kids-battery"))
+        kids_battery_override = clampi(atoi(a), -1, 4);
+#endif
     else
         return 0;
     return 1;

@@ -1,0 +1,260 @@
+# One melodic track first: gate contour, bypass and independent panel state.
+wait 300
+kids-legacy-band
+master 2800
+spin SELECT 1
+param 2 a 0
+param 2 d 0
+param 2 s 127
+param 2 r 0
+param 2 e1 80
+param 2 cut 127
+param 2 fenv 64
+tap ENV
+expect kids 3
+expect kids_lights 4
+spin K1 8
+spin K2 12
+spin K3 -40
+spin K4 -5
+wait 25
+expect kids_dsp.2.1 24
+expect kids_dsp.2.2 30
+expect kids_dsp.2.3 48
+expect kids_dsp.2.4 20
+shot kids-envelope.png
+wav envelope.wav
+key w8 down
+wait 680
+key w8 up
+wait 330
+wavstop
+wait 150
+wav early.wav
+key w8 down
+wait 46
+key w8 up
+wait 330
+wavstop
+spin SELECT 1
+expect kids_lights 0
+expect kids_dsp.3.0 0
+spin SELECT -1
+tap ENV
+expect kids 1
+expect kids_lights 64
+wav preset-envelope.wav
+key w8 down
+wait 680
+key w8 up
+wait 330
+wavstop
+# LFO phase is attached to 120 BPM. Square tremolo holds two gain levels.
+tap LFO
+expect kids 5
+spin K1 36
+spin K4 3
+wait 20
+expect kids_dsp.2.5 1
+expect kids_dsp.2.7 227
+expect kids_dsp.2.8 3
+tap LFO
+expect kids 1
+expect kids_lights 64
+tap LFO
+expect kids_lights 8
+shot kids-lfo-square.png
+wav tremolo.wav
+tap PLAY
+expect kids_phase <20
+key w8 down
+wait 3990
+key w8 up
+tap PLAY
+wavstop
+bpm 90
+wav tremolo-90.wav
+tap PLAY
+expect kids_phase <20
+key w8 down
+wait 5320
+key w8 up
+tap PLAY
+wavstop
+bpm 120
+spin K2 1
+spin K4 -1
+wait 12
+expect kids_dsp.2.6 1
+expect kids_dsp.2.8 2
+tap OCT+
+wav lfo-cutoff.wav
+tap PLAY
+key w8 down
+wait 430
+shot kids-lfo.png
+wait 1680
+key w8 up
+tap PLAY
+wavstop
+spin K2 1
+spin K4 1
+wav lfo-drive.wav
+tap PLAY
+key w8 down
+wait 2110
+key w8 up
+tap PLAY
+wavstop
+spin K2 -2
+spin K1 -200
+spin K3 3
+wait 12
+expect kids_dsp.2.7 27
+expect kids_dsp.2.14 4
+wav tremolo-quarter-inverse.wav
+tap PLAY
+key w8 down
+wait 1450
+key w8 up
+tap PLAY
+wavstop
+tap LFO
+expect kids 1
+tap OCT-
+# Each recipe by itself, then stacked with both sends. Zero is dry.
+tap EDIT
+expect kids 1
+expect kids_panel 5
+spin K1 -127
+spin K2 -127
+spin K3 -127
+spin K4 -127
+wav zero.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+spin K1 127
+wav filter.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+spin K1 -127
+spin K2 127
+wav drive.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+spin K2 -127
+spin K3 127
+wav crush.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+spin K3 -127
+spin K4 127
+wav chorus.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+spin K1 76
+spin K2 83
+spin K3 86
+wait 32
+shot kids-quick-fx.png
+tap FX
+tap SEL
+expect kids_lights 83
+wav stack.wav
+key w8 down
+wait 400
+key w8 up
+wait 1300
+wavstop
+tap HOME
+tap FX
+tap FX
+tap SEL
+tap SEL
+tap EDIT
+tap EDIT
+expect kids_lights 64
+wav bypass.wav
+key w8 down
+wait 400
+key w8 up
+wait 140
+wavstop
+tap EDIT
+expect kids_panel 5
+wait 12
+expect kids_dsp.2.10 76
+expect kids_dsp.2.11 83
+expect kids_dsp.2.12 86
+expect kids_dsp.2.13 127
+# Kit voices accept the same per-hit gate and independent quick settings.
+spin SELECT -1
+expect kids_lights 64
+wav kit-dry.wav
+key b4 down
+wait 480
+key b4 up
+wait 220
+wavstop
+tap ENV
+spin K1 127
+wav kit-envelope.wav
+key b4 down
+wait 480
+key b4 up
+wait 220
+wavstop
+tap ENV
+tap EDIT
+spin K1 127
+spin K2 127
+spin K3 127
+spin K4 127
+wav kit-quick.wav
+key b4 down
+wait 480
+key b4 up
+wait 220
+wavstop
+expect kids_lights 80
+spin SELECT 1
+expect kids_lights 80
+tap HOME
+expect kids_panel 0
+expect kids_lights 80
+# Toggling effects on T2 while T3's unprocessed note rings leaves T3 steady.
+spin SELECT 1
+param 3 a 0
+param 3 d 0
+param 3 s 127
+param 3 r 0
+tap HOME
+chord 3 1 1 64 65
+tap PLAY
+wait 110
+wav isolated.wav
+wait 400
+spin SELECT -1
+tap EDIT
+wait 320
+tap EDIT
+wait 320
+wavstop
+tap PLAY
+wait 200
+expect voices 0
