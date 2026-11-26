@@ -4,6 +4,8 @@ This candidate uses the normal M‑VAVE firmware update path and keeps the stock
 
 The device has one 64-step pattern per track, with the same 16, 32 and 64-step lengths in the Kids controls. Ordinary edits have Undo and Redo. Save, open and clear are outside the device edit history. Each saved song can use up to 16,364 bytes in flash. There is a second flash copy for an interrupted save. Device songs and browser songs are kept separately.
 
+Preview 0.0.5 adds a top-right battery meter with a USB power symbol.
+
 Preview 0.0.4 runs Acid Bass on the primary audio core after a reported fault in its soft drive. It keeps playing on one core if the second core fails and bounds the undo journal during live edits.
 
 Preview 0.0.3 adds read-only song export and stereo USB recording.

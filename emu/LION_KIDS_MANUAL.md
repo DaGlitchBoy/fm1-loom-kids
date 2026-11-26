@@ -8,6 +8,8 @@
 
 Device slots are saved on the FM‑1. Emulator slots are saved in the current browser profile at the address you opened. Keep using the same browser profile, address and port to see those slots. Clearing that site's data removes its browser songs.
 
+The FM‑1 shows a battery icon at the top right. It displays up to three bars and turns pink when low. A lightning symbol indicates USB power.
+
 ## Play and record
 
 Turn **SELECT** to pick one of eight tracks, **PRESETS** to choose its category, and **ALGORITHM** to pick a sound. These knobs stop at either end. The track icon shows the category, and the counter shows the preset's position. On a new song the tracks are Acid Line, Marimba, Twill, Bellows, Dusty Pad, Breath Lead, Flute and Whisper Pad. Keys and Plucks start with reverb and delay.
