@@ -1,0 +1,299 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual · LION KIDS</title>
+  <link rel="stylesheet" href="../site.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="../">LION KIDS</a>
+    <nav aria-label="Main navigation"><a href="../emu/">Play in browser</a><a href="../install/">Install</a><a href="../export/">Record &amp; export</a></nav>
+  </header>
+  <main class="manual">
+    <h1>LION KIDS manual</h1>
+    <nav id="TOC" aria-label="On this page"><ul>
+<li><a href="#get-started" id="toc-get-started">Get started</a></li>
+<li><a href="#play-and-record" id="toc-play-and-record">Play and
+record</a></li>
+<li><a href="#edit-the-loop" id="toc-edit-the-loop">Edit the
+loop</a></li>
+<li><a href="#shape-your-sound" id="toc-shape-your-sound">Shape your
+sound</a></li>
+<li><a href="#add-effects" id="toc-add-effects">Add effects</a></li>
+<li><a href="#save-open-or-clear-a-song"
+id="toc-save-open-or-clear-a-song">Save, open or clear a song</a></li>
+<li><a href="#export-or-record-to-a-wav"
+id="toc-export-or-record-to-a-wav">Export or record to a WAV</a></li>
+<li><a href="#computer-keyboard" id="toc-computer-keyboard">Computer
+keyboard</a></li>
+</ul></nav>
+<h2 id="get-started">Get started</h2>
+<p><strong>In the browser.</strong> Open the <a
+href="https://daglitchboy.github.io/fm1-loom-kids/emu/">LION KIDS
+emulator</a> and press <strong>Start LION KIDS</strong>. Use a mouse,
+touch, or your computer keyboard. To play offline, extract the browser
+ZIP, run <code>python3 -m http.server 8000 --bind 127.0.0.1</code> in
+the extracted <code>lion-kids-web</code> folder, and open <a
+href="http://127.0.0.1:8000">127.0.0.1:8000</a>. Use <code>py -3</code>
+instead of <code>python3</code> on Windows if needed.</p>
+<p><strong>On the FM‑1.</strong> Back up your existing projects with
+your current firmware's backup tool. Connect the FM‑1 with a USB data
+cable, open the <a
+href="https://daglitchboy.github.io/fm1-loom-kids/install/">installer</a>
+in desktop Chrome or Edge, and click <strong>Install</strong>. Allow
+MIDI access and follow the installer prompts. If it requests update
+mode, hold <strong>OCT−</strong> and <strong>OCT+</strong> together for
+five seconds. Leave the cable connected until the installer reports
+completion and the FM‑1 restarts. The installer includes a
+return-to-stock option.</p>
+<p>Device slots are saved on the FM‑1. Emulator slots are saved in the
+current browser profile at the address you opened. Keep using the same
+browser profile, address and port to see those slots. Clearing that
+site's data removes its browser songs.</p>
+<h2 id="play-and-record">Play and record</h2>
+<p>Turn <strong>SELECT</strong> to pick one of eight tracks,
+<strong>PRESETS</strong> to choose its category, and
+<strong>ALGORITHM</strong> to pick a sound. These knobs stop at either
+end. The track icon shows the category, and the counter shows the
+preset's position. On a new song the tracks are Acid Line, Marimba,
+Twill, Bellows, Dusty Pad, Breath Lead, Flute and Whisper Pad. Keys and
+Plucks start with reverb and delay.</p>
+<ul>
+<li>On <strong>HOME</strong>, K1 changes track volume, K2 changes the
+loop length (16, 32 or 64 steps), K3 chooses a chord mode, and K4
+chooses a scale.</li>
+<li><strong>PLAY</strong> starts or stops playback. In HOME and
+Performance, press <strong>REC</strong> while playing to overdub the
+selected track. If stopped, press REC and then PLAY. Press REC again to
+finish the take.</li>
+<li><strong>OCT−/+</strong> changes octave. Turn <strong>SELECT</strong>
+to move to another track.</li>
+</ul>
+<h2 id="edit-the-loop">Edit the loop</h2>
+<p><strong>SEQ</strong> first opens <strong>Performance</strong>, where
+the keyboard plays live. Press SEQ again to switch to
+<strong>Steps</strong>. Further presses alternate views. After visiting
+another screen, SEQ reopens the view you last used.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Control</th>
+<th>Performance</th>
+<th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>SELECT</td>
+<td>Choose a track</td>
+<td>Choose a track</td>
+</tr>
+<tr class="even">
+<td>K4</td>
+<td>Move the cursor on that track</td>
+<td>Move the cursor on that track</td>
+</tr>
+<tr class="odd">
+<td>K1</td>
+<td>Set the selected note's velocity</td>
+<td>Set the selected note's velocity, or set velocity before adding
+it</td>
+</tr>
+<tr class="even">
+<td>K2</td>
+<td>Transpose the selected melodic note or chord</td>
+<td>Transpose the selected note or chord. On an empty step, set the root
+for new notes</td>
+</tr>
+<tr class="odd">
+<td>K3</td>
+<td>Set the selected step's length</td>
+<td>Set the selected step's length</td>
+</tr>
+<tr class="even">
+<td>Keys</td>
+<td>Play live</td>
+<td>White keys toggle steps on the visible page. Black keys choose a hit
+on drum tracks</td>
+</tr>
+<tr class="odd">
+<td>EDIT</td>
+<td>Add or remove the note or last played drum hit at the cursor</td>
+<td>Add or remove the note or selected drum hit at the cursor</td>
+</tr>
+</tbody>
+</table>
+<p>K4 moves between pages and wraps at the ends of the current track.
+For example, turning left from step 1 of a 32-step track selects step
+32. Each track has its own cursor. In Performance the rows follow their
+own loops while playing. Turning K4 lets you inspect the current track
+independently until you start or stop playback or change views. On a
+drum step, velocity can be changed for the selected hit. Length applies
+to the step's group of hits. <strong>Auto</strong> uses the pattern's
+default note length.</p>
+<p><img src="../img/lion-kids-performance.png"
+alt="Performance view" /></p>
+<p><img src="../img/lion-kids-steps.png" alt="Steps view" /></p>
+<h2 id="shape-your-sound">Shape your sound</h2>
+<p>On HOME, K3 moves from single notes to chords. Options include chords
+built from the selected scale, major, minor, power chords, seventh
+chords and octaves. K4 chooses the scale. When a scale is active, a key
+outside the scale is mapped to a playable note.</p>
+<h2 id="add-effects">Add effects</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Button</th>
+<th>Panel</th>
+<th>K1 / K2 / K3 / K4</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FX</td>
+<td>Reverb</td>
+<td>Amount / decay / room size / tone</td>
+</tr>
+<tr class="even">
+<td>SEL</td>
+<td>Delay</td>
+<td>Amount / feedback / beat division / tone</td>
+</tr>
+<tr class="odd">
+<td>EDIT outside Performance, Steps and GLO</td>
+<td>Quick FX</td>
+<td>Low-pass / drive / bitcrush / chorus</td>
+</tr>
+<tr class="even">
+<td>ENV</td>
+<td>Envelope</td>
+<td>Attack / hold / sustain / release</td>
+</tr>
+<tr class="odd">
+<td>LFO</td>
+<td>Modulation</td>
+<td>Depth / target / rate / waveform</td>
+</tr>
+<tr class="even">
+<td>ARP</td>
+<td>Arpeggiator</td>
+<td>Order / rate / chord / scale</td>
+</tr>
+</tbody>
+</table>
+<p>A lit effect button means it is enabled on the selected track.
+Pressing it from another panel opens its controls and keeps an active
+effect enabled. Press it again in that panel to switch it off. A quick
+double press from another effect panel returns to the panel you came
+from. Reverb and delay amounts are independent per track. Their other
+settings are shared within the song.</p>
+<ul>
+<li><strong>ENV</strong> draws the current envelope. Attack is the rise,
+hold is the time at the top, sustain is the level while you hold the
+note, and release is the fade after you let go.</li>
+<li><strong>LFO</strong> can modulate volume, cutoff or drive. Negative
+depth inverts the modulation. Rate follows the song's tempo, and
+waveform selects sine, triangle, saw or square.</li>
+<li><strong>ARP</strong> plays held notes in order. Select up, down,
+up–down, down–up or random, then set a tempo division. Chord and scale
+controls work with the arpeggiator.</li>
+<li><strong>Quick FX</strong> knobs set how much of each effect the
+track uses. A setting of zero gives you the dry signal for that
+effect.</li>
+</ul>
+<h2 id="save-open-or-clear-a-song">Save, open or clear a song</h2>
+<p>Press <strong>GLO</strong>. K1 sets the tempo, K2 sets the metronome
+level, K3 sets swing for the selected track, and K4 previews song slots
+1–3. Press <strong>EDIT</strong> to open the previewed song.
+<strong>SAVE</strong> writes to the currently loaded slot. To clear the
+selected slot, hold <strong>GLO for five seconds</strong>, then confirm
+with EDIT or cancel with HOME. The confirmation closes after five
+seconds.</p>
+<p>Hold <strong>EDIT</strong> on GLO to open the pixel-name editor. K1
+selects the canvas, K2 and K3 move the cursor, and K4 chooses and paints
+a color. PLAY paints with the current color, SEL resets the canvas, EDIT
+assigns the picture, and HOME leaves the editor. The templates autosave.
+A song keeps its own copy of the picture you assign.</p>
+<p>Hold <strong>HOME</strong> and turn K1 left to undo or right to redo.
+The session holds up to ten recent edits. The browser also includes song
+saves and deletions in its history. On the FM‑1, saving, opening and
+clearing slots take effect outside edit history. Undo history clears on
+restart.</p>
+<h2 id="export-or-record-to-a-wav">Export or record to a WAV</h2>
+<p>Use <a
+href="https://daglitchboy.github.io/fm1-loom-kids/export/">Record &amp;
+Export</a> in desktop Chrome or Edge with firmware 0.0.3 or later.</p>
+<p><strong>Download saved songs.</strong> Press <strong>SAVE</strong>
+for each song you want to keep and stop playback. On the page, click
+<strong>Read songs from FM‑1</strong> and allow MIDI access. Choose
+<strong>Download song backup</strong> to save all three slots to one
+<code>.lionkids</code> file. <strong>Open song backup</strong> reloads
+the file on the page for future WAV exports. This preview uses the
+backup file for archiving and rendering. Keep a copy wherever you store
+your music.</p>
+<p><strong>Export a song as audio.</strong> Click <strong>Export
+WAV</strong> beside a filled slot. The browser renders one full cycle of
+the song, then lets the delay and reverb tails fade. The metronome is
+muted in an offline export.</p>
+<p><strong>Record a live performance.</strong> Click <strong>Find audio
+inputs</strong> and allow audio access. Choose the FM‑1 stereo input,
+click <strong>Record live</strong>, and play. Listen through the FM‑1.
+Click <strong>Stop</strong>, then <strong>Download recording</strong> to
+save the stereo WAV. The recording stays in the browser until you
+download it.</p>
+<h2 id="computer-keyboard">Computer keyboard</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Shortcut</th>
+<th>Control</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q–I, A–K</td>
+<td>White keys</td>
+</tr>
+<tr class="even">
+<td>1–0, minus</td>
+<td>Black keys</td>
+</tr>
+<tr class="odd">
+<td>Up / Down away from a focused knob</td>
+<td>SELECT</td>
+</tr>
+<tr class="even">
+<td>Tab, then arrow keys</td>
+<td>Focus and turn a knob</td>
+</tr>
+<tr class="odd">
+<td>Space / Return from the panel</td>
+<td>PLAY / REC</td>
+</tr>
+<tr class="even">
+<td>/</td>
+<td>SEQ</td>
+</tr>
+<tr class="odd">
+<td>O / N / V</td>
+<td>GLO / EDIT / SAVE</td>
+</tr>
+<tr class="even">
+<td>Esc</td>
+<td>HOME</td>
+</tr>
+<tr class="odd">
+<td>Z / X</td>
+<td>OCT− / OCT+</td>
+</tr>
+</tbody>
+</table>
+<p>You can also click the panel buttons and drag or scroll over the
+knobs. Tab moves focus between controls. Space or Return presses a
+focused panel button.</p>
+  </main>
+</body>
+</html>

@@ -14,10 +14,10 @@ Preview 0.0.1 includes the factory recorded instruments and break loops in the f
 
 ## Install from Chrome or Edge
 
-1. Open the [LION KIDS installer](https://daglitchboy.github.io/fm1-loom-kids/). Check that it says **LION KIDS device preview**.
+1. Open the [LION KIDS installer](https://daglitchboy.github.io/fm1-loom-kids/install/). Check that it says **LION KIDS device preview**.
 2. Back up anything you want to keep using your current firmware's backup tool. Connect the FM‑1 directly with a USB data cable.
 3. Click **Install**, allow MIDI access when asked, and follow the page. If the installer asks for update mode, hold OCT− and OCT+ together for five seconds. Keep the FM‑1 connected until the installer reports completion and it has restarted.
-4. Verify HOME, the keyboard, playback and SAVE. Use an empty slot to check that a small saved pattern reopens after a power cycle. The older Puya revision still needs that first physical test.
+4. Verify HOME, the keyboard, playback and SAVE. Use an empty slot to check that a small saved pattern reopens after a power cycle. The published build passed simulated checks for both supported flash chips. Test playback and recording on your own unit.
 
 The installer also has **Back to the stock firmware**.
 
