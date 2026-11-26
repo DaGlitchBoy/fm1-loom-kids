@@ -14,7 +14,7 @@ from build_lion_device import PREVIEW_VERSION
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "app" / "web" / "site"
 SHOTS = (
-    "lion-kids-home.png", "lion-kids-performance.png", "lion-kids-steps.png", "kids-shaping-lfo.png",
+    "lion-kids-home.png", "lion-kids-performance.png", "lion-kids-steps.png", "lion-kids-lfo.png",
 )
 
 

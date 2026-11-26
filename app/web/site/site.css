@@ -45,6 +45,7 @@ figcaption { margin-top: .55rem; color: var(--muted); font-size: .92rem; }
 .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; margin-block: 1.25rem; }
 .gallery figure { padding: .75rem; background: var(--panel); border-radius: .55rem; }
 .gallery img { width: 100%; max-width: 240px; margin-inline: auto; }
+.workflow-detail { margin-block: 1rem; }
 .text-link { font-weight: 750; }
 .export-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.4rem; background: var(--panel); border-left: 3px solid var(--mint); margin: 1rem 0 2rem; }
 .export-strip div { max-width: 52ch; }
