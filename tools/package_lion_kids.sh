@@ -22,6 +22,23 @@ tar -xf "$tmp/bsp.tar" -C "$tmp/lion-kids-source/base/bsp"
 tar -czf "$out/lion-kids-source.tar.gz" -C "$tmp" lion-kids-source
 
 cp app/build/emu/index.html app/build/emu/app.wasm app/build/emu/*.js "$tmp/lion-kids-web/"
+mkdir -p "$tmp/lion-kids-web/fonts"
+cp base/assets/fonts/BarlowSemiCondensed-SemiBold.ttf base/assets/fonts/BarlowSemiCondensed-Bold.ttf "$tmp/lion-kids-web/fonts/"
+cp base/assets/fonts/Barlow-OFL.txt "$tmp/lion-kids-web/fonts/"
+python3 - "$tmp/lion-kids-web/index.html" <<'PYFONT'
+from pathlib import Path
+import re
+import sys
+
+page = Path(sys.argv[1])
+source = re.sub(r'^<link [^>]*fonts\.(?:googleapis|gstatic)\.com[^>]*>\n', '', page.read_text(), flags=re.M)
+styles = '''<style>
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url("./fonts/BarlowSemiCondensed-SemiBold.ttf"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-display: swap; src: url("./fonts/BarlowSemiCondensed-Bold.ttf"); }
+</style>
+'''
+page.write_text(source.replace("</head>", styles + "</head>", 1))
+PYFONT
 for assets in parts reader; do
     if [ -d "app/build/emu/$assets" ]; then
         cp -R "app/build/emu/$assets" "$tmp/lion-kids-web/"
