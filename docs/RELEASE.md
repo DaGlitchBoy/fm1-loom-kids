@@ -31,7 +31,15 @@ Deploy the generated files to `gh-pages`. Keep this branch set as the Pages sour
 
 ## Prepare a GitHub release
 
-Open **Releases → Draft a new release**. Select a tag such as `v0.0.4` for the exact firmware source commit, which may differ from the website or emulator source commit. For the currently hosted firmware that commit is `e8d7213ba84f1c23df5fcd3b63066b87ab1a8f3d`. The offline emulator ZIP records its own source commit in `SOURCE-COMMIT.txt`.
+The firmware and emulator are built from separate source snapshots. For the currently hosted firmware, create the release tag at the exact 0.0.4 build commit if the tag does not already exist. Run this in the project checkout with the renamed repository configured as `origin`.
+
+```sh
+git fetch origin feat/lion-kids-fm1-device
+git tag v0.0.4 e8d7213ba84f1c23df5fcd3b63066b87ab1a8f3d
+git push origin refs/tags/v0.0.4
+```
+
+Then open **Releases → Draft a new release** and choose `v0.0.4`. The offline emulator ZIP records its own source commit in `SOURCE-COMMIT.txt`.
 
 Title the release **LION KIDS 0.0.4 — FM‑1 preview** and mark it as a prerelease. Add the firmware and resource files, both corresponding-source archives, and the offline browser ZIP from the project homepage. Link to the site's complete checksums and include these release notes:
 
