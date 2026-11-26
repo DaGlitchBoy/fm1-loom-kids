@@ -2,7 +2,7 @@
 
 This is the Delivery 8 handoff. See the [current manual](../LION_KIDS_MANUAL.md) and [release checklist](../RELEASE.md) for current controls and downloads.
 
-One click on **LION KIDS starten** switches on the instrument. On first use, slot 1 opens on HOME with all patterns empty. On later starts, the emulator opens the last loaded slot. [Starter sounds, categories and release review](LION_KIDS_RELEASE.md) · [Song slots and pixel names](KIDS_PIXEL_SHELF.md)
+One click on **Start LION KIDS** switches on the instrument. On first use, slot 1 opens on HOME with all patterns empty. On later starts, the emulator opens the last loaded slot. [Starter sounds, categories and release review](LION_KIDS_RELEASE.md) · [Song slots and pixel names](KIDS_PIXEL_SHELF.md)
 
 ## Try it on a Mac
 

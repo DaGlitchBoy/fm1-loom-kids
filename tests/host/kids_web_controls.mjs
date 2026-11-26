@@ -4,7 +4,7 @@ import vm from "node:vm";
 import assert from "node:assert/strict";
 
 const page = readFileSync("app/web/emu/page.html", "utf8");
-assert.match(page, /<!-- emu-page: start -->\s*LION KIDS starten/);
+assert.match(page, /<!-- emu-page: start -->\s*Start LION KIDS/);
 assert.match(page, /<h1>LION KIDS<\/h1>/);
 assert.doesNotMatch(page, /id="kids-entry"/);
 
