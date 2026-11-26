@@ -47,8 +47,12 @@ def main():
     (out / ".nojekyll").touch()
     (out / "install").mkdir()
     installer = installer.replace("</head>", '  <base href="../">\n</head>', 1)
+    installer = installer.replace('href="../backup/"', 'href="./export/"')
+    installer = installer.replace('href="../" data-t="manual"', 'href="./" data-t="manual"')
     installer = installer.replace("</h1>", '</h1>\n  <p><a href="./">LION KIDS home</a></p>', 1)
     (out / "install" / "index.html").write_text(installer)
+    export = out / "export" / "index.html"
+    export.write_text(export.read_text().replace('href="../">Firmware installer', 'href="../install/">Firmware installer'))
     (out / "index.html").write_text((TEMPLATES / "index.html").read_text().replace("{{VERSION}}", PREVIEW_VERSION))
     shutil.copy2(TEMPLATES / "site.css", out)
     for name in ("LICENSE", "COPYING", "LICENSING.md", "docs/FM1_DEVICE_PREVIEW.md"):
@@ -65,7 +69,7 @@ def main():
         with ZipFile(browser_zip) as archive:
             archive.extractall(temp)
         shutil.move(temp / "lion-kids-web", out / "emu")
-        template = (TEMPLATES / "manual.html").read_text().replace("{{MANUAL}}", "$toc$\n$body$")
+        template = (TEMPLATES / "manual.html").read_text().replace("{{MANUAL}}", '<nav id="TOC" aria-label="On this page">$toc$</nav>\n$body$')
         shell = temp / "manual.html"
         shell.write_text(template)
         manual = (ROOT / "docs" / "LION_KIDS_MANUAL.md").read_text().split("\n", 1)[1]
