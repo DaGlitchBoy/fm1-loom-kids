@@ -72,6 +72,7 @@ jobs:
           "$RUNNER_TEMP/checks/chips"
           "$PYTHON" tools/build_lion_device.py --render
           "$PYTHON" tools/make_lion_installer.py "$RUNNER_TEMP/install-preview"
+          git rev-parse HEAD > "$RUNNER_TEMP/install-preview/FIRMWARE-SOURCE-COMMIT.txt"
           node tests/host/lion_song_export.mjs "$build/lion-kids_host" "$RUNNER_TEMP/install-preview"
           tar --exclude=.git --exclude=build --exclude=__pycache__ -czf "$RUNNER_TEMP/install-preview/lion-kids-source.tar.gz" \
             .github app base docs tests tools build.sh AGENTS.md COPYING LICENSE LICENSING.md README.md BUILDING.md

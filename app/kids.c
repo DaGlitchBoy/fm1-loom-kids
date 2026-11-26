@@ -1440,7 +1440,31 @@ static int kids_draw_strip(int row, int height, uint16_t bg)
     return (int)cv_h;
 }
 
-static int kids_shelf_dialog(void)
+#if defined(PLAT_HOST) && !defined(PLAT_WEB)
+static int kids_battery_override = -2;
+#endif
+
+static void kids_draw_battery(int level)
+{
+    if (level < 0) return;
+    uint16_t color = level <= 1 ? RGB(255, 122, 140) : KIDS_WHITE;
+    cv_rect(219, 8, 14, 11, color);
+    cv_rect(220, 9, 12, 9, KIDS_BG);
+    cv_rect(233, 11, 2, 5, color);
+    if (level == 4) {
+        /* The platform reports USB power, rather than a charge level. */
+        cv_rect(227, 9, 2, 2, color);
+        cv_rect(226, 11, 2, 2, color);
+        cv_rect(225, 13, 5, 1, color);
+        cv_rect(227, 14, 2, 2, color);
+        cv_rect(226, 16, 2, 2, color);
+    } else {
+        for (int i = 0; i < level; i++)
+            cv_rect(221 + i * 4, 10, 3, 7, color);
+    }
+}
+
+static int kids_shelf_dialog(int battery)
 {
     static uint8_t visible;
     if (!ks_modal && !kpix_open) {
@@ -1460,6 +1484,7 @@ static int kids_shelf_dialog(void)
         int height = kpix_open ? editor_h[band] : 60;
         uint32_t h = hash_u(2166136261u, 128 + ks_modal + 8 * view);
         h = hash_u(h, ks_target);
+        if (!band) h = hash_u(h, (uint32_t)(battery + 1));
         if (kpix_open) {
             h = hash_u(h, kpix_generation);
             h = hash_u(h, (unsigned)(owner + 1));
@@ -1528,6 +1553,7 @@ static int kids_shelf_dialog(void)
             kids_text(12, 6, "HOME  Cancel");
             if (notice) kids_label(12, 29, &LFONT_XS, ks_message, ink, 210);
         }
+        if (!band) kids_draw_battery(battery);
         cv_blit(0, y + row);
         }
         y += height;
@@ -1597,7 +1623,12 @@ static int glo_overlay_panel_draw(void)
 
 static void kids_draw(void)
 {
-    if (glo_overlay_panel_draw() || kids_shelf_dialog()) return;
+    if (glo_overlay_panel_draw()) return;
+    int battery = plat_battery();
+#if defined(PLAT_HOST) && !defined(PLAT_WEB)
+    if (kids_battery_override >= -1) battery = kids_battery_override;
+#endif
+    if (kids_shelf_dialog(battery)) return;
     static uint8_t drawn_mode;
     if (drawn_mode != kids_mode) {
         /* The same band index can cover a different set of physical rows. */
@@ -1632,6 +1663,7 @@ static void kids_draw(void)
             h = hash_u(h, rec_status); h = hash_u(h, full);
             h = hash_u(h, now + 1); h = hash_u(h, cued_pat(trk));
             h = hash_u(h, ks_loaded);
+            h = hash_u(h, (uint32_t)(battery + 1));
             for (int i = 0; i < KPIX_BYTES; i++) h = hash_u(h, kpix_song[i]);
         } else if (kids_mode == KIDS_HOME && (b == 1 || b == 2)) {
             h = hash_u(h, seq.mute);
@@ -1715,10 +1747,11 @@ static void kids_draw(void)
                 for (int i = 0; i < 8; i++) cv_rect(170 + i, 7 + i / 2, 1, 12 - i, ink);
             } else cv_rect(170, 9, 8, 8, KIDS_WHITE);
             if (full || rec_status)
-                kids_label(185, 7, &LFONT_XS, full ? "FULL" : rec_status == 2 ? "REC" : "ARMED", RGB(255, 122, 140), 48);
+                kids_label(182, 7, &LFONT_XS, full ? "FULL" : rec_status == 2 ? "REC" : "ARMED", RGB(255, 122, 140), 36);
             else
                 for (int i = 0; i < 4; i++) cv_rect(185 + i * 7, 11, 4, 4, now >= 0 && now % 4 == i ? ink : KIDS_PANEL);
 
+            kids_draw_battery(battery);
             cv_rect(6, 27, 228, 1, KIDS_PANEL);
         } else if (b == bands - 1) {
             if (kh_visible) kids_history_strip();

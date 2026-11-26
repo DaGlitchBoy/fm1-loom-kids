@@ -1954,6 +1954,10 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
         plat_cpu2_set(atoi(a));
     else if (!strcmp(cmd, "drop-core2-job"))
         cpu2_drop_next = 1;
+#ifndef PLAT_WEB
+    else if (!strcmp(cmd, "kids-battery"))
+        kids_battery_override = clampi(atoi(a), -1, 4);
+#endif
     else
         return 0;
     return 1;

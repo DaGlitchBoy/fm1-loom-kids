@@ -70,4 +70,22 @@ with tempfile.TemporaryDirectory(prefix="lion-native-sounds-") as temp:
     home = Image.open(out / "home.png").convert("RGB")
     assert ImageChops.difference(home, Image.open(out / "lfo.png").convert("RGB")).getbbox()
     assert not ImageChops.difference(home, Image.open(out / "returned.png").convert("RGB")).getbbox()
-    print(f"{tested} factory sample presets produced audio. HOME redraw and rotary speed checks passed.")
+    states = []
+    for level in range(-1, 5):
+        states += [f"kids-battery {level}", "wait 40", f"shot battery{level}.png"]
+    run(states + [
+        "kids-battery 3", "tap REC", "wait 40", "shot armed.png",
+        "tap LFO", "wait 40", "shot battery-lfo.png",
+        "tap SEQ", "wait 40", "shot battery-perf.png",
+    ])
+    def battery_crop(name):
+        with Image.open(out / name) as shot:
+            return shot.convert("RGB").crop((219, 8, 235, 19))
+
+    icons = [battery_crop(f"battery{level}.png") for level in range(-1, 5)]
+    assert len(set(icon.tobytes() for icon in icons)) == 6
+    assert len(set(icons[0].getdata())) == 1, "unknown level should leave the area clear"
+    assert icons[2].getpixel((0, 0)) != icons[4].getpixel((0, 0)), "one bar should use the low-battery color"
+    for screen in ("armed.png", "battery-lfo.png", "battery-perf.png"):
+        assert ImageChops.difference(icons[4], battery_crop(screen)).getbbox() is None, screen
+    print(f"{tested} factory sample presets produced audio. Redraw, rotary speed and battery checks passed.")

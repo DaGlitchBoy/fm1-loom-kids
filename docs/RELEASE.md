@@ -31,23 +31,24 @@ Deploy the generated files to `gh-pages`. Keep this branch set as the Pages sour
 
 ## Prepare a GitHub release
 
-The firmware and emulator are built from separate source snapshots. For the currently hosted firmware, create the release tag at the exact 0.0.4 build commit if the tag does not already exist. Run this in the project checkout with the renamed repository configured as `origin`.
+The firmware and emulator are built from separate source snapshots. For the currently hosted firmware, create the release tag at the exact build commit if the tag does not already exist. Run this in the project checkout with the renamed repository configured as `origin`.
 
 ```sh
 git fetch origin feat/lion-kids-fm1-device
-git tag v0.0.4 e8d7213ba84f1c23df5fcd3b63066b87ab1a8f3d
-git push origin refs/tags/v0.0.4
+source_commit=$(curl -fsSL https://daglitchboy.github.io/fm1-loom-kids/FIRMWARE-SOURCE-COMMIT.txt)
+git tag v0.0.5 "$source_commit"
+git push origin refs/tags/v0.0.5
 ```
 
-Then open **Releases → Draft a new release** and choose `v0.0.4`. The offline emulator ZIP records its own source commit in `SOURCE-COMMIT.txt`.
+Then open **Releases → Draft a new release** and choose `v0.0.5`. The offline emulator ZIP records its own source commit in `SOURCE-COMMIT.txt`.
 
-Title the release **LION KIDS 0.0.4 — FM‑1 preview** and mark it as a prerelease. Add the firmware and resource files, both corresponding-source archives, and the offline browser ZIP from the project homepage. Link to the site's complete checksums and include these release notes:
+Title the release **LION KIDS 0.0.5 — FM‑1 preview** and mark it as a prerelease. Add the firmware and resource files, both corresponding-source archives, and the offline browser ZIP from the project homepage. Link to the site's complete checksums and include these release notes:
 
 > LION KIDS turns the M‑VAVE FM‑1 into an eight-track groovebox for learning to play, layer loops and perform. Play synths, sampled instruments and drums. Overdub on the keys or edit steps, add effects and save three songs with pixel-art names.
 >
 > Try the browser emulator, read the manual, or install the FM‑1 preview from the [LION KIDS homepage](https://daglitchboy.github.io/fm1-loom-kids/). The Record & Export page downloads song backups, renders one loop to WAV, and records live stereo over USB.
 >
-> This preview includes the 0.0.4 audio recovery changes. Acid Bass runs on the primary core, and the firmware can continue on one core after a second-core fault. Back up your existing projects before switching firmware.
+> This preview adds a battery indicator and includes the audio recovery changes. Acid Bass runs on the primary core, and the firmware can continue on one core after a second-core fault. Back up your existing projects before switching firmware.
 >
 > LION KIDS builds on LOOM‑8 by Charles Vestal, with fm1-base and felucca-bsp. The combined builds are distributed under GPL-3.0-only with corresponding source.
 

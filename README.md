@@ -6,7 +6,7 @@ LION KIDS is an open-source groovebox firmware for the M‑VAVE FM‑1, with a f
 | --- | --- |
 | [Project homepage](https://daglitchboy.github.io/fm1-loom-kids/) | Screenshots, downloads and an overview |
 | [Play in browser](https://daglitchboy.github.io/fm1-loom-kids/emu/) | Try the instrument on a computer |
-| [Install on FM‑1](https://daglitchboy.github.io/fm1-loom-kids/install/) | Install the 0.0.4 firmware preview in Chrome or Edge |
+| [Install on FM‑1](https://daglitchboy.github.io/fm1-loom-kids/install/) | Install the 0.0.5 firmware preview in Chrome or Edge |
 | [User manual](https://daglitchboy.github.io/fm1-loom-kids/manual/) | Learn the panel controls and workflows |
 | [Record & Export](https://daglitchboy.github.io/fm1-loom-kids/export/) | Back up saved device songs, export a loop, or record live stereo over USB |
 
